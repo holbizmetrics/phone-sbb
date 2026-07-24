@@ -593,7 +593,13 @@ function planFromBoard(ev,i){
 }
 document.addEventListener("click",e=>{
   const row=e.target.closest(".dep[data-i]");
-  if(row && !e.target.closest(".togo")) toggleDeparture(row);
+  if(!row) return;
+  // the expansion lives INSIDE the row, so a naive row-click handler swallows
+  // every interaction with it: you open a train's route, reach in to read a
+  // stop, and the row slams shut. Clicks inside the panel are inert; only the
+  // row's own surface toggles. (.togo has its own job: plan the journey.)
+  if(e.target.closest(".togo") || e.target.closest(".dstops")) return;
+  toggleDeparture(row);
 });
 function tickSketches(){
   document.querySelectorAll('.sketch[data-open="1"]').forEach(panel=>{
