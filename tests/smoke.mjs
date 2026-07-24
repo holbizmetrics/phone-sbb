@@ -129,7 +129,11 @@ const rev = await page.evaluate(() => { try {
   const d = base();
   d.from.prognosis = { departure: '2026-07-24T10:11:00+02:00' };
   d._chg = [];
+  // Expected times are derived with the page's own hhmm, never hardcoded: CI runs in
+  // UTC and the phone in CET, so a literal "10:11" here asserts the runner's timezone
+  // rather than the fix. (It did exactly that on the first run.)
   return { negKept: mChg.some(x => x.missed), missHTML: connCard(m, 0), lateHTML: connCard(d, 0),
+           wantLate: hhmm(d.from.prognosis.departure), wantSched: hhmm('2026-07-24T10:00:00+02:00'),
            tickUsesLabel: String(tickBoard).includes('depLabel') };
 } catch (e) { return { err: e.message }; } });
 check(!rev.err, `review-regression fixture builds (${rev.err || 'ok'})`);
@@ -137,8 +141,9 @@ if (!rev.err) {
   check(rev.negKept, 'impossible change is kept, not silently dropped');
   check(rev.missHTML.includes('missed by'), 'missed change is labelled in words');
   check(rev.missHTML.includes('cx tight'), 'missed change is flagged tight');
-  check(rev.lateHTML.includes('10:11'), 'journey card shows the real (prognosis) departure');
-  check(!/<div class="tt">10:00/.test(rev.lateHTML), 'journey card no longer shows the scheduled time instead');
+  check(rev.wantLate !== rev.wantSched, `control: delayed and scheduled times differ (${rev.wantSched} vs ${rev.wantLate})`);
+  check(rev.lateHTML.includes(`<div class="tt">${rev.wantLate}`), `journey card shows the real (prognosis) departure (${rev.wantLate})`);
+  check(!rev.lateHTML.includes(`<div class="tt">${rev.wantSched}`), 'journey card no longer shows the scheduled time instead');
   check(rev.lateHTML.includes('+11'), 'journey card shows the delay, as the board does');
   check(rev.tickUsesLabel, 'tickBoard uses the one depLabel definition');
 }
