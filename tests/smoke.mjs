@@ -155,6 +155,25 @@ check(await page.evaluate(() => { favs = ["O'Brien \" <b>x</b>"]; renderFavs();
   return !!b && b.dataset.n === "O'Brien \" <b>x</b>" && !document.querySelector('#favs b'); }),
   'station name with quotes/markup cannot break out of the favourite button');
 
+// Elevation: the strip must say where its numbers come from, and must refuse to
+// draw a profile through a route with too few samples to have one.
+const elev = await page.evaluate(() => { try {
+  const pts = [{ x: 8.54, y: 47.38, name: 'A' }, { x: 8.0, y: 47.0, name: 'B' },
+               { x: 7.8, y: 47.1, name: 'Peak' }, { x: 7.6, y: 47.2, name: 'C' }];
+  return { svg: elevationSVG(pts, [400, 600, 1000, 800]),
+           guard: String(fillElevation).includes('pts.length<4'),
+           helpHasElev: document.getElementById('help').textContent.includes('ground height at each stop') };
+} catch (e) { return { err: e.message }; } });
+check(!elev.err, `elevation fixture renders (${elev.err || 'ok'})`);
+if (!elev.err) {
+  // 400->600->1000 climbs 600; the 1000->800 descent must not cancel any of it
+  check(elev.svg.includes('climbs <b>600 m</b>'), 'elevation sums only the climbs, not the descent');
+  check(elev.svg.includes('straight between them'), 'elevation strip carries its provenance line');
+  check(elev.svg.includes('Peak'), 'high point is labelled by name');
+  check(elev.guard, 'fillElevation refuses fewer than 4 samples');
+  check(elev.helpHasElev, 'help sheet explains the elevation strip');
+}
+
 // Help sheet: the logo opens it, and it must be closable three ways — a modal
 // you cannot dismiss on a phone is worse than no modal.
 check(!(await page.locator('#help').evaluate((n) => n.classList.contains('on'))), 'help starts closed');

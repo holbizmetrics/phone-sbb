@@ -237,6 +237,7 @@
   .elev-peak{fill:var(--txt)}
   .elev-peaklbl{fill:var(--dim); font-size:10px; font-weight:700}
   .elev-sum{font-size:12px; color:var(--dim); margin-top:4px}
+  .elev-src{display:block; font-size:10px; color:var(--faint); margin-top:2px}
   .elev-sum b{color:var(--txt)}
   .skmaps{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px}
   .skmaps a{font-size:12px; font-weight:600; color:var(--dim); text-decoration:none;
@@ -389,6 +390,7 @@
       <div class="hrow"><span class="k">7&#8594;5</span><span class="v">on a change means you arrive at 7 and leave from 5 &#8212; you have to cross the station.</span></div>
       <div class="hrow"><span class="k">Tap a leg</span><span class="v">(the coloured badge) for the stops in between.</span></div>
       <div class="hrow"><span class="k">&#128506; map</span><span class="v">sketches the whole route, with a pulsing dot for where the train is now.</span></div>
+      <div class="hrow"><span class="k">&#9968;</span><span class="v">under the sketch: how much the route climbs. It is the ground height at each stop, joined by straight lines &#8212; not the track&#8217;s own gradient. Routes with too few stops to say anything get no strip at all.</span></div>
 
       <h3>The two switches</h3>
       <div class="hrow"><span class="k">Smart</span><span class="v">sweeps the hubs for connections the default search misses, and flags changes too tight to trust.</span></div>
@@ -1492,13 +1494,21 @@ function elevationSVG(pts,elev){
     + `text-anchor="${hiI>pts.length*0.7?"end":hiI<pts.length*0.3?"start":"middle"}">`
     + `${esc(shortStop(pts[hiI].name))}</text>`
     + `</svg><div class="elev-sum">&#9968; climbs <b>${climb} m</b> &#183; `
-    + `${Math.round(elev[0])} m &#8594; ${Math.round(elev[elev.length-1])} m &#183; ${total.toFixed(0)} km</div>`;
+    + `${Math.round(elev[0])} m &#8594; ${Math.round(elev[elev.length-1])} m &#183; ${total.toFixed(0)} km`
+    /* Say where the numbers come from, the way the train dot says "not GPS".
+       These are ground heights sampled at the stops and joined by straight
+       lines -- not the track's own gradient, and nothing between stops. */
+    + `<span class="elev-src">terrain height at each stop &#183; straight between them</span></div>`;
 }
 async function fillElevation(panel,ci){
   const legs=routePoints(ci); if(!legs) return;
   let pts=legs.flatMap(l=>l.pts);
   if(pts.length>60) pts=pts.filter((_,i)=>i%Math.ceil(pts.length/60)===0);   // stay polite
-  if(pts.length<2) return;
+  /* Below four samples this stops being a profile. A direct train with no stop
+     list gives just its two endpoints, and the strip then drew a confident
+     diagonal through terrain we never measured -- Zurich->Bern read as a smooth
+     137 m ramp when the line passes nothing of the sort. Draw nothing instead. */
+  if(pts.length<4) return;
   const elev=await routeElevation(pts);
   if(!elev||elev.length!==pts.length) return;      // fail-silent: no strip, no error
   const box=panel.querySelector(".elevbox");
