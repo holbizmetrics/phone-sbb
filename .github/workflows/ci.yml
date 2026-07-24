@@ -26,6 +26,11 @@ jobs:
       - name: Syntax-check the inline script (catches white-screen typos)
         run: node tests/syntax-check.mjs
 
+      - name: Offline unit tests (no browser -- these also run on the phone)
+        run: |
+          node tests/keyboard.mjs
+          node tests/mode-filter.mjs
+
       - name: Install Playwright (Chromium)
         run: |
           npm init -y >/dev/null

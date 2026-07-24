@@ -143,8 +143,16 @@ Works identically on desktop and phone.
 
 ```bash
 node tests/syntax-check.mjs     # parses the inline script — runs anywhere
+node tests/keyboard.mjs         # Enter/arrow handling — runs anywhere, no browser
+node tests/mode-filter.mjs      # transport-mode filter — runs anywhere, no browser
 node tests/smoke.mjs            # Playwright end-to-end — CI only
 ```
+
+The middle two lift the real functions straight out of `index.html` and run
+them in Node against a stub DOM, so the logic stays testable on a phone where
+Playwright can't be installed. Each one carries a control that fails if the
+harness itself stopped working — a check that silently doesn't run reads as a
+pass, which is worse than no check at all.
 
 CI runs the full smoke suite on every branch and pull request; `master`
 deploys only on green. The suite covers the change-buffer maths, prognosis
