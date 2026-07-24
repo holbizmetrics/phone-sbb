@@ -332,10 +332,19 @@ async function loadBoard(name, quiet){
   try{
     const d=await api("/stationboard?limit=12&station="+encodeURIComponent(name));
     lastBoard = d.stationboard||[];
-    const rows = lastBoard.map((j,i)=>depRow(j,i)).join("");
-    $("depOut").innerHTML = boardHeadHTML(d.station?.name||name) +
-      (rows || `<div class="empty"><div class="big">&#9788;</div>No departures right now.</div>`);
-    wireBoardHead(d.station?.name||name);
+    const disp=d.station?.name||name;
+    const existing=[...$("depOut").querySelectorAll(".dep")];
+    const newKeys=lastBoard.map(depKey), oldKeys=existing.map(el=>el.dataset.key);
+    const sameSet = existing.length===lastBoard.length && newKeys.every((k,i)=>k===oldKeys[i]);
+    if(quiet && lastBoard.length && sameSet){
+      // no-flicker path: same departures in same order → patch fields in place, keep the head + nodes
+      lastBoard.forEach((j,i)=>patchRow(existing[i], j));
+    }else{
+      const rows = lastBoard.map((j,i)=>depRow(j,i)).join("");
+      $("depOut").innerHTML = boardHeadHTML(disp) +
+        (rows || `<div class="empty"><div class="big">&#9788;</div>No departures right now.</div>`);
+      wireBoardHead(disp);
+    }
   }catch(e){
     if(!quiet) $("depOut").innerHTML = boardHeadHTML(name) +
       `<div class="err">Couldn&#39;t reach the network.<br>Check your connection and tap &#8635;.</div>`;
@@ -353,7 +362,7 @@ function depRow(j,i){
   const pl = j.stop?.platform;
   const plChanged = j.stop?.prognosis?.platform && j.stop.prognosis.platform!==pl;
   const effPl = j.stop?.prognosis?.platform || pl;
-  return `<div class="dep" style="animation-delay:${i*28}ms">
+  return `<div class="dep" data-key="${esc(depKey(j))}" style="animation-delay:${i*28}ms">
     <div class="badge" style="background:${b.col}">${b.label}</div>
     <div class="mid">
       <div class="to">${esc(j.to||"&#8212;")}</div>
@@ -371,6 +380,23 @@ function tickBoard(){
     el.innerHTML = m<=0?"now":m<60?m+"&#8242;":hhmm(el.dataset.t);
     el.classList.toggle("now", m<=2);
   });
+}
+// stable identity for a departure = journey name + scheduled departure (immune to delay/platform churn)
+function depKey(j){ return (j.name||((j.category||"")+(j.number||j.line||"")))+"|"+(j.stop?.departure||""); }
+// patch one existing row's mutable fields in place — no node recreation, so no flicker/re-animation
+function patchRow(row, j){
+  const dep=j.stop?.departure, prog=j.stop?.prognosis?.departure;
+  const late = prog && dep && (new Date(prog)-new Date(dep))>=60000;
+  const eff = prog || dep;
+  const m=minsUntil(eff);
+  const pl=j.stop?.platform, plChanged=j.stop?.prognosis?.platform && j.stop.prognosis.platform!==pl;
+  const effPl=j.stop?.prognosis?.platform||pl;
+  const min=row.querySelector(".min");
+  if(min){ min.dataset.t=eff; min.innerHTML = m<=0?"now":m<60?m+"&#8242;":hhmm(eff); min.classList.toggle("now", m<=2); }
+  const at=row.querySelector(".at");
+  if(at) at.innerHTML = `${hhmm(dep)}${late?` <span class="late">+${Math.round((new Date(prog)-new Date(dep))/60000)}</span>`:""}`;
+  const via=row.querySelector(".via");
+  if(via) via.innerHTML = `${effPl?`<span class="plat${plChanged?" chg":""}">Pl. ${esc(effPl)}${plChanged?" &#9888;":""}</span> `:""}${esc(j.category||"")} ${esc(j.operator||"")}`;
 }
 function boardHeadHTML(name){
   const on=favs.includes(name);
