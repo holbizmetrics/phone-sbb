@@ -192,7 +192,7 @@
   .legs .b2:active{transform:scale(.94)}
   .legs .b2.on{box-shadow:0 0 0 2px var(--bg), 0 0 0 4px currentColor}
   .legs .sep{color:var(--faint); font-size:13px}
-  .legs .lhint{font-size:10px; color:var(--faint); margin-left:auto; letter-spacing:.02em}
+  .legs .lhint{margin-right:auto; font-size:10px; color:var(--faint); margin-left:auto; letter-spacing:.02em}
 
   /* ---- expandable leg -> intermediate stops (from section.journey.passList) ---- */
   .stops:empty{display:none}
@@ -1199,7 +1199,8 @@ function connCard(c,i){
     </div>
     <div class="legs">${legs}${lhint}
       <button class="skbtn" type="button" aria-expanded="false" onclick="toggleSketch(this,${i})"
-              title="Sketch the route geography">&#128506;</button></div>
+              aria-label="Show a sketch of the whole route"
+              title="Sketch the whole route">&#128506; map</button></div>
     <div class="stops"></div>
     <div class="sketch"></div>
     ${chgHTML}
