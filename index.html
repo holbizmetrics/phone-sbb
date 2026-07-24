@@ -555,7 +555,7 @@ function wireAC(inpId, acId, fieldId, onPick){
         field.classList.add("has"); onPick(el.dataset.n);
       });
     }catch(e){ ac.classList.remove("show"); }
-  },180);
+  },300);
   inp.addEventListener("input", run);
   inp.addEventListener("focus", ()=>{ if(inp.value.trim().length>=2) run(); });
   document.addEventListener("click", e=>{ if(!field.contains(e.target)) ac.classList.remove("show"); });
@@ -566,6 +566,23 @@ function clearField(which){
 }
 
 /* ---------- DEPARTURES ---------- */
+/* A departure board left open in a background tab polled every 30s forever --
+   roughly 2900 requests a day doing nothing for anybody. transport.opendata.ch
+   is a volunteer service running on search.ch's goodwill, and the cheapest fix
+   available to THEM is to block our origin wholesale, which would kill the app
+   for every user at once. Per-user rate limits do not protect against that;
+   only not making pointless requests does. So the board sleeps when nobody is
+   looking, and wakes with an immediate fetch so it still feels instant. */
+function startBoardTimers(name){
+  stopBoardTimers();
+  if(document.hidden) return;                  // never start while nobody is looking
+  refreshTimer=setInterval(()=>loadBoard(name,true), 30000);
+  tickTimer=setInterval(tickBoard, 1000);
+}
+function stopBoardTimers(){
+  clearInterval(refreshTimer); clearInterval(tickTimer);
+  refreshTimer=null; tickTimer=null;
+}
 async function showDepartures(name){
   if(!name) return;
   current=name; save(LS.last,name);
@@ -574,10 +591,9 @@ async function showDepartures(name){
   renderBoardHead(name);
   $("depOut").innerHTML = `<div id="bh"></div>` + skel(6);
   renderBoardHead(name);
-  clearInterval(refreshTimer); clearInterval(tickTimer);
+  stopBoardTimers();
   await loadBoard(name);
-  refreshTimer=setInterval(()=>loadBoard(name,true), 30000);
-  tickTimer=setInterval(tickBoard, 1000);
+  startBoardTimers(name);
 }
 async function loadBoard(name, quiet){
   const rf=$("rf"); if(rf) rf.classList.add("spin");
@@ -1646,7 +1662,10 @@ const last=load(LS.last,"");
 if(last) showDepartures(last);
 else $("depOut").innerHTML=`<div class="empty"><div class="big">&#128647;</div>Search a station to see live departures.</div>`;
 
-document.addEventListener("visibilitychange",()=>{ if(!document.hidden && current) loadBoard(current,true); });
+document.addEventListener("visibilitychange",()=>{
+  if(document.hidden){ stopBoardTimers(); return; }       // asleep: zero requests
+  if(current){ loadBoard(current,true); startBoardTimers(current); }
+});
 </script>
 </body>
 </html>
