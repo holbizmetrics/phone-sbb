@@ -58,6 +58,43 @@ await page.locator('#tabJrn').click();
 check((await page.locator('#smartTog').count()) === 1, 'Smart toggle renders on Journey');
 check((await page.locator('#wxTog').count()) === 1, 'Weather toggle renders on Journey');
 
+// Expandable leg -> intermediate stops. The network is aborted here, so a real
+// connection never renders; we stub one into the render registry and drive the
+// actual tap. This covers the DOM half (delegated toggle, collapse, marker
+// filter) that the offline unit test cannot reach.
+const stubbed = await page.evaluate(() => { try {
+  const stub = {
+    from: { departure: '2026-07-24T10:00:00+02:00' },
+    to: { arrival: '2026-07-24T11:00:00+02:00' },
+    duration: '00d01:00:00', transfers: 0,
+    sections: [{ journey: { category: 'IR', number: '16', passList: [
+      { station: { name: 'Alpha' }, departure: '2026-07-24T10:00:00+02:00' },
+      { station: { name: 'Bahn-2000-Strecke' } },                       // routing marker: no times
+      { station: { name: 'Beta' }, arrival: '2026-07-24T10:30:00+02:00', delay: 3, platform: '7' },
+      { station: { name: 'Omega' }, arrival: '2026-07-24T11:00:00+02:00' },
+    ] } }],
+  };
+  jrnConns = [stub];
+  document.getElementById('jrnOut').innerHTML = connCard(stub, 0);
+  return 'ok';
+} catch (e) { return 'stub failed: ' + e.message; } });
+check(stubbed === 'ok', `leg-stops fixture renders (${stubbed})`);
+
+if (stubbed === 'ok') {
+  const legBtn = page.locator('#jrnOut .legs .b2').first();
+  check((await legBtn.count()) === 1, 'leg badge renders as a tappable button');
+  check((await page.locator('#jrnOut .stops .sline').count()) === 0, 'stops start collapsed');
+  await legBtn.click();
+  const rows = await page.locator('#jrnOut .stops .sline').count();
+  check(rows === 3, `tap expands stops, routing marker dropped (rows=${rows})`);
+  const txt = (await page.locator('#jrnOut .stops').textContent()) || '';
+  check(!txt.includes('Bahn-2000'), 'no routing marker in output');
+  check(txt.includes('+3'), 'delay shown on intermediate stop');
+  check(txt.includes('Beta') && txt.includes('Omega'), 'stop names rendered');
+  await legBtn.click();
+  check((await page.locator('#jrnOut .stops .sline').count()) === 0, 'second tap collapses');
+}
+
 check(problems.length === 0, `no console errors / uncaught exceptions (${problems.length})`);
 problems.forEach((p) => console.error('     ' + p));
 

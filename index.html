@@ -117,8 +117,24 @@
   .conn .dur b{font-size:16px; font-weight:700}
   .conn .dur span{display:block; font-size:11px; color:var(--faint)}
   .legs{display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:12px; padding-top:12px; border-top:1px solid var(--line)}
-  .legs .b2{min-width:0; height:26px; padding:0 8px; border-radius:8px; display:grid; place-items:center; font-weight:800; font-size:12px; color:#fff}
+  .legs .b2{min-width:0; height:26px; padding:0 8px; border-radius:8px; display:grid; place-items:center; font-weight:800; font-size:12px; color:#fff; border:0; font-family:inherit; cursor:pointer; position:relative; transition:box-shadow .15s, transform .15s}
+  .legs .b2:active{transform:scale(.94)}
+  .legs .b2.on{box-shadow:0 0 0 2px var(--bg), 0 0 0 4px currentColor}
   .legs .sep{color:var(--faint); font-size:13px}
+  .legs .lhint{font-size:10px; color:var(--faint); margin-left:auto; letter-spacing:.02em}
+
+  /* ---- expandable leg -> intermediate stops (from section.journey.passList) ---- */
+  .stops:empty{display:none}
+  .stops{margin-top:10px; padding:10px 2px 2px; border-top:1px dashed var(--line)}
+  .stops .sline{display:flex; gap:9px; align-items:baseline; padding:3px 0; font-size:13px; font-variant-numeric:tabular-nums}
+  .stops .st{color:var(--dim); flex:0 0 auto; min-width:42px; font-weight:700}
+  .stops .sdot{flex:0 0 auto; width:9px; height:9px; border-radius:50%; border:2px solid var(--faint); align-self:center}
+  .stops .sline.end .sdot{background:var(--txt); border-color:var(--txt)}
+  .stops .sname{color:var(--dim); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .stops .sline.end .sname{color:var(--txt); font-weight:700}
+  .stops .sdly{color:var(--amber); font-weight:700; flex:0 0 auto; font-size:12px}
+  .stops .splt{color:var(--faint); flex:0 0 auto; font-size:11px; margin-left:auto}
+  .stops .snone{font-size:12px; color:var(--faint); padding:2px 0}
   .conn .meta{margin-top:10px; font-size:12px; color:var(--dim)}
   .conn .meta b{color:var(--txt)}
   .conn .plt{color:var(--amber)}
@@ -499,6 +515,7 @@ async function plainPlan(){
     const cs=d.connections||[];
     if(!cs.length){ $("jrnOut").innerHTML=`<div class="empty"><div class="big">&#9940;</div>No connections found.</div>`; return; }
     cs.forEach(annotate);
+    jrnConns = cs;   // render order == the ci the leg buttons index back into
     $("jrnOut").innerHTML = cs.map((c,i)=>connCard(c,i)).join("") + wondersExpanderHTML(cs[0].to?.station);
     if(weather) fillWeather();
   }catch(e){
@@ -812,6 +829,7 @@ function renderSmart(base, swept, baseline, searching){
   const nSafe = top.filter(c=>c._safePick).length;
   const swN = new Set(swept.map(connSig)).size;
 
+  jrnConns = top;   // render order == the ci the leg buttons index back into
   $("jrnOut").innerHTML = smartHead(baseline, nSafe, swN)
     + (searching?`<div class="shint">&#8987; searching wider routes&#8230;</div>`:"")
     + top.map((c,i)=>connCard(c,i)).join("")
@@ -831,14 +849,52 @@ function smartHead(baseline, nSafe, swN){
   return `<div class="shead good">SBB&#39;s default looks solid${bb!=null?` (<b>${bb}&#8201;min</b> transfer slack)`:` (direct)`}. Full swept spread below &#8595;</div>`;
 }
 
+/* ---------- expandable leg -> intermediate stops ----------
+   Zero extra API calls: every stop already rides along in the connection
+   response as section.journey.passList. jrnConns is the render-order
+   registry the inline onclick indexes back into. */
+let jrnConns=[];
+function legStops(ci,si){
+  const c=jrnConns[ci]; if(!c) return null;
+  const s=(c.sections||[]).filter(x=>x.journey)[si]; if(!s||!s.journey) return null;
+  const pl=s.journey.passList;
+  if(!Array.isArray(pl)) return null;          // unavailable is NOT the same as non-stop
+  // A passList also carries routing markers (e.g. "Bahn-2000-Strecke") which are
+  // not stops: no arrival AND no departure. They appear mid-list, not only at the ends.
+  return pl.filter(p=>p.station?.name && (p.arrival||p.departure));
+}
+function stopsHTML(rows){
+  if(rows===null) return `<div class="snone">Stop list unavailable for this leg.</div>`;
+  if(rows.length<=2) return `<div class="snone">Non-stop &#8212; no intermediate stops.</div>`;
+  return rows.map((p,k)=>{
+    const end = k===0 || k===rows.length-1;
+    const t = k===0 ? (p.departure||p.arrival) : (p.arrival||p.departure);
+    return `<div class="sline ${end?"end":""}">`
+      + `<span class="st">${hhmm(t)}</span><span class="sdot"></span>`
+      + `<span class="sname">${esc(p.station.name)}</span>`
+      + (p.delay?`<span class="sdly">+${p.delay}&#8242;</span>`:"")
+      + (p.platform?`<span class="splt">Pl.&#8201;${esc(p.platform)}</span>`:"")
+      + `</div>`;
+  }).join("");
+}
+function toggleLeg(btn,ci,si){
+  const card=btn.closest(".conn"), panel=card.querySelector(".stops");
+  const wasOpen = panel.dataset.open===String(si);
+  card.querySelectorAll(".legs .b2").forEach(b=>b.classList.remove("on"));
+  if(wasOpen){ panel.dataset.open=""; panel.innerHTML=""; return; }   // :empty collapses it
+  panel.dataset.open=String(si); btn.classList.add("on");
+  panel.innerHTML = stopsHTML(legStops(ci,si));
+}
+
 function connCard(c,i){
   const dep=c.from?.departure, arr=c.to?.arrival;
   const secs=(c.sections||[]).filter(s=>s.journey);
   const tr=c._chg ? c._chg.length : (c.transfers||0);
-  const legs = secs.map(s=>{
+  const legs = secs.map((s,si)=>{
     const b=badge(s.journey.category, s.journey.number);
-    return `<span class="b2" style="background:${b.col}">${b.label}</span>`;
+    return `<button class="b2" style="background:${b.col}" onclick="toggleLeg(this,${i},${si})" title="Show stops on this leg">${b.label}</button>`;
   }).join('<span class="sep">&#8250;</span>') || '<span class="sep">walk</span>';
+  const lhint = secs.length ? `<span class="lhint">tap a leg for stops</span>` : "";
   const chg = c._chg || [];
   const chgHTML = chg.length ? `<div class="chg">`+chg.map(x=>{
     const cls = x.b<TIGHT?"tight":x.b<COMFY?"warn":"";
@@ -863,7 +919,8 @@ function connCard(c,i){
       ${wxO}<div class="tt">${hhmm(dep)}</div><span class="arr">&#8594;</span>${wxD}<div class="tt">${hhmm(arr)}</div>
       <div class="dur"><b>${parseDur(c.duration)}</b><span>${tr} change${tr===1?"":"s"}</span></div>
     </div>
-    <div class="legs">${legs}</div>
+    <div class="legs">${legs}${lhint}</div>
+    <div class="stops"></div>
     ${chgHTML}
     <div class="meta"><div class="rbrow">${ribs}</div>${dm>0&&dm<90?`Departs in <b>${dm} min</b>`:"Departs "+hhmm(dep)}</div>
   </div>`;
