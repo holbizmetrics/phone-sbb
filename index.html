@@ -195,6 +195,9 @@
   .skbtn.on{background:var(--segon); color:var(--segontxt); border-color:transparent}
   .sketch:not(:empty){margin-top:12px; padding-top:12px; border-top:1px solid var(--line)}
   .sk{width:100%; height:auto; display:block; overflow:visible}
+  .sktrain{fill:var(--txt); stroke:var(--card); stroke-width:2}
+  .sktrain-halo{fill:var(--grn); opacity:.28; animation:skpulse 2.2s ease-in-out infinite}
+  @keyframes skpulse{0%,100%{r:8; opacity:.30} 50%{r:13; opacity:.10}}
   .sklbl{fill:var(--txt); font-size:11px; font-weight:700; paint-order:stroke;
     stroke:var(--card); stroke-width:3.5px; stroke-linejoin:round;
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif}
@@ -400,6 +403,7 @@ let current = "";        // current departures station
 let refreshTimer = null;
 let tickTimer = null;
 let lastBoard = [];      // cached stationboard for live tick
+let openDep = "";        // depKey of the expanded departure -- survives a rebuild
 
 /* ---------- utils ---------- */
 function load(k,d){ try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d} }
@@ -498,6 +502,7 @@ async function loadBoard(name, quiet){
       $("depOut").innerHTML = boardHeadHTML(disp) +
         (rows || `<div class="empty"><div class="big">&#9788;</div>No departures right now.</div>`);
       wireBoardHead(disp);
+      restoreOpenDep();
     }
   }catch(e){
     if(!quiet) $("depOut").innerHTML = boardHeadHTML(name) +
@@ -563,6 +568,19 @@ function toggleDeparture(row){
   panel.dataset.open=open?"":"1";
   panel.innerHTML=open?"":onwardHTML(onwardStops(+row.dataset.i));
   row.classList.toggle("open",!open);
+  // remember WHICH departure is open, by its stable key -- a busy station shifts
+  // its set every refresh, which rebuilds the board and would otherwise silently
+  // throw the expansion away mid-read.
+  openDep = open ? "" : (row.dataset.key||"");
+}
+function restoreOpenDep(){
+  if(!openDep) return;
+  const row=[...document.querySelectorAll(".dep[data-key]")].find(r=>r.dataset.key===openDep);
+  if(!row){ openDep=""; return; }                 // that train has departed
+  const panel=row.querySelector(".dstops"); if(!panel) return;
+  panel.dataset.open="1";
+  panel.innerHTML=onwardHTML(onwardStops(+row.dataset.i));
+  row.classList.add("open");
 }
 /* destination name -> Journey tab, prefilled, timed to THIS train */
 function planFromBoard(ev,i){
@@ -583,8 +601,25 @@ function planFromBoard(ev,i){
 }
 document.addEventListener("click",e=>{
   const row=e.target.closest(".dep[data-i]");
-  if(row && !e.target.closest(".togo")) toggleDeparture(row);
+  if(!row) return;
+  // the expansion lives INSIDE the row, so a naive row-click handler swallows
+  // every interaction with it: you open a train's route, reach in to read a
+  // stop, and the row slams shut. Clicks inside the panel are inert; only the
+  // row's own surface toggles. (.togo has its own job: plan the journey.)
+  if(e.target.closest(".togo") || e.target.closest(".dstops")) return;
+  toggleDeparture(row);
 });
+function tickSketches(){
+  document.querySelectorAll('.sketch[data-open="1"]').forEach(panel=>{
+    const card=panel.closest(".conn"); if(!card) return;
+    const btn=card.querySelector(".skbtn"); if(!btn) return;
+    const ci=+(btn.getAttribute("onclick")||"").match(/,(\d+)\)/)?.[1];
+    if(!isFinite(ci)) return;
+    const svg=panel.querySelector("svg"); if(!svg) return;
+    const fresh=document.createElement("div"); fresh.innerHTML=sketchSVG(ci);
+    const n=fresh.querySelector("svg"); if(n) svg.replaceWith(n);
+  });
+}
 function tickBoard(){
   document.querySelectorAll(".dep .min[data-t]").forEach(el=>{
     const m=minsUntil(el.dataset.t);
@@ -1244,7 +1279,42 @@ function sketchSVG(ci){
     out+=`<text x="${(x+dx).toFixed(1)}" y="${(y+dy).toFixed(1)}" text-anchor="${anchor}" `
        + `class="sklbl${m.change?" chg":""}">${esc(m.t)}</text>`;
   });
+  // the train itself, where the timetable says it is right now
+  const tn=trainNow(ci);
+  if(tn){
+    const cx=px(tn).toFixed(1), cy=py(tn).toFixed(1);
+    out+=`<circle class="sktrain-halo" cx="${cx}" cy="${cy}" r="9"/>`
+       + `<circle class="sktrain" cx="${cx}" cy="${cy}" r="4.5"><title>`
+       + `Scheduled position (from the timetable, not GPS) &#8212; between `
+       + `${esc(tn.from)} and ${esc(tn.to)}</title></circle>`;
+  }
   return out+`</svg>`;
+}
+/* Where the train is NOW, interpolated from the timetable -- NOT GPS.
+   The real live-position feed (opentransportdata GTFS-RT) needs a registered
+   key and allows ~2 requests/minute, so it is unusable from a keyless page;
+   interpolation is not the cheap option, it is the only viable one. */
+function trainNow(ci){
+  const c=jrnConns[ci]; if(!c) return null;
+  const now=Date.now();
+  const secs=(c.sections||[]).filter(s=>s.journey);
+  for(let si=0; si<secs.length; si++){
+    const rows=legStops(ci,si)||[];
+    for(let k=0;k<rows.length-1;k++){
+      const a=rows[k], b=rows[k+1];
+      const ta=new Date(a.departure||a.arrival).getTime();
+      const tb=new Date(b.arrival||b.departure).getTime();
+      if(!isFinite(ta)||!isFinite(tb)||tb<=ta) continue;
+      if(now>=ta && now<=tb){
+        const f=(now-ta)/(tb-ta);
+        const ca=a.station?.coordinate, cb=b.station?.coordinate;
+        if(!ca||!cb) return null;
+        return {x:+ca.y+(+cb.y-+ca.y)*f, y:+ca.x+(+cb.x-+ca.x)*f,
+                from:a.station.name, to:b.station.name};
+      }
+    }
+  }
+  return null;   // not underway: before departure or after arrival
 }
 /* The app solves the RAIL part and stops at a station -- but the real
    destination is usually the trailhead / hotel / cable-car base beyond it.
@@ -1354,7 +1424,7 @@ wireAC("iTo","acTo","fTo",     n=>{ toName=n;   if(fromName) planJourney(); });
 $("iDep").addEventListener("keydown",e=>{ if(e.key==="Enter"){e.target.blur(); showDepartures(e.target.value.trim());}});
 
 renderFavs();
-tickClock(); setInterval(tickClock,1000);
+tickClock(); setInterval(tickClock,1000); setInterval(tickSketches,15000);
 const last=load(LS.last,"");
 if(last) showDepartures(last);
 else $("depOut").innerHTML=`<div class="empty"><div class="big">&#128647;</div>Search a station to see live departures.</div>`;
