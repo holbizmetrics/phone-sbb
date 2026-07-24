@@ -584,7 +584,12 @@ async function smartPlan(){
     // scenic routes are exempt from the detour cull when "prefer scenic" is on (slower IS the point)
     cand = cand.filter(c=> c._isBase || (preferScenic && c._scenic) || c._arr <= fastest + WINDOW_MIN*60000);
     cand.sort((a,b)=> (preferScenic ? ((b._scenic?1:0)-(a._scenic?1:0)) : 0) || (b._safePick-a._safePick) || (b._beats-a._beats) || (a._arr-b._arr) || ((b._buf??-1)-(a._buf??-1)) || (a._chg.length-b._chg.length));
-    const top = cand.slice(0,7);
+    // display-safety: prefer-scenic floats scenics to the top, so with >=7 scenic
+    // options a plain slice(0,7) could hide the SBB default / absolute-fastest off the
+    // visible list -- the exact "hidden default" sin this app exists to fix. Pin them in.
+    const pin = new Set(cand.filter(c=> c._isBase || c._arr===fastest));
+    const top = [...pin, ...cand.filter(c=>!pin.has(c))].slice(0,7).sort((a,b)=>
+      (preferScenic ? ((b._scenic?1:0)-(a._scenic?1:0)) : 0) || (b._safePick-a._safePick) || (b._beats-a._beats) || (a._arr-b._arr) || ((b._buf??-1)-(a._buf??-1)));
     const nSafe = top.filter(c=>c._safePick).length;
     const swN = new Set(swept.map(connSig)).size;
 
