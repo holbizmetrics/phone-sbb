@@ -137,6 +137,8 @@
   .shead.warn{background:rgba(245,158,11,.1); border-color:rgba(245,158,11,.3); color:#ffe0a3}
   .shead.good{border-color:rgba(34,197,94,.25)}
   .shead b{color:var(--txt)}
+  .shint{font-size:12px; color:var(--faint); margin:-4px 2px 12px; display:flex; align-items:center; gap:6px}
+  .shint::before{content:""; width:9px; height:9px; border:2px solid var(--faint); border-top-color:transparent; border-radius:50%; display:inline-block; animation:spin .7s linear infinite}
   .conn.win{border-color:rgba(34,197,94,.5); box-shadow:0 0 0 1px rgba(34,197,94,.15),var(--shadow)}
   .conn.hastight{border-color:rgba(245,158,11,.4)}
   .chg{display:flex; flex-wrap:wrap; gap:6px; margin-top:11px}
@@ -558,72 +560,87 @@ async function fillWeather(){
   }
 }
 
+// resolve to [] if a slow query outruns the cap, so one lagging hub can't stall first paint
+function withTimeout(p, ms){ return Promise.race([p, new Promise(r=>setTimeout(()=>r([]), ms))]); }
+
 async function smartPlan(){
   if(!fromName||!toName || smartBusy) return;   // no overlapping sweeps (F1)
   smartBusy=true;
   $("jrnOut").innerHTML = skel(4);
   try{
     const f=encodeURIComponent(fromName), t=encodeURIComponent(toName);
-    const base = await tryConns(`from=${f}&to=${t}&limit=6`);
+    // Fire everything at once. The two direct queries (base + wide) are the fast core;
+    // hub sweeps run in parallel, each capped so the slowest hub can't hold up first paint.
+    const baseP = tryConns(`from=${f}&to=${t}&limit=6`);
+    const wideP = tryConns(`from=${f}&to=${t}&limit=16`);
+    const hubList = [...HUBS, ...(preferScenic?SCENIC_HUBS:[])].filter(h=>h!==fromName&&h!==toName);
+    const HUB_CAP=5000;  // tunable: bounds hub fill-in (hubs measured 3.3-9.3s); the base render fixes PERCEIVED latency regardless of this
+    const hubJobs = hubList.map(h=>
+      withTimeout(tryConns(`from=${f}&to=${t}&via[]=${encodeURIComponent(h)}&limit=3`), HUB_CAP)
+        .then(cs=>cs.map(c=>{c._via=h; return c;})).catch(()=>[]));
+
+    // Phase 1 -- render the direct/wide results the moment they land (~base latency), hint that more is coming
+    const [base, wide] = await Promise.all([baseP, wideP]);
     const baseline = base[0] ? annotate(base[0]) : null;
+    renderSmart(base, wide.slice(), baseline, true);
 
-    const jobs = [ tryConns(`from=${f}&to=${t}&limit=16`) ];
-    HUBS.forEach(h=>{
-      if(h===fromName||h===toName) return;
-      jobs.push(tryConns(`from=${f}&to=${t}&via[]=${encodeURIComponent(h)}&limit=3`)
-        .then(cs=>cs.map(c=>{c._via=h; return c;})));
-    });
-    if(preferScenic) SCENIC_HUBS.forEach(h=>{
-      if(h===fromName||h===toName) return;
-      jobs.push(tryConns(`from=${f}&to=${t}&via[]=${encodeURIComponent(h)}&limit=3`)
-        .then(cs=>cs.map(c=>{c._via=h; return c;})));
-    });
-    const swept = (await Promise.all(jobs)).flat();
-
-    const seen=new Set(), all=[];
-    base.concat(swept).forEach(c=>{ const s=connSig(c); if(!seen.has(s)){ seen.add(s); all.push(annotate(c)); } });
-    if(!all.length){ $("jrnOut").innerHTML=`<div class="empty"><div class="big">&#9940;</div>No connections found.<br>Check the station names.</div>`; return; }
-
-    const now=Date.now();
-    const baseArr = baseline ? baseline._arr : Infinity;
-    const baseBuf = baseline ? baseline._buf : null;
-    const baseSig = baseline ? connSig(baseline) : "";
-    all.forEach(c=>{
-      c._isBase = connSig(c)===baseSig;
-      c._scenic = (c.sections||[]).some(s=>s.journey && isScenic(s.journey.category));
-      c._earlier = c._arr < baseArr;
-      c._safer   = !c._isBase && !c._tight && baseline!=null &&
-                   (baseline._tight || (baseBuf!=null && c._buf!=null && c._buf>=baseBuf+3)) &&
-                   c._arr <= baseArr + SAFER_LATER*60000;   // roomier, within the slower-tolerance window (F4)
-      c._beats = c._earlier || c._safer;
-      // F3: a genuine "smart pick" (green) must NOT be tight; an earlier-but-tight
-      // option is an honest tradeoff, never crowned as safe and never hides its warning
-      c._safePick   = c._beats && !c._tight;
-      c._fasterTight = c._beats && c._tight;
-      c._why = c._safer && c._earlier ? "earlier & roomier"
-             : c._safer ? "roomier change"
-             : "arrives earlier";
-    });
-
-    let cand = all.filter(c=> c._dep > now-60000 || c._isBase);
-    const fastest = Math.min(...cand.map(c=>c._arr));
-    // scenic routes are exempt from the detour cull when "prefer scenic" is on (slower IS the point)
-    cand = cand.filter(c=> c._isBase || (preferScenic && c._scenic) || c._arr <= fastest + WINDOW_MIN*60000);
-    cand.sort((a,b)=> (preferScenic ? ((b._scenic?1:0)-(a._scenic?1:0)) : 0) || (b._safePick-a._safePick) || (b._beats-a._beats) || (a._arr-b._arr) || ((b._buf??-1)-(a._buf??-1)) || (a._chg.length-b._chg.length));
-    // display-safety: prefer-scenic floats scenics to the top, so with >=7 scenic
-    // options a plain slice(0,7) could hide the SBB default / absolute-fastest off the
-    // visible list -- the exact "hidden default" sin this app exists to fix. Pin them in.
-    const pin = new Set(cand.filter(c=> c._isBase || c._arr===fastest));
-    const top = [...pin, ...cand.filter(c=>!pin.has(c))].slice(0,7).sort((a,b)=>
-      (preferScenic ? ((b._scenic?1:0)-(a._scenic?1:0)) : 0) || (b._safePick-a._safePick) || (b._beats-a._beats) || (a._arr-b._arr) || ((b._buf??-1)-(a._buf??-1)));
-    const nSafe = top.filter(c=>c._safePick).length;
-    const swN = new Set(swept.map(connSig)).size;
-
-    $("jrnOut").innerHTML = smartHead(baseline, nSafe, swN) + top.map((c,i)=>connCard(c,i)).join("");
-    if(weather) fillWeather();
+    // Phase 2 -- hub routes fill in when they arrive; any past the cap are dropped silently
+    const hubResults = (await Promise.allSettled(hubJobs)).flatMap(r=>r.status==="fulfilled"?r.value:[]);
+    renderSmart(base, wide.concat(hubResults), baseline, false);
   }catch(e){
     $("jrnOut").innerHTML=`<div class="err">Couldn&#39;t plan that journey.<br>Check the station names and try again.</div>`;
   }finally{ smartBusy=false; }
+}
+
+// score + pin + paint a candidate set; called twice (fast base-only, then full sweep)
+function renderSmart(base, swept, baseline, searching){
+  const seen=new Set(), all=[];
+  base.concat(swept).forEach(c=>{ const s=connSig(c); if(!seen.has(s)){ seen.add(s); all.push(annotate(c)); } });
+  if(!all.length){
+    // an empty base can still be rescued by the incoming hub sweep -- don't paint the dead-end while still searching
+    if(!searching) $("jrnOut").innerHTML=`<div class="empty"><div class="big">&#9940;</div>No connections found.<br>Check the station names.</div>`;
+    return;
+  }
+
+  const now=Date.now();
+  const baseArr = baseline ? baseline._arr : Infinity;
+  const baseBuf = baseline ? baseline._buf : null;
+  const baseSig = baseline ? connSig(baseline) : "";
+  all.forEach(c=>{
+    c._isBase = connSig(c)===baseSig;
+    c._scenic = (c.sections||[]).some(s=>s.journey && isScenic(s.journey.category));
+    c._earlier = c._arr < baseArr;
+    c._safer   = !c._isBase && !c._tight && baseline!=null &&
+                 (baseline._tight || (baseBuf!=null && c._buf!=null && c._buf>=baseBuf+3)) &&
+                 c._arr <= baseArr + SAFER_LATER*60000;   // roomier, within the slower-tolerance window (F4)
+    c._beats = c._earlier || c._safer;
+    // F3: a genuine "smart pick" (green) must NOT be tight; an earlier-but-tight
+    // option is an honest tradeoff, never crowned as safe and never hides its warning
+    c._safePick   = c._beats && !c._tight;
+    c._fasterTight = c._beats && c._tight;
+    c._why = c._safer && c._earlier ? "earlier & roomier"
+           : c._safer ? "roomier change"
+           : "arrives earlier";
+  });
+
+  let cand = all.filter(c=> c._dep > now-60000 || c._isBase);
+  const fastest = Math.min(...cand.map(c=>c._arr));
+  // scenic routes are exempt from the detour cull when "prefer scenic" is on (slower IS the point)
+  cand = cand.filter(c=> c._isBase || (preferScenic && c._scenic) || c._arr <= fastest + WINDOW_MIN*60000);
+  cand.sort((a,b)=> (preferScenic ? ((b._scenic?1:0)-(a._scenic?1:0)) : 0) || (b._safePick-a._safePick) || (b._beats-a._beats) || (a._arr-b._arr) || ((b._buf??-1)-(a._buf??-1)) || (a._chg.length-b._chg.length));
+  // display-safety: prefer-scenic floats scenics to the top, so with >=7 scenic
+  // options a plain slice(0,7) could hide the SBB default / absolute-fastest off the
+  // visible list -- the exact "hidden default" sin this app exists to fix. Pin them in.
+  const pin = new Set(cand.filter(c=> c._isBase || c._arr===fastest));
+  const top = [...pin, ...cand.filter(c=>!pin.has(c))].slice(0,7).sort((a,b)=>
+    (preferScenic ? ((b._scenic?1:0)-(a._scenic?1:0)) : 0) || (b._safePick-a._safePick) || (b._beats-a._beats) || (a._arr-b._arr) || ((b._buf??-1)-(a._buf??-1)));
+  const nSafe = top.filter(c=>c._safePick).length;
+  const swN = new Set(swept.map(connSig)).size;
+
+  $("jrnOut").innerHTML = smartHead(baseline, nSafe, swN)
+    + (searching?`<div class="shint">&#8987; searching wider routes&#8230;</div>`:"")
+    + top.map((c,i)=>connCard(c,i)).join("");
+  if(weather) fillWeather();
 }
 
 function smartHead(baseline, nSafe, swN){
