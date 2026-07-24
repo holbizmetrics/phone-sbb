@@ -1,0 +1,35 @@
+name: CI — build test
+
+# Tier-1 "don't ship a white-screen" gate. Runs on every push and PR.
+# It does NOT change how Pages deploys (that's the separate Tier-2 step) —
+# it reports pass/fail so a broken change shows red.
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Syntax-check the inline script (catches white-screen typos)
+        run: node tests/syntax-check.mjs
+
+      - name: Install Playwright (Chromium)
+        run: |
+          npm init -y >/dev/null
+          npm install --no-save playwright@^1.47.0
+          npx playwright install --with-deps chromium
+
+      - name: Smoke test (headless render + no console errors)
+        run: node tests/smoke.mjs
