@@ -113,6 +113,12 @@
   .conn .tt{font-size:22px; font-weight:800; letter-spacing:-.02em}
   .conn .arr{color:var(--faint); font-size:16px}
   .conn .wx{font-size:14px; font-weight:700; color:var(--dim); white-space:nowrap; display:inline-flex; align-items:center; gap:3px}
+  .conn .wx.tappable{cursor:pointer; border-bottom:1px dotted var(--faint); padding-bottom:1px}
+  .conn .wx.tappable:active{opacity:.6}
+  .wxpop{position:absolute; z-index:60; max-width:min(320px,calc(100vw - 16px));
+    background:var(--card2); border:1px solid var(--line); border-radius:12px;
+    box-shadow:var(--shadow); padding:10px 13px; font-size:13px; color:var(--txt);
+    line-height:1.45; animation:pop .14s ease}
   .conn .dur{margin-left:auto; text-align:right}
   .conn .dur b{font-size:16px; font-weight:700}
   .conn .dur span{display:block; font-size:11px; color:var(--faint)}
@@ -553,10 +559,23 @@ function wxEmoji(c){
   if(c>=95)            return E(0x26C8);   // thunderstorm
   return E(0x2601);
 }
+/* plain-language description for the same WMO codes the emoji map uses --
+   the emoji says the mood, this says the fact. Only surfaced on tap. */
+function wxText(c){
+  const M={0:"Clear sky",1:"Mainly clear",2:"Partly cloudy",3:"Overcast",45:"Fog",48:"Depositing rime fog",
+    51:"Light drizzle",53:"Drizzle",55:"Dense drizzle",56:"Freezing drizzle",57:"Freezing drizzle",
+    61:"Light rain",63:"Rain",65:"Heavy rain",66:"Freezing rain",67:"Freezing rain",
+    71:"Light snow",73:"Snow",75:"Heavy snow",77:"Snow grains",
+    80:"Light showers",81:"Showers",82:"Violent showers",85:"Snow showers",86:"Snow showers",
+    95:"Thunderstorm",96:"Thunderstorm with hail",99:"Thunderstorm with hail"};
+  return M[c] || "";
+}
 const wxCache={};   // one forecast fetch per destination coord, reused across cards
 function destWeather(lat,lon){
   const k=lat+","+lon;
-  if(!wxCache[k]) wxCache[k]=fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,weather_code&forecast_days=2&timezone=auto`)
+  // widened hourly set: the extra fields cost nothing (same single request) and
+  // are what the tap-to-detail overlay reads.
+  if(!wxCache[k]) wxCache[k]=fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,weather_code,apparent_temperature,precipitation_probability,wind_speed_10m&forecast_days=2&timezone=auto`)
     .then(r=>r.json()).then(d=>d.hourly).catch(()=>null);
   return wxCache[k];
 }
@@ -565,7 +584,23 @@ function wxAt(hourly, arrIso){
   const key=arrIso.slice(0,13);   // yyyy-mm-ddTHH — Open-Meteo times are local (timezone=auto)
   const i=hourly.time.findIndex(t=>t.slice(0,13)===key);
   if(i<0) return null;
-  return {emoji:wxEmoji(hourly.weather_code[i]), temp:Math.round(hourly.temperature_2m[i])};
+  const at=a=>Array.isArray(a)&&a[i]!=null?a[i]:null;   // every extra field is optional
+  const code=hourly.weather_code[i];
+  return {
+    emoji:wxEmoji(code), temp:Math.round(hourly.temperature_2m[i]), desc:wxText(code),
+    feels:at(hourly.apparent_temperature)!=null?Math.round(at(hourly.apparent_temperature)):null,
+    rain:at(hourly.precipitation_probability),
+    wind:at(hourly.wind_speed_10m)!=null?Math.round(at(hourly.wind_speed_10m)):null,
+    hour:hourly.time[i].slice(11,16),
+  };
+}
+function wxDetailText(w){
+  const parts=[];
+  if(w.desc) parts.push(w.desc);
+  parts.push(`${w.temp}°` + (w.feels!=null && w.feels!==w.temp ? ` (feels ${w.feels}°)` : ""));
+  if(w.rain!=null) parts.push(`${w.rain}% rain`);
+  if(w.wind!=null) parts.push(`${w.wind} km/h wind`);
+  return parts.join(" · ") + (w.hour?` · at ${w.hour}`:"");
 }
 async function fillWeather(){
   const els=[...document.querySelectorAll(".wx[data-t]")];
@@ -575,9 +610,44 @@ async function fillWeather(){
   for(const k in byCoord){
     const [lat,lon]=k.split(",");
     const hourly=await destWeather(lat,lon);
-    byCoord[k].forEach(e=>{ const w=wxAt(hourly, e.dataset.t); if(w) e.innerHTML=`${w.emoji} ${w.temp}&#176;`; });
+    byCoord[k].forEach(e=>{
+      const w=wxAt(hourly, e.dataset.t);
+      if(!w) return;
+      e.innerHTML=`${w.emoji} ${w.temp}&#176;`;
+      e.dataset.detail=wxDetailText(w);   // tap reads this; no refetch
+      e.classList.add("tappable");
+      e.setAttribute("role","button"); e.setAttribute("tabindex","0");
+      e.setAttribute("aria-label",`Weather: ${wxDetailText(w)}`);
+    });
   }
 }
+/* tap a weather chip -> a small dismissable bubble. Delegated, so it survives
+   every re-render; tap-away / Esc closes. Nothing fetches on tap. */
+function wxClosePop(){ const p=$("wxPop"); if(p) p.remove(); }
+function wxShowPop(el){
+  wxClosePop();
+  const txt=el.dataset.detail; if(!txt) return;
+  const pop=document.createElement("div");
+  pop.id="wxPop"; pop.className="wxpop"; pop.setAttribute("role","status"); pop.textContent=txt;
+  document.body.appendChild(pop);
+  const r=el.getBoundingClientRect(), pr=pop.getBoundingClientRect();
+  const left=Math.min(Math.max(8, r.left+r.width/2-pr.width/2), innerWidth-pr.width-8);
+  const above=r.top>pr.height+12;
+  pop.style.left=left+"px";
+  pop.style.top=(above ? r.top-pr.height-8 : r.bottom+8)+scrollY+"px";
+}
+document.addEventListener("click",e=>{
+  const chip=e.target.closest(".wx.tappable");
+  if(chip){ e.stopPropagation(); (($("wxPop")&&chip===wxShowPop.last)?wxClosePop():(wxShowPop(chip), wxShowPop.last=chip)); return; }
+  wxClosePop();
+});
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape") wxClosePop();
+  if((e.key==="Enter"||e.key===" ")&&e.target.classList&&e.target.classList.contains("tappable")){
+    e.preventDefault(); wxShowPop(e.target); wxShowPop.last=e.target;
+  }
+});
+addEventListener("scroll",wxClosePop,{passive:true});
 
 /* ---------- Natural Wonders (OSM/Overpass, on-demand; Wikipedia enrichment) ----------
    No 4th toggle: a calm tap-to-expand under the journey results. One Overpass call
