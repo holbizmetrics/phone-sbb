@@ -279,6 +279,8 @@
   .smart-toggle input:checked + .track{background:linear-gradient(145deg,var(--red),#a30000); border-color:transparent}
   .smart-toggle input:checked + .track .knob{left:20px; background:#fff}
   .smart-toggle .lbl{font-weight:700; font-size:14px}
+  .tznote{font-size:11px; color:var(--amber); background:rgba(245,158,11,.10);
+    border:1px solid rgba(245,158,11,.28); border-radius:10px; padding:7px 11px; margin-bottom:10px}
   .smart-hint{font-size:11px; color:var(--faint)}
 
   /* ---- when-to-travel (now / leave at / arrive by) ---- */
@@ -408,6 +410,7 @@
     </div>
   </div>
 
+  <div id="tzNote"></div>
   <div class="tabs">
     <button id="tabDep" class="on" onclick="setTab('dep')">Departures</button>
     <button id="tabJrn" onclick="setTab('jrn')">Journey</button>
@@ -491,7 +494,34 @@ function save(k,v){ localStorage.setItem(k, JSON.stringify(v)); }
 function esc(s){ return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 // 24-hour, always: a Swiss departure board reads 22:27, never 10:27 PM. h23 (not
 // hour12:false) so midnight is 00:00 rather than 24:00.
-function hhmm(iso){ const d=new Date(iso); return d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",hourCycle:"h23"}); }
+/* Times must ALWAYS read as Swiss local -- the same numbers on the platform
+   board -- no matter what zone the phone is on. new Date(iso).toLocaleTimeString()
+   re-renders in the DEVICE zone, so a 00:02 departure showed as 23:02 on a UK
+   phone, 18:02 on New York, 07:02 on Tokyo. The one-hour cases are the dangerous
+   ones: they look entirely plausible, so nobody questions them and they miss the
+   train. The API already states Swiss local time in the string, so read it from
+   there instead of converting. (Countdowns are untouched: minsUntil compares
+   absolute instants, which is correct in any zone.) */
+const ISO_LOCAL=/^\d{4}-\d{2}-\d{2}T(\d{2}:\d{2})/;
+function hhmm(iso){
+  const m=ISO_LOCAL.exec(iso||"");
+  if(m) return m[1];
+  const d=new Date(iso);
+  return isNaN(d) ? "" : d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",hourCycle:"h23"});
+}
+/* If the phone is on another zone, say so once -- otherwise the header clock
+   (device time) and every departure (Swiss time) disagree with no explanation. */
+function swissOffsetMinutes(){ return -new Date().getTimezoneOffset(); }
+function tzNoteHTML(){
+  try{
+    const here=Intl.DateTimeFormat().resolvedOptions().timeZone||"";
+    if(here==="Europe/Zurich") return "";
+    const swiss=new Date().toLocaleString("en-GB",{timeZone:"Europe/Zurich",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).slice(-5);
+    const local=new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",hourCycle:"h23"});
+    if(swiss===local) return "";                      // same wall clock, no need to nag
+    return `<div class="tznote">All times are Swiss local (${swiss} now) &#183; your device shows ${local}</div>`;
+  }catch(e){ return ""; }
+}
 function minsUntil(iso){ return Math.round((new Date(iso)-Date.now())/60000); }
 /* The countdown slot, ONE definition -- depRow renders it and patchRow rewrites
    it every 30s, and two copies of this formula would drift apart. Past an hour
