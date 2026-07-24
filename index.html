@@ -21,6 +21,38 @@
     --radius:18px; --shadow:0 8px 30px rgba(0,0,0,.45);
     --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
   }
+  /* Light theme: respect the OS/browser preference automatically -- no toggle,
+     no extra UI. Dark stays the default; this only fires when the user has
+     already chosen light at system level. Outdoor readability in bright sun,
+     and light-on-dark is genuinely harder to read with astigmatism. */
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#f6f6f8; --bg2:#ececf0; --card:#ffffff; --card2:#f2f2f6;
+      --line:#d9d9e0; --txt:#16161a; --dim:#5c5c68; --faint:#8a8a96;
+      --shadow:0 6px 20px rgba(20,20,30,.10);
+    }
+    body{
+      background:
+        radial-gradient(1200px 600px at 50% -10%, #efe6f4 0%, transparent 55%),
+        radial-gradient(900px 500px at 100% 0%, #e4edf6 0%, transparent 50%),
+        var(--bg);
+    }
+    .tabs button.on{background:linear-gradient(145deg,#ffffff,#eeeef3); color:#16161a}
+    .tog .track, .smart-toggle .track{background:#d5d5de}
+    .tog .knob, .smart-toggle .knob{background:#ffffff}
+    .plat{background:#ececf1}
+  }
+
+  /* Honour "reduce motion": the app is a utility, not a show. Users who asked
+     the OS for less animation get none -- the SBB app's refusal to make its
+     animations optional is a documented complaint; this is the opt-out, free. */
+  @media (prefers-reduced-motion: reduce){
+    *, *::before, *::after{
+      animation-duration:.001ms !important; animation-iteration-count:1 !important;
+      transition-duration:.001ms !important; scroll-behavior:auto !important;
+    }
+  }
+
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;height:100%}
   body{
@@ -212,7 +244,7 @@
     <div class="field" id="fDep">
       <span class="ico">&#9906;</span>
       <input class="stn" id="iDep" placeholder="Search a station&#8230;" autocomplete="off" autocapitalize="off" spellcheck="false">
-      <button class="clr" onclick="clearField('dep')">&#10005;</button>
+      <button class="clr" type="button" aria-label="Clear station" onclick="clearField('dep')">&#10005;</button>
       <div class="ac" id="acDep"></div>
     </div>
     <div class="favs" id="favs"></div>
@@ -224,14 +256,14 @@
     <div class="field" id="fFrom">
       <span class="ico">&#9679;</span>
       <input class="stn" id="iFrom" placeholder="From&#8230;" autocomplete="off" autocapitalize="off" spellcheck="false">
-      <button class="clr" onclick="clearField('from')">&#10005;</button>
+      <button class="clr" type="button" aria-label="Clear origin" onclick="clearField('from')">&#10005;</button>
       <div class="ac" id="acFrom"></div>
     </div>
-    <div class="swap"><button onclick="swap()" title="swap">&#8645;</button></div>
+    <div class="swap"><button type="button" onclick="swap()" title="swap" aria-label="Swap origin and destination">&#8645;</button></div>
     <div class="field" id="fTo">
       <span class="ico">&#9873;</span>
       <input class="stn" id="iTo" placeholder="To&#8230;" autocomplete="off" autocapitalize="off" spellcheck="false">
-      <button class="clr" onclick="clearField('to')">&#10005;</button>
+      <button class="clr" type="button" aria-label="Clear destination" onclick="clearField('to')">&#10005;</button>
       <div class="ac" id="acTo"></div>
     </div>
     <div class="smartbar">
@@ -421,8 +453,8 @@ function boardHeadHTML(name){
   const on=favs.includes(name);
   return `<div class="boardhead">
     <h2>${esc(name)}</h2>
-    <button class="rf" id="rf" title="refresh">&#8635;</button>
-    <button class="star ${on?"on":""}" id="fav" title="favourite">${on?"&#9733;":"&#9734;"}</button>
+    <button class="rf" id="rf" type="button" title="refresh" aria-label="Refresh departures">&#8635;</button>
+    <button class="star ${on?"on":""}" id="fav" type="button" title="favourite" aria-pressed="${on}" aria-label="${on?"Remove from favourites":"Add to favourites"}">${on?"&#9733;":"&#9734;"}</button>
   </div>`;
 }
 function renderBoardHead(){ /* placeholder kept for flow */ }
