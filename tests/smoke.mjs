@@ -104,6 +104,25 @@ if (stubbed === 'ok') {
   check(cx.includes('7') && cx.includes('5'), `change shows the platform switch (${cx.trim()})`);
 }
 
+// Help sheet: the logo opens it, and it must be closable three ways — a modal
+// you cannot dismiss on a phone is worse than no modal.
+check(!(await page.locator('#help').evaluate((n) => n.classList.contains('on'))), 'help starts closed');
+await page.locator('#helpBtn').click();
+check(await page.locator('#help').evaluate((n) => n.classList.contains('on')), 'logo opens help');
+check((await page.locator('#helpBtn').getAttribute('aria-expanded')) === 'true', 'help button reports expanded');
+const helpTxt = (await page.locator('#help').textContent()) || '';
+check(helpTxt.includes('platform'), 'help explains the platform display');
+check(helpTxt.includes('not GPS'), 'help is honest that the dot is scheduled, not GPS');
+await page.keyboard.press('Escape');
+check(!(await page.locator('#help').evaluate((n) => n.classList.contains('on'))), 'Escape closes help');
+await page.locator('#helpBtn').click();
+await page.locator('#help .hclose').click();
+check(!(await page.locator('#help').evaluate((n) => n.classList.contains('on'))), 'close button closes help');
+await page.locator('#helpBtn').click();
+await page.locator('#help').click({ position: { x: 5, y: 5 } });   // the scrim, outside the sheet
+check(!(await page.locator('#help').evaluate((n) => n.classList.contains('on'))), 'tapping outside closes help');
+check((await page.evaluate(() => document.body.style.overflow)) === '', 'page scroll restored after close');
+
 check(problems.length === 0, `no console errors / uncaught exceptions (${problems.length})`);
 problems.forEach((p) => console.error('     ' + p));
 
