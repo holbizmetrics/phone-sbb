@@ -182,6 +182,10 @@
     stroke:var(--card); stroke-width:3.5px; stroke-linejoin:round;
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif}
   .sklbl.chg{fill:var(--dim); font-weight:600}
+  .skmaps{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px}
+  .skmaps a{font-size:12px; font-weight:600; color:var(--dim); text-decoration:none;
+    background:var(--chip); border:1px solid var(--line); border-radius:9px; padding:6px 10px}
+  .skmaps a:active{opacity:.6}
   .sk-unused{font-size:11px; font-weight:700;
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif}
   .conn .dur{margin-left:auto; text-align:right}
@@ -1168,11 +1172,29 @@ function sketchSVG(ci){
   });
   return out+`</svg>`;
 }
+/* The app solves the RAIL part and stops at a station -- but the real
+   destination is usually the trailhead / hotel / cable-car base beyond it.
+   These two links are that handoff, and they cost nothing: pure hrefs built
+   from coordinates already in the connection. By COORDINATE, never by name,
+   so they cannot land on a same-named place elsewhere. */
+function mapsLinks(ci){
+  const c=jrnConns[ci]; if(!c) return "";
+  const f=c.from?.station?.coordinate, t=c.to?.station?.coordinate;
+  if(!t) return "";
+  const dest=`${t.x},${t.y}`;
+  const pin=`https://www.google.com/maps/search/?api=1&query=${dest}`;
+  const drive=f?`https://www.google.com/maps/dir/?api=1&origin=${f.x},${f.y}&destination=${dest}&travelmode=driving`:"";
+  const name=esc(shortStop(c.to?.station?.name||"destination"));
+  return `<div class="skmaps">`
+    + `<a href="${pin}" target="_blank" rel="noopener">&#128205; ${name} in Maps</a>`
+    + (drive?`<a href="${drive}" target="_blank" rel="noopener">&#128663; by car instead</a>`:"")
+    + `</div>`;
+}
 function toggleSketch(btn,ci){
   const card=btn.closest(".conn"), panel=card.querySelector(".sketch");
   const open = panel.dataset.open==="1";
   panel.dataset.open = open?"":"1";
-  panel.innerHTML = open?"":sketchSVG(ci);
+  panel.innerHTML = open?"":(sketchSVG(ci)+mapsLinks(ci));
   btn.classList.toggle("on",!open);
   btn.setAttribute("aria-expanded", String(!open));
 }
