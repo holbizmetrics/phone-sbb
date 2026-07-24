@@ -409,8 +409,20 @@ let openDep = "";        // depKey of the expanded departure -- survives a rebui
 function load(k,d){ try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d} }
 function save(k,v){ localStorage.setItem(k, JSON.stringify(v)); }
 function esc(s){ return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
-function hhmm(iso){ const d=new Date(iso); return d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}); }
+// 24-hour, always: a Swiss departure board reads 22:27, never 10:27 PM. h23 (not
+// hour12:false) so midnight is 00:00 rather than 24:00.
+function hhmm(iso){ const d=new Date(iso); return d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",hourCycle:"h23"}); }
 function minsUntil(iso){ return Math.round((new Date(iso)-Date.now())/60000); }
+/* The countdown slot, ONE definition -- depRow renders it and patchRow rewrites
+   it every 30s, and two copies of this formula would drift apart. Past an hour
+   it stays relative: printing the clock time here just repeated the time already
+   shown beside it, which on a first-run-tomorrow board read as a duplicate. */
+function depLabel(m){
+  if(m<=0) return "now";
+  if(m<60) return m+"&#8242;";
+  if(m<1440) return Math.round(m/60)+"h";
+  return Math.round(m/1440)+"d";
+}
 function debounce(fn,ms){ let t; return (...a)=>{clearTimeout(t); t=setTimeout(()=>fn(...a),ms)}; }
 
 /* category -> colour (SBB-ish) */
@@ -517,7 +529,7 @@ function depRow(j,i){
   const late = prog && dep && (new Date(prog)-new Date(dep))>=60000;
   const eff = prog || dep;
   const m=minsUntil(eff);
-  const mlabel = m<=0 ? "now" : m<60 ? m+"&#8242;" : hhmm(eff);
+  const mlabel = depLabel(m);
   const pl = j.stop?.platform;
   const plChanged = j.stop?.prognosis?.platform && j.stop.prognosis.platform!==pl;
   const effPl = j.stop?.prognosis?.platform || pl;
@@ -638,7 +650,7 @@ function patchRow(row, j){
   const pl=j.stop?.platform, plChanged=j.stop?.prognosis?.platform && j.stop.prognosis.platform!==pl;
   const effPl=j.stop?.prognosis?.platform||pl;
   const min=row.querySelector(".min");
-  if(min){ min.dataset.t=eff; min.innerHTML = m<=0?"now":m<60?m+"&#8242;":hhmm(eff); min.classList.toggle("now", m<=2); }
+  if(min){ min.dataset.t=eff; min.innerHTML = depLabel(m); min.classList.toggle("now", m<=2); }
   const at=row.querySelector(".at");
   if(at) at.innerHTML = `${hhmm(dep)}${late?` <span class="late">+${Math.round((new Date(prog)-new Date(dep))/60000)}</span>`:""}`;
   const via=row.querySelector(".via");
@@ -1414,7 +1426,7 @@ function cycleTheme(){
 }
 function tickClock(){
   const d=new Date();
-  $("clk").textContent=d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+  $("clk").textContent=d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",hourCycle:"h23"});
   $("clkd").textContent=d.toLocaleDateString([], {weekday:"short",day:"numeric",month:"short"});
 }
 
