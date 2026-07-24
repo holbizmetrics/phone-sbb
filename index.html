@@ -580,6 +580,7 @@ function wireAC(inpId, acId, fieldId, onPick){
       if(!s.length){ ac.classList.remove("show"); return; }
       ac.innerHTML = s.slice(0,7).map(x=>
         `<div data-n="${esc(x.name)}"><span>&#9906;</span><span>${esc(x.name)}</span></div>`).join("");
+      ac.dataset.q=q;                  // which query these rows answer -- acEnter checks it
       ac.classList.add("show");
       [...ac.children].forEach(el=>el.onclick=()=>{
         inp.value=el.dataset.n; ac.classList.remove("show");
@@ -1752,8 +1753,16 @@ function acEnter(inpId, acId, onPick){
     }
     if(e.key!=="Enter") return;
     e.preventDefault();
-    const sel=rows.find(r=>r.classList.contains("sel")) || (open?rows[0]:null);
-    const name=sel? sel.dataset.n : inp.value.trim();
+    const typed=inp.value.trim();
+    /* The dropdown is debounced 300ms behind the keyboard, so a fast typist who
+       finishes "Zurich HB" and hits Enter can still be looking at rows fetched
+       for "Zur" -- silently taking row 0 would have sent them to Zurich
+       Altstetten. Only trust the top row when it actually answers what is in
+       the box; otherwise search the literal text, which the API resolves fine.
+       An arrow-selected row is always honoured: that was a deliberate choice. */
+    const fresh = ac.dataset.q === typed;
+    const sel=rows.find(r=>r.classList.contains("sel")) || (open&&fresh?rows[0]:null);
+    const name=sel? sel.dataset.n : typed;
     if(!name) return;
     inp.value=name; ac.classList.remove("show"); inp.blur();
     onPick(name);
