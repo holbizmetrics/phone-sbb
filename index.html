@@ -349,6 +349,9 @@
     animation:sh 1.2s linear infinite}
   .empty{text-align:center; color:var(--faint); padding:60px 20px}
   .empty .big{font-size:40px; margin-bottom:10px; opacity:.5}
+  .emptywhy{margin-top:14px; font-size:13px; color:var(--dim); line-height:1.5}
+  .linkish{background:none; border:0; padding:0; font:inherit; font-weight:700;
+    color:var(--blue); text-decoration:underline; cursor:pointer}
   .err{background:rgba(235,0,0,.1); border:1px solid rgba(235,0,0,.3); color:#ffb3b3;
     padding:14px; border-radius:14px; text-align:center; font-size:14px}
   .hint{color:var(--faint); font-size:13px; text-align:center; padding:8px}
@@ -398,6 +401,8 @@
       <div class="hrow"><span class="k">Tap a leg</span><span class="v">(the coloured badge) for the stops in between.</span></div>
       <div class="hrow"><span class="k">&#128506; map</span><span class="v">sketches the whole route, with a pulsing dot for where the train is now.</span></div>
       <div class="hrow"><span class="k">&#9968;</span><span class="v">under the sketch: the same journey seen from the side, so a valley run and a mountain climb are one glance apart. It is the ground height at each stop joined by straight lines &#8212; terrain, not railway data, and nothing about the track&#8217;s own gradient. Routes with too few stops to say anything get no strip at all.</span></div>
+
+      <div class="hrow"><span class="k">&#128674; Boat</span><span class="v">the mode chips under the time row. Tap one and only journeys using it are shown &#8212; a Luzern&#8211;R&#252;tli search turns from a bus-and-train slog into the direct lake steamer. They stay set until you tap &#10005;&#8201;all modes, so if a search comes back empty it will tell you the filter is why.</span></div>
 
       <h3>The two switches</h3>
       <div class="hrow"><span class="k">Smart</span><span class="v">sweeps the hubs for connections the default search misses, and flags changes too tight to trust.</span></div>
@@ -934,6 +939,18 @@ function renderModes(){
     + (modeSel.length?`<button class="chip mode clear" type="button" onclick="clearModes()">&#10005; all modes</button>`:"");
 }
 function clearModes(){ modeSel=[]; save(LS.modes,modeSel); renderModes(); if(fromName&&toName) planJourney(); }
+/* The selection is remembered across sessions, so a boat filter set once for a
+   lake trip is still on next week when you are trying to get to work -- and a
+   bare "no connections found" would send you hunting for a typo in a station
+   name that is perfectly correct. Say which filter is doing it, and let the
+   sentence itself be the way out. */
+function modeWhyEmpty(){
+  if(!modeSel.length) return "";
+  const names=MODES.filter(m=>modeSel.includes(m.k)).map(m=>m.label.toLowerCase());
+  const list=names.length>1 ? names.slice(0,-1).join(", ")+" or "+names[names.length-1] : names[0];
+  return `<div class="emptywhy">You are only showing journeys by ${esc(list)}. `
+    + `<button type="button" class="linkish" onclick="clearModes()">Show every mode</button></div>`;
+}
 function planJourney(){ return smart ? smartPlan() : plainPlan(); }
 
 async function plainPlan(){
@@ -942,7 +959,7 @@ async function plainPlan(){
   try{
     const d=await api(`/connections?limit=6&from=${encodeURIComponent(fromName)}&to=${encodeURIComponent(toName)}${whenQS()}${modeQS()}`);
     const cs=d.connections||[];
-    if(!cs.length){ $("jrnOut").innerHTML=`<div class="empty"><div class="big">&#9940;</div>No connections found.</div>`; return; }
+    if(!cs.length){ $("jrnOut").innerHTML=`<div class="empty"><div class="big">&#9940;</div>No connections found.${modeWhyEmpty()}</div>`; return; }
     cs.forEach(annotate);
     jrnConns = cs;   // render order == the ci the leg buttons index back into
     $("jrnOut").innerHTML = cs.map((c,i)=>connCard(c,i)).join("") + wondersExpanderHTML(cs[0].to?.station);
@@ -1300,7 +1317,7 @@ function renderSmart(base, swept, baseline, searching){
   base.concat(swept).forEach(c=>{ const s=connSig(c); if(!seen.has(s)){ seen.add(s); all.push(annotate(c)); } });
   if(!all.length){
     // an empty base can still be rescued by the incoming hub sweep -- don't paint the dead-end while still searching
-    if(!searching) $("jrnOut").innerHTML=`<div class="empty"><div class="big">&#9940;</div>No connections found.<br>Check the station names.</div>`;
+    if(!searching) $("jrnOut").innerHTML=`<div class="empty"><div class="big">&#9940;</div>No connections found.<br>Check the station names.${modeWhyEmpty()}</div>`;
     return;
   }
 
@@ -1809,6 +1826,7 @@ wireAC("iTo","acTo","fTo",     n=>{ toName=n;   if(fromName) planJourney(); });
 $("iDep").addEventListener("keydown",e=>{ if(e.key==="Enter"){e.target.blur(); showDepartures(e.target.value.trim());}});
 
 renderFavs();
+renderModes();   // without this the chips never draw, so the filter is unreachable
 tickClock(); setInterval(tickClock,1000); setInterval(tickSketches,15000);
 const last=load(LS.last,"");
 if(last) showDepartures(last);
