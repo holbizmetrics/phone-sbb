@@ -238,6 +238,13 @@
   .elev-peaklbl{fill:var(--dim); font-size:10px; font-weight:700}
   .elev-sum{font-size:12px; color:var(--dim); margin-top:4px}
   .elev-sum b{color:var(--txt)}
+  .enroutebox:not(:empty){margin-top:12px; padding-top:10px; border-top:1px solid var(--line)}
+  .ertitle{font-size:12px; font-weight:800; color:var(--dim); margin-bottom:6px}
+  .ersearch{font-size:11px; color:var(--faint)}
+  .errow{display:flex; align-items:baseline; gap:8px; padding:3px 0; font-size:13px}
+  .errow .ern{font-weight:700; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .errow .ers{margin-left:auto; color:var(--faint); font-size:11px; white-space:nowrap}
+  .errow .erm{text-decoration:none; opacity:.75}
   .skmaps{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px}
   .skmaps a{font-size:12px; font-weight:600; color:var(--dim); text-decoration:none;
     background:var(--chip); border:1px solid var(--line); border-radius:9px; padding:6px 10px}
@@ -1504,12 +1511,94 @@ async function fillElevation(panel,ci){
   const box=panel.querySelector(".elevbox");
   if(box && panel.dataset.open==="1") box.innerHTML=elevationSVG(pts,elev);
 }
+/* ---------- en-route discovery ----------
+   Every rail app answers "how do I get from A to B". Nobody answers "I am
+   crossing the country -- where should I get OFF?". The passList already gives
+   every intermediate stop with coordinates AND times, so ONE Overpass BBOX query
+   over the whole corridor (not one per stop) finds what is worth breaking the
+   trip for, and each find is anchored to a real stop with a real time. That
+   anchoring is the point: an OSM peak might be a four-hour hike, but a wonder
+   600 m from a stop the train actually calls at is genuinely reachable. */
+const enrouteCache={};
+function overpassBBox(s,w,n,e){
+  const key=[s,w,n,e].map(v=>v.toFixed(3)).join(",");
+  if(enrouteCache[key]) return enrouteCache[key];
+  const box=`${s.toFixed(4)},${w.toFixed(4)},${n.toFixed(4)},${e.toFixed(4)}`;
+  const q=`[out:json][timeout:25];(`
+    +`node(${box})[tourism=viewpoint];`
+    +`node(${box})[natural~"^(cave_entrance|waterfall|peak|glacier)$"];`
+    +`way(${box})[waterway=waterfall];`
+    +`);out center 120;`;
+  const hosts=["https://overpass-api.de/api/interpreter","https://overpass.kumi.systems/api/interpreter"];
+  enrouteCache[key]=(async()=>{
+    for(const h of hosts){
+      try{
+        const r=await fetch(h,{method:"POST",body:"data="+encodeURIComponent(q)});
+        if(!r.ok) continue;
+        return (await r.json()).elements||[];
+      }catch(err){ /* next mirror */ }
+    }
+    return [];
+  })();
+  return enrouteCache[key];
+}
+const NEAR_KM=3.5;          // further than this is not "get off here"
+async function enrouteFind(ci){
+  const c=jrnConns[ci]; if(!c) return null;
+  const stops=[];
+  (c.sections||[]).filter(s=>s.journey).forEach((s,si)=>{
+    (legStops(ci,si)||[]).forEach(p=>{
+      const co=p.station?.coordinate;
+      if(co&&isFinite(+co.x)) stops.push({name:p.station.name, y:+co.x, x:+co.y, t:(p.arrival||p.departure||"").slice(11,16)});
+    });
+  });
+  if(stops.length<3) return null;
+  const mid=stops.slice(1,-1);                 // endpoints are not stop-off candidates
+  if(!mid.length) return null;
+  const pad=0.03;
+  const s=Math.min(...stops.map(p=>p.y))-pad, n=Math.max(...stops.map(p=>p.y))+pad;
+  const w=Math.min(...stops.map(p=>p.x))-pad, e=Math.max(...stops.map(p=>p.x))+pad;
+  const els=await overpassBBox(s,w,n,e);
+  const out=[];
+  for(const el of els){
+    const t=el.tags||{}; const name=t.name||t["name:de"]||t["name:fr"]||t["name:it"];
+    if(!name) continue;
+    const la=el.lat ?? el.center?.lat, lo=el.lon ?? el.center?.lon;
+    if(la==null) continue;
+    let best=null;
+    for(const p of mid){
+      const dkm=haversine({x:lo,y:la},{x:p.x,y:p.y});
+      if(!best||dkm<best.d) best={d:dkm,p};
+    }
+    if(best && best.d<=NEAR_KM){
+      const kind=t.tourism==="viewpoint"?"viewpoint":(t.natural||"waterfall");
+      out.push({name, kind, km:best.d, stop:best.p});
+    }
+  }
+  const byStop=new Map();
+  out.sort((a,b)=>a.km-b.km).forEach(o=>{ if(!byStop.has(o.stop.name)) byStop.set(o.stop.name,o); });
+  return [...byStop.values()].sort((a,b)=>(a.stop.t||"").localeCompare(b.stop.t||"")).slice(0,6);
+}
+const KIND_ICON={viewpoint:"\u{1F304}",peak:"\u{1F3D4}",waterfall:"\u{1F30A}",cave_entrance:"\u{1F573}",glacier:"❄"};
+async function fillEnroute(panel,ci){
+  const box=panel.querySelector(".enroutebox"); if(!box) return;
+  box.innerHTML=`<div class="ersearch">looking for reasons to break the trip&#8230;</div>`;
+  let finds=null;
+  try{ finds=await enrouteFind(ci); }catch(e){ finds=null; }
+  if(panel.dataset.open!=="1") return;
+  if(!finds||!finds.length){ box.innerHTML=""; return; }        // fail-silent
+  box.innerHTML=`<div class="ertitle">&#9968; Worth stopping for, on the way</div>`
+    + finds.map(f=>`<div class="errow"><span class="erk">${KIND_ICON[f.kind]||"\u{1F304}"}</span>`
+        + `<span class="ern">${esc(f.name)}</span>`
+        + `<span class="ers">${esc(shortStop(f.stop.name))}${f.stop.t?` &#183; ${f.stop.t}`:""} &#183; ${f.km.toFixed(1)} km</span>`
+        + `<a class="erm" href="https://www.google.com/maps/search/?api=1&query=${f.stop.y},${f.stop.x}" target="_blank" rel="noopener" title="Open this stop in Maps">&#128205;</a></div>`).join("");
+}
 function toggleSketch(btn,ci){
   const card=btn.closest(".conn"), panel=card.querySelector(".sketch");
   const open = panel.dataset.open==="1";
   panel.dataset.open = open?"":"1";
-  panel.innerHTML = open?"":(sketchSVG(ci)+`<div class="elevbox"></div>`+mapsLinks(ci));
-  if(!open) fillElevation(panel,ci);
+  panel.innerHTML = open?"":(sketchSVG(ci)+`<div class="elevbox"></div>`+`<div class="enroutebox"></div>`+mapsLinks(ci));
+  if(!open){ fillElevation(panel,ci); fillEnroute(panel,ci); }
   btn.classList.toggle("on",!open);
   btn.setAttribute("aria-expanded", String(!open));
 }
