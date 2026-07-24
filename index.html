@@ -178,7 +178,11 @@
   .skbtn.on{background:var(--segon); color:var(--segontxt); border-color:transparent}
   .sketch:not(:empty){margin-top:12px; padding-top:12px; border-top:1px solid var(--line)}
   .sk{width:100%; height:auto; display:block; overflow:visible}
-  .sklbl{fill:var(--dim); font-size:11px; font-weight:700;
+  .sklbl{fill:var(--txt); font-size:11px; font-weight:700; paint-order:stroke;
+    stroke:var(--card); stroke-width:3.5px; stroke-linejoin:round;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif}
+  .sklbl.chg{fill:var(--dim); font-weight:600}
+  .sk-unused{font-size:11px; font-weight:700;
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif}
   .conn .dur{margin-left:auto; text-align:right}
   .conn .dur b{font-size:16px; font-weight:700}
@@ -1127,10 +1131,28 @@ function sketchSVG(ci){
          + `fill="${end?"#fff":l.col}" stroke="${l.col}" stroke-width="${end?2.2:0}"/>`;
     });
   });
-  const first=legs[0].pts[0], last=legs[legs.length-1].pts.slice(-1)[0];
-  const lbl=(p,t,anchor)=>`<text x="${Math.min(Math.max(px(p),4),W-4).toFixed(1)}" y="${(py(p)-9).toFixed(1)}" `
-    + `text-anchor="${anchor}" class="sklbl">${esc(t)}</text>`;
-  out+=lbl(first,first.name,"start")+lbl(last,last.name,"end");
+  // Label the MEANINGFUL vertices: origin, every change station, destination.
+  // Anonymous dots make a correct shape unreadable -- the changes are the story.
+  const marks=[{p:legs[0].pts[0], t:legs[0].pts[0].name}];
+  legs.forEach((l,i)=>{
+    const end=l.pts[l.pts.length-1];
+    const name=end.name.replace(/,\s*Bahnhof$/,"");        // "X, Bahnhof" -> "X"
+    if(!marks.some(m=>m.t===name)) marks.push({p:end, t:name, change:i<legs.length-1});
+  });
+  marks[0].t=marks[0].t.replace(/,\s*Bahnhof$/,"");
+  // place each label on the side with room, and anchor so it never runs off-frame
+  const placed=[];
+  marks.forEach(m=>{
+    const x=px(m.p), y=py(m.p);
+    const anchor = x < W*0.25 ? "start" : x > W*0.75 ? "end" : "middle";
+    const dx = anchor==="start" ? 6 : anchor==="end" ? -6 : 0;
+    // above unless that would clip the top, or another label already sits there
+    let dy = -10;
+    if(y < 16 || placed.some(q=>Math.abs(q.x-(x+dx))<70 && Math.abs(q.y-(y-10))<11)) dy = 16;
+    placed.push({x:x+dx, y:y+dy});
+    out+=`<text x="${(x+dx).toFixed(1)}" y="${(y+dy).toFixed(1)}" text-anchor="${anchor}" `
+       + `class="sklbl${m.change?" chg":""}">${esc(m.t)}</text>`;
+  });
   return out+`</svg>`;
 }
 function toggleSketch(btn,ci){
