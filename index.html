@@ -1108,6 +1108,14 @@ function routePoints(ci){
   });
   return legs.length?legs:null;
 }
+/* Station names can be very long ("DTC Dynamic Test Center AG, Vauffelin,
+   Route Principale 127"). The SVG is overflow:visible so an unshortened label
+   paints outside the card -- shorten first, then clamp by estimated width. */
+function shortStop(n){
+  let s=(n||"").replace(/,\s*(Bahnhof|Gare|Stazione|Bahnhof\/Gare)\s*$/i,"");
+  s=s.split(",")[0].trim();                       // keep the place, drop the address tail
+  return s.length>20 ? s.slice(0,19)+"…" : s;
+}
 function sketchSVG(ci){
   const legs=routePoints(ci);
   if(!legs) return `<div class="snone">No map data for this route.</div>`;
@@ -1136,15 +1144,20 @@ function sketchSVG(ci){
   const marks=[{p:legs[0].pts[0], t:legs[0].pts[0].name}];
   legs.forEach((l,i)=>{
     const end=l.pts[l.pts.length-1];
-    const name=end.name.replace(/,\s*Bahnhof$/,"");        // "X, Bahnhof" -> "X"
+    const name=shortStop(end.name);
     if(!marks.some(m=>m.t===name)) marks.push({p:end, t:name, change:i<legs.length-1});
   });
-  marks[0].t=marks[0].t.replace(/,\s*Bahnhof$/,"");
+  marks[0].t=shortStop(marks[0].t);
   // place each label on the side with room, and anchor so it never runs off-frame
   const placed=[];
   marks.forEach(m=>{
     const x=px(m.p), y=py(m.p);
-    const anchor = x < W*0.25 ? "start" : x > W*0.75 ? "end" : "middle";
+    const w=m.t.length*5.6;                        // ~6px/char at 11px bold
+    let anchor = x < W*0.28 ? "start" : x > W*0.72 ? "end" : "middle";
+    // a label must never leave the box: flip the anchor if this side has no room
+    if(anchor==="end"   && x-w < 2)   anchor="start";
+    if(anchor==="start" && x+w > W-2) anchor="end";
+    if(anchor==="middle"){ if(x-w/2 < 2) anchor="start"; else if(x+w/2 > W-2) anchor="end"; }
     const dx = anchor==="start" ? 6 : anchor==="end" ? -6 : 0;
     // above unless that would clip the top, or another label already sits there
     let dy = -10;
