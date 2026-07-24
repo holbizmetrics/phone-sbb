@@ -160,6 +160,8 @@
   .chip.mode{font-size:12px; padding:7px 11px; opacity:.62}
   .chip.mode.on{opacity:1; border-color:var(--blue); color:var(--txt)}
   .chip.mode.clear{opacity:.8; border-style:dashed}
+  .chip.route{font-weight:600}
+  .chip.route .ra{color:var(--faint); margin:0 2px}
 
   /* ---- board ---- */
   .boardhead{display:flex; align-items:baseline; gap:8px; margin:6px 2px 12px}
@@ -394,6 +396,7 @@
       <div class="hrow"><span class="k">Tap the destination</span><span class="v">to plan a journey there on that train, not a generic search from now.</span></div>
 
       <h3>Journey</h3>
+      <div class="hrow"><span class="k">A &#8594; B</span><span class="v">the chips above the two fields are routes you have searched before, newest first. Nothing to save &#8212; a search records itself. The two directions are kept apart, because the morning trip and the evening one are not the same trip.</span></div>
       <div class="hrow"><span class="k">&#8645;</span><span class="v">swaps the two stations.</span></div>
       <div class="hrow"><span class="k">Now</span><span class="v">&#183; Leave at &#183; Arrive by &#8212; Arrive by works backwards from when you must be there.</span></div>
       <div class="hrow"><span class="k">Pl.&#8201;7</span><span class="v">is the platform you leave from. Amber with &#9888; means it changed from the scheduled one.</span></div>
@@ -442,6 +445,7 @@
 
   <!-- JOURNEY -->
   <section id="vJrn" class="view">
+    <div class="favs" id="routeChips"></div>
     <div class="field" id="fFrom">
       <span class="ico">&#9679;</span>
       <input class="stn" id="iFrom" placeholder="From&#8230;" autocomplete="off" autocapitalize="off" spellcheck="false">
@@ -493,7 +497,7 @@
 <script>
 const API = "https://transport.opendata.ch/v1";
 const $ = id => document.getElementById(id);
-const LS = { favs:"rail.favs", last:"rail.last", modes:"rail.modes", theme:"rail.theme" };
+const LS = { favs:"rail.favs", last:"rail.last", modes:"rail.modes", routes:"rail.routes", theme:"rail.theme" };
 let favs = load(LS.favs, []);
 let current = "";        // current departures station
 let refreshTimer = null;
@@ -818,7 +822,7 @@ function toggleFav(name){
   if(i<0) favs.unshift(name); else favs.splice(i,1);
   favs=favs.slice(0,12); save(LS.favs,favs);
   applyTheme(load(LS.theme,"dark"));
-renderFavs(); renderModes(); const f=$("fav"); if(f){ const on=favs.includes(name); f.className="star "+(on?"on":""); f.innerHTML=on?"&#9733;":"&#9734;"; }
+renderFavs(); renderModes(); renderRoutes(); const f=$("fav"); if(f){ const on=favs.includes(name); f.className="star "+(on?"on":""); f.innerHTML=on?"&#9733;":"&#9734;"; }
 }
 function renderFavs(){
   const el=$("favs");
@@ -951,7 +955,36 @@ function modeWhyEmpty(){
   return `<div class="emptywhy">You are only showing journeys by ${esc(list)}. `
     + `<button type="button" class="linkish" onclick="clearModes()">Show every mode</button></div>`;
 }
-function planJourney(){ return smart ? smartPlan() : plainPlan(); }
+/* ---------- route history ----------
+   A commuter retypes the same two stations every day. The departures board has
+   remembered your last station since day one; the journey side forgot both
+   fields every time. Recorded automatically when a search actually runs -- no
+   "save route" button to remember -- most recent first, and DIRECTION-DISTINCT,
+   because the morning and the evening trip are not the same trip. Reuses the
+   favourites chip pattern from the departures board rather than inventing a new
+   control: same visual language, nothing new to learn. localStorage only. */
+let routeHist = load(LS.routes, []);
+function rememberRoute(from,to){
+  if(!from||!to||from===to) return;
+  routeHist = [{f:from,t:to}, ...routeHist.filter(r=>!(r.f===from&&r.t===to))].slice(0,6);
+  save(LS.routes, routeHist); renderRoutes();
+}
+function useRoute(i){
+  const r=routeHist[i]; if(!r) return;
+  fromName=r.f; toName=r.t;
+  $("iFrom").value=r.f; $("iTo").value=r.t;
+  $("fFrom").classList.add("has"); $("fTo").classList.add("has");
+  planJourney();
+}
+function renderRoutes(){
+  const el=$("routeChips"); if(!el) return;
+  if(!routeHist.length){ el.innerHTML=""; return; }
+  el.innerHTML = routeHist.map((r,i)=>
+    `<button class="chip route" type="button" onclick="useRoute(${i})" `
+    + `title="${esc(r.f)} to ${esc(r.t)}">${esc(shortStop(r.f))} <span class="ra">&#8594;</span> ${esc(shortStop(r.t))}</button>`
+  ).join("");
+}
+function planJourney(){ rememberRoute(fromName,toName); return smart ? smartPlan() : plainPlan(); }
 
 async function plainPlan(){
   if(!fromName||!toName) return;
@@ -1825,8 +1858,12 @@ wireAC("iFrom","acFrom","fFrom", n=>{ fromName=n; if(toName) planJourney(); });
 wireAC("iTo","acTo","fTo",     n=>{ toName=n;   if(fromName) planJourney(); });
 $("iDep").addEventListener("keydown",e=>{ if(e.key==="Enter"){e.target.blur(); showDepartures(e.target.value.trim());}});
 
+/* Anything that draws remembered state has to be called HERE, on load. Twice now
+   a feature arrived wired only into toggleFav(), so its chips appeared solely as
+   a side effect of starring a station -- green CI, invisible app. */
 renderFavs();
-renderModes();   // without this the chips never draw, so the filter is unreachable
+renderModes();
+renderRoutes();
 tickClock(); setInterval(tickClock,1000); setInterval(tickSketches,15000);
 const last=load(LS.last,"");
 if(last) showDepartures(last);

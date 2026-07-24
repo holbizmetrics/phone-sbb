@@ -55,13 +55,7 @@ chk("two modes join with 'or'", w2.includes("train or cable car"), w2);
 chk("wording is tap-order independent",
   mk(["train", "cableway"]).modeWhyEmpty() === w2);
 
-// boot wiring: the chips must be drawn on load, or the whole filter is unreachable
-const bootTail = src.slice(src.lastIndexOf("renderFavs();"));
-chk("renderModes() runs at boot", /renderModes\(\)/.test(bootTail),
-  "chips never draw -> filter unreachable -> feature is invisible");
-
-// the control that proves the line above is load-bearing
-chk("control: boot block really is the boot block", bootTail.includes("tickClock()"), bootTail.slice(0, 80));
+// boot wiring for renderModes() is asserted in tests/boot-wiring.mjs
 
 // every mode key must be one the API knows; a typo here silently returns nothing
 const OK = new Set(["train", "ship", "cableway", "bus", "tram", "metro", "funicular"]);

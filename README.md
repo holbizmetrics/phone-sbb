@@ -143,8 +143,10 @@ Works identically on desktop and phone.
 
 ```bash
 node tests/syntax-check.mjs     # parses the inline script — runs anywhere
+node tests/boot-wiring.mjs      # remembered state is actually drawn on load
 node tests/keyboard.mjs         # Enter/arrow handling — runs anywhere, no browser
 node tests/mode-filter.mjs      # transport-mode filter — runs anywhere, no browser
+node tests/route-history.mjs    # route chips — runs anywhere, no browser
 node tests/smoke.mjs            # Playwright end-to-end — CI only
 ```
 
