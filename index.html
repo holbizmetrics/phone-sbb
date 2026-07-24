@@ -150,6 +150,8 @@
   .wmain .wemoji{font-size:16px}
   .wmain .wname{font-weight:700; font-size:15px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
   .wmain .wmeta{margin-left:auto; font-size:12px; color:var(--dim); white-space:nowrap; flex:0 0 auto}
+  .wmain .wpin{flex:0 0 auto; font-size:14px; text-decoration:none; opacity:.7; line-height:1}
+  .wmain .wpin:hover{opacity:1}
   .wrich:not(:empty){display:flex; gap:10px; margin-top:9px}
   .wrich .wthumb{width:56px; height:56px; object-fit:cover; border-radius:8px; flex:0 0 auto}
   .wrich .wtext{min-width:0; font-size:12px; color:var(--dim); line-height:1.45}
@@ -644,7 +646,7 @@ async function loadWonders(btn,lat,lon){
     const la=e.lat??e.center?.lat, lo=e.lon??e.center?.lon;
     if(la==null||lo==null) return;
     seen.add(name);
-    list.push({name, ty:wonderType(t), dist:haversineKm(+lat,+lon,la,lo), wikipedia:t.wikipedia, wikidata:t.wikidata});
+    list.push({name, ty:wonderType(t), dist:haversineKm(+lat,+lon,la,lo), lat:la, lon:lo, wikipedia:t.wikipedia, wikidata:t.wikidata});
   });
   list.sort((a,b)=>a.dist-b.dist);
   const top=list.slice(0,5);
@@ -653,9 +655,13 @@ async function loadWonders(btn,lat,lon){
   enrichWonders(top, body);   // Wikipedia layer fills in after
 }
 function wonderCard(w,i){
+  // coord-based Maps link (NOT name) so the pin lands on the exact wonder, never a same-named place elsewhere
+  const pin = (w.lat!=null&&w.lon!=null)
+    ? `<a class="wpin" href="https://www.google.com/maps/search/?api=1&query=${w.lat},${w.lon}" target="_blank" rel="noopener" title="Open in Maps">${CP(0x1F4CD)}</a>`
+    : "";
   return `<div class="wcard" data-i="${i}">
     <div class="wmain"><span class="wemoji">${w.ty.emoji}</span><span class="wname">${esc(w.name)}</span>`
-    +`<span class="wmeta">${w.ty.label?esc(w.ty.label)+" &#183; ":""}${w.dist.toFixed(1)} km</span></div>
+    +`<span class="wmeta">${w.ty.label?esc(w.ty.label)+" &#183; ":""}${w.dist.toFixed(1)} km</span>${pin}</div>
     <div class="wrich"></div>
   </div>`;
 }
@@ -675,16 +681,41 @@ function wikiSummary(title,lang){
   })();
   return wikiCache[key];
 }
+// normalize a title/name for matching: strip diacritics, parentheticals, leading articles, punctuation
+const wnorm=s=>(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+  .replace(/\s*\(.*?\)\s*/g," ").replace(/[^a-z0-9 ]/g," ")
+  .replace(/\b(le|la|les|l|der|die|das|il|lo|the|de|du)\b/g," ").replace(/\s+/g," ").trim();
+// geo-constrained title lookup: only accept an article NEAR the wonder's coord whose name matches,
+// so an untagged "Le Belvedere" near Sion can't grab Ravel's identically-named house in France
+async function wikiGeoTitle(lat,lon,name,lang){
+  try{
+    const u=`https://${lang}.wikipedia.org/w/api.php?action=query&list=geosearch`
+      +`&gscoord=${lat}%7C${lon}&gsradius=10000&gslimit=20&format=json&origin=*`;
+    const r=await fetch(u);
+    if(!r.ok) return null;
+    const d=await r.json();
+    const hits=(d&&d.query&&d.query.geosearch)||[];   // returned nearest-first
+    const want=wnorm(name);
+    if(want.length<3) return null;
+    for(const h of hits){
+      const t=wnorm(h.title);
+      if(t===want || t.startsWith(want+" ") || want.startsWith(t+" ")) return h.title;
+    }
+    return null;
+  }catch(e){ return null; }
+}
 async function wonderWiki(w){
   // clean path first: an explicit OSM wikipedia tag "lang:Title" -> fetch that exact article
   if(w.wikipedia){
     const i=w.wikipedia.indexOf(":");
     if(i>0){ const d=await wikiSummary(w.wikipedia.slice(i+1), w.wikipedia.slice(0,i)); if(d&&d.extract) return d; }
   }
-  // fallback: search the name with language fallback (Swiss POIs often stub in EN, full in local lang)
-  for(const lang of ["en","fr","de","it"]){
-    const d=await wikiSummary(w.name, lang);
-    if(d&&d.extract&&d.extract.length>=25) return d;
+  // fallback: geo-verify by name near the coord (Swiss local langs first). Never show a blurb we can't geo-confirm.
+  if(w.lat!=null&&w.lon!=null){
+    for(const lang of ["fr","de","it","en"]){
+      const title=await wikiGeoTitle(w.lat, w.lon, w.name, lang);
+      if(title){ const d=await wikiSummary(title, lang); if(d&&d.extract&&d.extract.length>=25) return d; }
+    }
   }
   return null;
 }
