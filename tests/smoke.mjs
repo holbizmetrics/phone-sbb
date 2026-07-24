@@ -161,6 +161,8 @@ const elev = await page.evaluate(() => { try {
   const pts = [{ x: 8.54, y: 47.38, name: 'A' }, { x: 8.0, y: 47.0, name: 'B' },
                { x: 7.8, y: 47.1, name: 'Peak' }, { x: 7.6, y: 47.2, name: 'C' }];
   return { svg: elevationSVG(pts, [400, 600, 1000, 800]),
+           // a journey OFF a summit descends; calling that "climbs" was misleading
+           down: elevationSVG(pts, [3800, 2500, 1200, 800]),
            guard: String(fillElevation).includes('pts.length<4'),
            helpHasElev: document.getElementById('help').textContent.includes('ground height at each stop') };
 } catch (e) { return { err: e.message }; } });
@@ -169,6 +171,8 @@ if (!elev.err) {
   // 400->600->1000 climbs 600; the 1000->800 descent must not cancel any of it
   check(elev.svg.includes('climbs <b>600 m</b>'), 'elevation sums only the climbs, not the descent');
   check(elev.svg.includes('straight between them'), 'elevation strip carries its provenance line');
+  check(elev.down.includes('descends <b>3000 m</b>'), 'a route that drops is reported as a descent, not a climb');
+  check(!elev.down.includes('climbs'), 'a pure descent is not also called a climb');
   check(elev.svg.includes('Peak'), 'high point is labelled by name');
   check(elev.guard, 'fillElevation refuses fewer than 4 samples');
   check(elev.helpHasElev, 'help sheet explains the elevation strip');
