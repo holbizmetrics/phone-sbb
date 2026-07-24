@@ -220,6 +220,11 @@
         <span class="track"><span class="knob"></span></span>
         <span class="lbl">Smart change-finder</span>
       </label>
+      <label class="smart-toggle" title="Keep panoramic routes (GoldenPass, Glacier &amp; co.) even when they're slower">
+        <input type="checkbox" id="scenicTog" onchange="onScenicToggle()">
+        <span class="track"><span class="knob"></span></span>
+        <span class="lbl">&#9968; Prefer scenic</span>
+      </label>
       <span class="smart-hint">sweeps hubs &amp; flags tight changes</span>
     </div>
     <div id="jrnOut"><div class="hint">Enter two stations to plan a journey.</div></div>
@@ -412,9 +417,18 @@ const TIGHT = 5;   // minutes: a change below this is a sprint
 const COMFY = 8;   // minutes: at/above this a change is relaxed
 const SAFER_LATER = 10;  // a roomier option up to this many min slower still counts as "safer"
 const WINDOW_MIN = 25;   // drop absurd detours arriving >this many min past the fastest
+// scenic-gateway hubs — swept only when "prefer scenic" is on, to fetch panoramic
+// change-routes the default search never returns: Zweisimmen (GoldenPass),
+// Andermatt/Brig (Glacier Express), Chur (Bernina Express)
+const SCENIC_HUBS = ["Zweisimmen","Andermatt","Chur","Brig"];
 
+let preferScenic = false;   // keep + float panoramic routes even when slower
 function onSmartToggle(){
   smart = $("smartTog").checked;
+  if(fromName&&toName) planJourney();
+}
+function onScenicToggle(){
+  preferScenic = $("scenicTog").checked;
   if(fromName&&toName) planJourney();
 }
 function planJourney(){ return smart ? smartPlan() : plainPlan(); }
@@ -479,6 +493,11 @@ async function smartPlan(){
       jobs.push(tryConns(`from=${f}&to=${t}&via[]=${encodeURIComponent(h)}&limit=3`)
         .then(cs=>cs.map(c=>{c._via=h; return c;})));
     });
+    if(preferScenic) SCENIC_HUBS.forEach(h=>{
+      if(h===fromName||h===toName) return;
+      jobs.push(tryConns(`from=${f}&to=${t}&via[]=${encodeURIComponent(h)}&limit=3`)
+        .then(cs=>cs.map(c=>{c._via=h; return c;})));
+    });
     const swept = (await Promise.all(jobs)).flat();
 
     const seen=new Set(), all=[];
@@ -491,6 +510,7 @@ async function smartPlan(){
     const baseSig = baseline ? connSig(baseline) : "";
     all.forEach(c=>{
       c._isBase = connSig(c)===baseSig;
+      c._scenic = (c.sections||[]).some(s=>s.journey && isScenic(s.journey.category));
       c._earlier = c._arr < baseArr;
       c._safer   = !c._isBase && !c._tight && baseline!=null &&
                    (baseline._tight || (baseBuf!=null && c._buf!=null && c._buf>=baseBuf+3)) &&
@@ -507,8 +527,9 @@ async function smartPlan(){
 
     let cand = all.filter(c=> c._dep > now-60000 || c._isBase);
     const fastest = Math.min(...cand.map(c=>c._arr));
-    cand = cand.filter(c=> c._isBase || c._arr <= fastest + WINDOW_MIN*60000);   // drop absurd detours
-    cand.sort((a,b)=> (b._safePick-a._safePick) || (b._beats-a._beats) || (a._arr-b._arr) || ((b._buf??-1)-(a._buf??-1)) || (a._chg.length-b._chg.length));
+    // scenic routes are exempt from the detour cull when "prefer scenic" is on (slower IS the point)
+    cand = cand.filter(c=> c._isBase || (preferScenic && c._scenic) || c._arr <= fastest + WINDOW_MIN*60000);
+    cand.sort((a,b)=> (preferScenic ? ((b._scenic?1:0)-(a._scenic?1:0)) : 0) || (b._safePick-a._safePick) || (b._beats-a._beats) || (a._arr-b._arr) || ((b._buf??-1)-(a._buf??-1)) || (a._chg.length-b._chg.length));
     const top = cand.slice(0,7);
     const nSafe = top.filter(c=>c._safePick).length;
     const swN = new Set(swept.map(connSig)).size;
