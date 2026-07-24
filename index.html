@@ -151,6 +151,7 @@
   .rib.pick{background:rgba(34,197,94,.16); color:#7be6a3}
   .rib.base{background:#26262f; color:var(--dim)}
   .rib.tight{background:rgba(245,158,11,.16); color:var(--amber)}
+  .rib.scenic{background:rgba(192,38,211,.16); color:#e9a3f2}
   .viatag{font-size:11px; color:var(--violet); font-weight:700}
 
   /* ---- states ---- */
@@ -254,7 +255,10 @@ function catColor(cat){
   if(/^(B|BUS|NB)/.test(c))            return "var(--grn)";
   return "var(--violet)";
 }
-function badge(cat,num){ const l=((cat||"")+(num?" "+num:"")).trim()||"&#183;"; return {label:l, col:catColor(cat)}; }
+/* scenic / panoramic trains the default SBB view buries: GoldenPass (PE30, PEGPX),
+   Centovalli (PE72), Glacier Express (GEX), Bernina Express (BEX), Voralpen (VAE) */
+function isScenic(cat){ return /^(PE|GPX|GEX|BEX|VAE)/.test((cat||"").toUpperCase()); }
+function badge(cat,num){ const sc=isScenic(cat); const l=((sc?"&#9968; ":"")+(cat||"")+(num?" "+num:"")).trim()||"&#183;"; return {label:l, col:catColor(cat), scenic:sc}; }
 
 /* ---------- API ---------- */
 async function api(path){
@@ -540,7 +544,9 @@ function connCard(c,i){
     const cls = x.b<TIGHT?"tight":x.b<COMFY?"warn":"";
     return `<span class="cx ${cls}">${esc(x.stn)} <b>${x.b}&#8242;</b></span>`;
   }).join("")+`</div>` : "";
+  const scenic = secs.some(s=>isScenic(s.journey.category));
   let ribs="";
+  if(scenic) ribs+=`<span class="rib scenic">&#9968; scenic &#183; panoramic route</span>`;
   if(c._safePick) ribs+=`<span class="rib pick">&#9889; smart pick${c._why?" &#183; "+c._why:""}</span>`;
   else if(c._fasterTight) ribs+=`<span class="rib tight">&#9889; faster &#183; tight ${c._buf}&#8242; change</span>`;
   else if(c._isBase) ribs+=`<span class="rib base">SBB default</span>`;
