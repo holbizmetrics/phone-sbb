@@ -158,6 +158,12 @@
   .dep .at{font-size:12px; color:var(--dim); font-variant-numeric:tabular-nums}
   .dep .at .late{color:var(--redsoft); font-weight:700}
   .plat{display:inline-block; margin-top:3px; font-size:11px; color:var(--dim); background:var(--chip); padding:2px 7px; border-radius:6px}
+  .pfrow{display:flex; gap:9px; align-items:baseline; flex-wrap:wrap; margin-top:9px}
+  .pf{font-size:14px; font-weight:700; color:var(--txt); background:var(--chip);
+    padding:3px 10px; border-radius:8px; font-variant-numeric:tabular-nums}
+  .pf.chg{color:var(--amber)}
+  .pfa{font-size:11px; color:var(--dim)}
+  .cxpf{color:var(--dim); font-weight:700}
   .plat.chg{color:var(--amber); background:rgba(245,158,11,.12)}
 
   /* tappable departure row: the affordance people were already reaching for */
@@ -797,7 +803,11 @@ function changeDetails(c){
     const stn=rides[k].departure?.station?.name || rides[k-1].arrival?.station?.name || "";
     if(!prevArr||!nextDep) continue;
     const b=Math.round((new Date(nextDep)-new Date(prevArr))/60000);
-    if(b>=0 && b<600) out.push({stn, b});
+    // which platform you arrive on and which you leave from: a 5-minute change
+    // on the same platform and one across the station are not the same change
+    const pa=rides[k-1].arrival?.prognosis?.platform || rides[k-1].arrival?.platform || null;
+    const pd=rides[k].departure?.prognosis?.platform || rides[k].departure?.platform || null;
+    if(b>=0 && b<600) out.push({stn, b, pa, pd});
   }
   return out;
 }
@@ -1367,7 +1377,9 @@ function connCard(c,i){
   const chg = c._chg || [];
   const chgHTML = chg.length ? `<div class="chg">`+chg.map(x=>{
     const cls = x.b<TIGHT?"tight":x.b<COMFY?"warn":"";
-    return `<span class="cx ${cls}">${esc(x.stn)} <b>${x.b}&#8242;</b></span>`;
+    const pf = x.pa && x.pd && x.pa!==x.pd ? ` <span class="cxpf">${esc(x.pa)}&#8594;${esc(x.pd)}</span>`
+             : x.pd ? ` <span class="cxpf">Pl.&#8201;${esc(x.pd)}</span>` : "";
+    return `<span class="cx ${cls}">${esc(x.stn)} <b>${x.b}&#8242;</b>${pf}</span>`;
   }).join("")+`</div>` : "";
   const scenic = secs.some(s=>isScenic(s.journey.category));
   let ribs="";
@@ -1378,6 +1390,14 @@ function connCard(c,i){
   if(c._tight && !c._fasterTight) ribs+=`<span class="rib tight">&#9888; tight change</span>`;
   if(c._via) ribs+=`<span class="viatag">via ${esc(c._via)}</span>`;
   const dm=minsUntil(dep);
+  /* The platform is the one thing you need while standing IN the station, and it
+     is already in the connection response -- no extra request. Prognosis first:
+     a platform change is exactly the case where the scheduled value misleads. */
+  const pfD=c.from?.prognosis?.platform || c.from?.platform;
+  const pfA=c.to?.prognosis?.platform || c.to?.platform;
+  const pfChanged=c.from?.prognosis?.platform && c.from.prognosis.platform!==c.from.platform;
+  const pfrow = pfD ? `<div class="pfrow"><span class="pf${pfChanged?" chg":""}">Pl.&#8201;${esc(pfD)}${pfChanged?" &#9888;":""}</span>`
+    + (pfA?`<span class="pfa">arrives Pl.&#8201;${esc(pfA)}</span>`:"") + `</div>` : "";
   // both-ends weather delta: origin forecast at DEPARTURE hour (left of arrow),
   // destination at ARRIVAL hour (right) — same wxAt/destWeather path, data-t = the hour to look up
   const cto=c.to?.station?.coordinate, cfr=c.from?.station?.coordinate;
@@ -1388,6 +1408,7 @@ function connCard(c,i){
       ${wxO}<div class="tt">${hhmm(dep)}</div><span class="arr">&#8594;</span>${wxD}<div class="tt">${hhmm(arr)}</div>
       <div class="dur"><b>${parseDur(c.duration)}</b><span>${tr} change${tr===1?"":"s"}</span></div>
     </div>
+    ${pfrow}
     <div class="legs">${legs}${lhint}
       <button class="skbtn" type="button" aria-expanded="false" onclick="toggleSketch(this,${i})"
               aria-label="Show a sketch of the whole route"

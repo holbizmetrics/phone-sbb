@@ -64,9 +64,10 @@ check((await page.locator('#wxTog').count()) === 1, 'Weather toggle renders on J
 // filter) that the offline unit test cannot reach.
 const stubbed = await page.evaluate(() => { try {
   const stub = {
-    from: { departure: '2026-07-24T10:00:00+02:00' },
-    to: { arrival: '2026-07-24T11:00:00+02:00' },
+    from: { departure: '2026-07-24T10:00:00+02:00', platform: '31' },
+    to: { arrival: '2026-07-24T11:00:00+02:00', platform: '2A' },
     duration: '00d01:00:00', transfers: 0,
+    _chg: [{ stn: 'Bern', b: 7, pa: '7', pd: '5' }],
     sections: [{ journey: { category: 'IR', number: '16', passList: [
       { station: { name: 'Alpha' }, departure: '2026-07-24T10:00:00+02:00' },
       { station: { name: 'Bahn-2000-Strecke' } },                       // routing marker: no times
@@ -93,6 +94,14 @@ if (stubbed === 'ok') {
   check(txt.includes('Beta') && txt.includes('Omega'), 'stop names rendered');
   await legBtn.click();
   check((await page.locator('#jrnOut .stops .sline').count()) === 0, 'second tap collapses');
+
+  // Platform: the one thing you need while standing in the station. Non-numeric
+  // platforms (2A, D) are real, so the stub uses one.
+  const pf = (await page.locator('#jrnOut .pfrow').textContent()) || '';
+  check(pf.includes('31'), `departure platform rendered (${pf.trim()})`);
+  check(pf.includes('2A'), 'arrival platform rendered, non-numeric preserved');
+  const cx = (await page.locator('#jrnOut .chg').textContent()) || '';
+  check(cx.includes('7') && cx.includes('5'), `change shows the platform switch (${cx.trim()})`);
 }
 
 check(problems.length === 0, `no console errors / uncaught exceptions (${problems.length})`);
