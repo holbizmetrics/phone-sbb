@@ -139,6 +139,23 @@
   .shead b{color:var(--txt)}
   .shint{font-size:12px; color:var(--faint); margin:-4px 2px 12px; display:flex; align-items:center; gap:6px}
   .shint::before{content:""; width:9px; height:9px; border:2px solid var(--faint); border-top-color:transparent; border-radius:50%; display:inline-block; animation:spin .7s linear infinite}
+  .wonders{margin-top:14px}
+  .wtoggle{width:100%; text-align:left; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px; color:var(--txt); font-size:14px; font-weight:600; display:flex; align-items:center; gap:8px; cursor:pointer}
+  .wtoggle .wchev{margin-left:auto; color:var(--faint); transition:transform .2s}
+  .wtoggle.open .wchev{transform:rotate(180deg)}
+  .wbody:not(:empty){margin-top:8px; display:flex; flex-direction:column; gap:8px}
+  .wloading,.wempty{font-size:13px; color:var(--faint); padding:6px 4px}
+  .wcard{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:11px 13px}
+  .wmain{display:flex; align-items:baseline; gap:8px}
+  .wmain .wemoji{font-size:16px}
+  .wmain .wname{font-weight:700; font-size:15px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .wmain .wmeta{margin-left:auto; font-size:12px; color:var(--dim); white-space:nowrap; flex:0 0 auto}
+  .wrich:not(:empty){display:flex; gap:10px; margin-top:9px}
+  .wrich .wthumb{width:56px; height:56px; object-fit:cover; border-radius:8px; flex:0 0 auto}
+  .wrich .wtext{min-width:0; font-size:12px; color:var(--dim); line-height:1.45}
+  .wrich .wtext p{margin:0 0 3px}
+  .wrich .wtext a{color:var(--accent, #6ea8fe); text-decoration:none}
+  .wrich .wattr{color:var(--faint); font-size:11px}
   .conn.win{border-color:rgba(34,197,94,.5); box-shadow:0 0 0 1px rgba(34,197,94,.15),var(--shadow)}
   .conn.hastight{border-color:rgba(245,158,11,.4)}
   .chg{display:flex; flex-wrap:wrap; gap:6px; margin-top:11px}
@@ -480,7 +497,7 @@ async function plainPlan(){
     const cs=d.connections||[];
     if(!cs.length){ $("jrnOut").innerHTML=`<div class="empty"><div class="big">&#9940;</div>No connections found.</div>`; return; }
     cs.forEach(annotate);
-    $("jrnOut").innerHTML = cs.map((c,i)=>connCard(c,i)).join("");
+    $("jrnOut").innerHTML = cs.map((c,i)=>connCard(c,i)).join("") + wondersExpanderHTML(cs[0].to?.station);
     if(weather) fillWeather();
   }catch(e){
     $("jrnOut").innerHTML=`<div class="err">Couldn&#39;t plan that journey.<br>Check the station names and try again.</div>`;
@@ -558,6 +575,133 @@ async function fillWeather(){
     const hourly=await destWeather(lat,lon);
     byCoord[k].forEach(e=>{ const w=wxAt(hourly, e.dataset.t); if(w) e.innerHTML=`${w.emoji} ${w.temp}&#176;`; });
   }
+}
+
+/* ---------- Natural Wonders (OSM/Overpass, on-demand; Wikipedia enrichment) ----------
+   No 4th toggle: a calm tap-to-expand under the journey results. One Overpass call
+   per destination coord (cached), async + fail-silent; Wikipedia blurb+thumb layered
+   on top of the instant name+distance list. tourism=attraction deliberately excluded
+   (proven noisy). Coord convention: station.coordinate.x = lat, .y = lon. */
+const CP=c=>String.fromCodePoint(c);
+function haversineKm(la1,lo1,la2,lo2){
+  const R=6371, r=x=>x*Math.PI/180;
+  const dLa=r(la2-la1), dLo=r(lo2-lo1);
+  const a=Math.sin(dLa/2)**2+Math.cos(r(la1))*Math.cos(r(la2))*Math.sin(dLo/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function wonderType(t){
+  if(t.natural==="peak")            return {emoji:CP(0x26F0), label:"peak"};
+  if(t.natural==="glacier")         return {emoji:CP(0x1F9CA),label:"glacier"};
+  if(t.natural==="cave_entrance")   return {emoji:CP(0x1F573),label:"cave"};
+  if(t.natural==="waterfall"||t.waterway==="waterfall") return {emoji:CP(0x1F4A7),label:"waterfall"};
+  if(t.tourism==="viewpoint")       return {emoji:CP(0x1F304),label:"viewpoint"};
+  return {emoji:CP(0x1F4CD), label:""};
+}
+const overpassCache={};
+function overpass(lat,lon){
+  const key=lat+","+lon;
+  if(overpassCache[key]) return overpassCache[key];
+  const q=`[out:json][timeout:25];(`
+    +`node(around:8000,${lat},${lon})[tourism=viewpoint];`
+    +`node(around:8000,${lat},${lon})[natural~"^(cave_entrance|waterfall|peak|glacier)$"];`
+    +`way(around:8000,${lat},${lon})[natural~"^(cave_entrance|waterfall|peak|glacier)$"];`
+    +`node(around:8000,${lat},${lon})[waterway=waterfall];`
+    +`way(around:8000,${lat},${lon})[waterway=waterfall];`
+    +`);out center 40;`;
+  const hosts=["https://overpass-api.de/api/interpreter","https://overpass.kumi.systems/api/interpreter"];
+  overpassCache[key]=(async()=>{
+    for(const h of hosts){
+      try{
+        const r=await fetch(h,{method:"POST",body:"data="+encodeURIComponent(q)});
+        if(!r.ok) continue;
+        const d=await r.json();
+        return d.elements||[];
+      }catch(e){ /* try the next mirror */ }
+    }
+    return [];
+  })();
+  return overpassCache[key];
+}
+function wondersExpanderHTML(dest){
+  if(!dest||!dest.coordinate) return "";
+  const lat=dest.coordinate.x, lon=dest.coordinate.y;
+  if(lat==null||lon==null) return "";
+  return `<div class="wonders"><button class="wtoggle" onclick="loadWonders(this,${lat},${lon})">`
+    +`${CP(0x26F0)} Natural Wonders near ${esc(dest.name||toName||"destination")}<span class="wchev">&#9662;</span>`
+    +`</button><div class="wbody"></div></div>`;
+}
+async function loadWonders(btn,lat,lon){
+  const wrap=btn.closest(".wonders"), body=wrap.querySelector(".wbody");
+  if(wrap.dataset.loaded) return;   // one expansion per render
+  wrap.dataset.loaded="1"; btn.classList.add("open");
+  body.innerHTML=`<div class="wloading">searching nearby&#8230;</div>`;
+  const els=await overpass(lat,lon);
+  const seen=new Set(), list=[];
+  els.forEach(e=>{
+    const t=e.tags||{};
+    const name=t.name||t["name:fr"]||t["name:de"];
+    if(!name || seen.has(name)) return;
+    const la=e.lat??e.center?.lat, lo=e.lon??e.center?.lon;
+    if(la==null||lo==null) return;
+    seen.add(name);
+    list.push({name, ty:wonderType(t), dist:haversineKm(+lat,+lon,la,lo), wikipedia:t.wikipedia, wikidata:t.wikidata});
+  });
+  list.sort((a,b)=>a.dist-b.dist);
+  const top=list.slice(0,5);
+  if(!top.length){ body.innerHTML=`<div class="wempty">No natural wonders found nearby.</div>`; return; }
+  body.innerHTML=top.map((w,i)=>wonderCard(w,i)).join("");
+  enrichWonders(top, body);   // Wikipedia layer fills in after
+}
+function wonderCard(w,i){
+  return `<div class="wcard" data-i="${i}">
+    <div class="wmain"><span class="wemoji">${w.ty.emoji}</span><span class="wname">${esc(w.name)}</span>`
+    +`<span class="wmeta">${w.ty.label?esc(w.ty.label)+" &#183; ":""}${w.dist.toFixed(1)} km</span></div>
+    <div class="wrich"></div>
+  </div>`;
+}
+/* ---- Wikipedia enrichment (REST summary; keyless, CORS-open) ---- */
+const wikiCache={};
+function wikiSummary(title,lang){
+  const key=lang+":"+title;
+  if(wikiCache[key]) return wikiCache[key];
+  wikiCache[key]=(async()=>{
+    try{
+      const r=await fetch(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title.replace(/ /g,"_"))}`);
+      if(!r.ok) return null;
+      const d=await r.json();
+      if(d.type==="disambiguation") return null;
+      return d;
+    }catch(e){ return null; }
+  })();
+  return wikiCache[key];
+}
+async function wonderWiki(w){
+  // clean path first: an explicit OSM wikipedia tag "lang:Title" -> fetch that exact article
+  if(w.wikipedia){
+    const i=w.wikipedia.indexOf(":");
+    if(i>0){ const d=await wikiSummary(w.wikipedia.slice(i+1), w.wikipedia.slice(0,i)); if(d&&d.extract) return d; }
+  }
+  // fallback: search the name with language fallback (Swiss POIs often stub in EN, full in local lang)
+  for(const lang of ["en","fr","de","it"]){
+    const d=await wikiSummary(w.name, lang);
+    if(d&&d.extract&&d.extract.length>=25) return d;
+  }
+  return null;
+}
+function enrichWonders(top, body){
+  top.forEach(async(w,i)=>{
+    const d=await wonderWiki(w);
+    if(!d||!d.extract) return;
+    const slot=body.querySelector(`.wcard[data-i="${i}"] .wrich`);
+    if(!slot) return;
+    const thumb=d.thumbnail&&d.thumbnail.source;
+    const url=d.content_urls&&d.content_urls.desktop&&d.content_urls.desktop.page;
+    const ex=d.extract.length>140 ? d.extract.slice(0,140).trim()+"\u2026" : d.extract;
+    slot.innerHTML=`${thumb?`<img class="wthumb" src="${esc(thumb)}" alt="" loading="lazy">`:""}`
+      +`<div class="wtext"><p>${esc(ex)}</p>`
+      +`${url?`<a href="${esc(url)}" target="_blank" rel="noopener">more</a> &#183; `:""}`
+      +`<span class="wattr">from Wikipedia</span></div>`;
+  });
 }
 
 // resolve to [] if a slow query outruns the cap, so one lagging hub can't stall first paint
@@ -639,7 +783,8 @@ function renderSmart(base, swept, baseline, searching){
 
   $("jrnOut").innerHTML = smartHead(baseline, nSafe, swN)
     + (searching?`<div class="shint">&#8987; searching wider routes&#8230;</div>`:"")
-    + top.map((c,i)=>connCard(c,i)).join("");
+    + top.map((c,i)=>connCard(c,i)).join("")
+    + (searching?"":wondersExpanderHTML((base[0]||swept[0])?.to?.station));   // expander only on the settled render
   if(weather) fillWeather();
 }
 
