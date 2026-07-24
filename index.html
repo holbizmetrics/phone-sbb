@@ -157,6 +157,8 @@
     padding:9px 14px; border-radius:999px; font:600 13px inherit; cursor:pointer; white-space:nowrap; transition:.2s}
   .chip:active{transform:scale(.94)}
   .chip.star{color:var(--amber)}
+  .chip.route{font-weight:600}
+  .chip.route .ra{color:var(--faint); margin:0 2px}
 
   /* ---- board ---- */
   .boardhead{display:flex; align-items:baseline; gap:8px; margin:6px 2px 12px}
@@ -427,6 +429,7 @@
 
   <!-- JOURNEY -->
   <section id="vJrn" class="view">
+    <div class="favs" id="routeChips"></div>
     <div class="field" id="fFrom">
       <span class="ico">&#9679;</span>
       <input class="stn" id="iFrom" placeholder="From&#8230;" autocomplete="off" autocapitalize="off" spellcheck="false">
@@ -477,7 +480,7 @@
 <script>
 const API = "https://transport.opendata.ch/v1";
 const $ = id => document.getElementById(id);
-const LS = { favs:"rail.favs", last:"rail.last", theme:"rail.theme" };
+const LS = { favs:"rail.favs", last:"rail.last", routes:"rail.routes", theme:"rail.theme" };
 let favs = load(LS.favs, []);
 let current = "";        // current departures station
 let refreshTimer = null;
@@ -754,7 +757,7 @@ function toggleFav(name){
   if(i<0) favs.unshift(name); else favs.splice(i,1);
   favs=favs.slice(0,12); save(LS.favs,favs);
   applyTheme(load(LS.theme,"dark"));
-renderFavs(); const f=$("fav"); if(f){ const on=favs.includes(name); f.className="star "+(on?"on":""); f.innerHTML=on?"&#9733;":"&#9734;"; }
+renderFavs(); renderRoutes(); const f=$("fav"); if(f){ const on=favs.includes(name); f.className="star "+(on?"on":""); f.innerHTML=on?"&#9733;":"&#9734;"; }
 }
 function renderFavs(){
   const el=$("favs");
@@ -843,7 +846,36 @@ function onWhenChange(){
   if(whenValue && fromName && toName) planJourney();
 }
 
-function planJourney(){ return smart ? smartPlan() : plainPlan(); }
+/* ---------- route history ----------
+   A commuter retypes the same two stations every day. The departures board has
+   remembered your last station since day one; the journey side forgot both
+   fields every time. Recorded automatically when a search actually runs -- no
+   "save route" button to remember -- most recent first, and DIRECTION-DISTINCT,
+   because the morning and the evening trip are not the same trip. Reuses the
+   favourites chip pattern from the departures board rather than inventing a new
+   control: same visual language, nothing new to learn. localStorage only. */
+let routeHist = load(LS.routes, []);
+function rememberRoute(from,to){
+  if(!from||!to||from===to) return;
+  routeHist = [{f:from,t:to}, ...routeHist.filter(r=>!(r.f===from&&r.t===to))].slice(0,6);
+  save(LS.routes, routeHist); renderRoutes();
+}
+function useRoute(i){
+  const r=routeHist[i]; if(!r) return;
+  fromName=r.f; toName=r.t;
+  $("iFrom").value=r.f; $("iTo").value=r.t;
+  $("fFrom").classList.add("has"); $("fTo").classList.add("has");
+  planJourney();
+}
+function renderRoutes(){
+  const el=$("routeChips"); if(!el) return;
+  if(!routeHist.length){ el.innerHTML=""; return; }
+  el.innerHTML = routeHist.map((r,i)=>
+    `<button class="chip route" type="button" onclick="useRoute(${i})" `
+    + `title="${esc(r.f)} to ${esc(r.t)}">${esc(shortStop(r.f))} <span class="ra">&#8594;</span> ${esc(shortStop(r.t))}</button>`
+  ).join("");
+}
+function planJourney(){ rememberRoute(fromName,toName); return smart ? smartPlan() : plainPlan(); }
 
 async function plainPlan(){
   if(!fromName||!toName) return;
