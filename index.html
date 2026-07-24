@@ -139,6 +139,23 @@
   .plat{display:inline-block; margin-top:3px; font-size:11px; color:var(--dim); background:#22222a; padding:2px 7px; border-radius:6px}
   .plat.chg{color:var(--amber); background:rgba(245,158,11,.12)}
 
+  /* tappable departure row: the affordance people were already reaching for */
+  .dep{cursor:pointer; flex-wrap:wrap}
+  .dep:active{transform:scale(.995)}
+  .dep.open{border-color:#3a3a46}
+  .dep .togo{background:none; border:0; padding:0; margin:0; font:inherit; color:inherit;
+    text-align:left; cursor:pointer; border-bottom:1px dotted var(--faint)}
+  .dep .togo:active{opacity:.6}
+  .dstops:not(:empty){flex-basis:100%; margin-top:11px; padding-top:11px; border-top:1px solid var(--line)}
+  .dstops .sline{display:flex; gap:9px; align-items:baseline; padding:3px 0; font-size:13px; font-variant-numeric:tabular-nums}
+  .dstops .st{color:var(--dim); min-width:42px}
+  .dstops .sdot{width:7px; height:7px; border-radius:50%; border:2px solid var(--faint); flex:0 0 auto}
+  .dstops .sline.end .sdot{background:var(--txt); border-color:var(--txt)}
+  .dstops .sname{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--dim)}
+  .dstops .sline.end .sname{color:var(--txt); font-weight:700}
+  .dstops .splt{font-size:11px; color:var(--faint)}
+  .dstops .snone{font-size:12px; color:var(--faint); padding:2px 0}
+
   /* ---- connections ---- */
   .conn{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:15px; margin-bottom:11px; animation:rise .3s ease backwards}
   .conn .top{display:flex; align-items:center; gap:10px; font-variant-numeric:tabular-nums}
@@ -473,18 +490,75 @@ function depRow(j,i){
   const pl = j.stop?.platform;
   const plChanged = j.stop?.prognosis?.platform && j.stop.prognosis.platform!==pl;
   const effPl = j.stop?.prognosis?.platform || pl;
-  return `<div class="dep" data-key="${esc(depKey(j))}" style="animation-delay:${i*28}ms">
+  return `<div class="dep" data-key="${esc(depKey(j))}" data-i="${i}" style="animation-delay:${i*28}ms">
     <div class="badge" style="background:${b.col}">${b.label}</div>
     <div class="mid">
-      <div class="to">${esc(j.to||"&#8212;")}</div>
+      <div class="to"><button class="togo" type="button" onclick="planFromBoard(event,${i})"
+        title="Plan a journey to ${esc(j.to||"")}">${esc(j.to||"&#8212;")}</button></div>
       <div class="via">${effPl?`<span class="plat${plChanged?" chg":""}">Pl. ${esc(effPl)}${plChanged?" &#9888;":""}</span> `:""}${esc(j.category||"")} ${esc(j.operator||"")}</div>
     </div>
     <div class="rt">
       <div class="min ${m<=2?"now":""}" data-t="${eff}">${mlabel}</div>
       <div class="at">${hhmm(dep)}${late?` <span class="late">+${Math.round((new Date(prog)-new Date(dep))/60000)}</span>`:""}</div>
     </div>
+    <div class="dstops"></div>
   </div>`;
 }
+
+/* ---------- tapping a departure ----------
+   The rows LOOK tappable and people tap them, so they answer the question a
+   departure board actually raises: "where does this train go?" The onward route
+   is already in the /stationboard response (journey.passList) -- no extra call.
+   Two distinct targets so one tap is never ambiguous:
+     row           -> expand this train's onward stops
+     destination   -> plan a journey there, departing at this train's time      */
+function onwardStops(i){
+  const j=lastBoard[i]; if(!j) return null;
+  const pl=j.passList;
+  if(!Array.isArray(pl)) return null;
+  // same filter as the journey-leg version: routing markers carry no time
+  const rows=pl.filter(p=>p.station?.name && (p.arrival||p.departure));
+  // first entry is the station you are standing at -- the interesting part is onward
+  return rows.length>1 ? rows.slice(1) : [];
+}
+function onwardHTML(rows){
+  if(rows===null) return `<div class="snone">Route unavailable for this train.</div>`;
+  if(!rows.length) return `<div class="snone">No onward stops listed.</div>`;
+  return rows.map((p,k)=>{
+    const last=k===rows.length-1, t=p.arrival||p.departure;
+    return `<div class="sline ${last?"end":""}"><span class="st">${hhmm(t)}</span>`
+      + `<span class="sdot"></span><span class="sname">${esc(p.station.name)}</span>`
+      + (p.platform?`<span class="splt">Pl.&#8201;${esc(p.platform)}</span>`:"")+`</div>`;
+  }).join("");
+}
+function toggleDeparture(row){
+  const panel=row.querySelector(".dstops"); if(!panel) return;
+  const open=panel.dataset.open==="1";
+  panel.dataset.open=open?"":"1";
+  panel.innerHTML=open?"":onwardHTML(onwardStops(+row.dataset.i));
+  row.classList.toggle("open",!open);
+}
+/* destination name -> Journey tab, prefilled, timed to THIS train */
+function planFromBoard(ev,i){
+  ev.stopPropagation();                       // never also toggle the row
+  const j=lastBoard[i]; if(!j||!j.to) return;
+  fromName=current; toName=j.to;
+  $("iFrom").value=fromName; $("iTo").value=toName;
+  $("fFrom").classList.add("has"); $("fTo").classList.add("has");
+  const dep=j.stop?.departure;
+  if(dep && typeof setWhen==="function"){     // land on THIS train, not a generic now-search
+    setWhen("dep");
+    const at=$("whenAt");
+    if(at){ at.value=dep.slice(0,16); whenValue=at.value; }
+  }
+  setTab("jrn");
+  planJourney();
+  scrollTo({top:0,behavior:"smooth"});
+}
+document.addEventListener("click",e=>{
+  const row=e.target.closest(".dep[data-i]");
+  if(row && !e.target.closest(".togo")) toggleDeparture(row);
+});
 function tickBoard(){
   document.querySelectorAll(".dep .min[data-t]").forEach(el=>{
     const m=minsUntil(el.dataset.t);
