@@ -238,6 +238,7 @@
   .elev-peaklbl{fill:var(--dim); font-size:10px; font-weight:700}
   .elev-sum{font-size:12px; color:var(--dim); margin-top:4px}
   .elev-sum b{color:var(--txt)}
+  .elev-src{color:var(--faint); cursor:help}
   .skmaps{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px}
   .skmaps a{font-size:12px; font-weight:600; color:var(--dim); text-decoration:none;
     background:var(--chip); border:1px solid var(--line); border-radius:9px; padding:6px 10px}
@@ -389,6 +390,7 @@
       <div class="hrow"><span class="k">7&#8594;5</span><span class="v">on a change means you arrive at 7 and leave from 5 &#8212; you have to cross the station.</span></div>
       <div class="hrow"><span class="k">Tap a leg</span><span class="v">(the coloured badge) for the stops in between.</span></div>
       <div class="hrow"><span class="k">&#128506; map</span><span class="v">sketches the whole route, with a pulsing dot for where the train is now.</span></div>
+      <div class="hrow"><span class="k">&#9968; climbs</span><span class="v">under the sketch: the same journey seen from the side, so you can tell a valley run from a mountain climb at a glance.</span></div>
 
       <h3>The two switches</h3>
       <div class="hrow"><span class="k">Smart</span><span class="v">sweeps the hubs for connections the default search misses, and flags changes too tight to trust.</span></div>
@@ -404,7 +406,10 @@
         fetch, though what is already on screen keeps working. The moving dot on the sketch is the
         <b>scheduled</b> position worked out from the timetable, not GPS &#8212; it shows where the train
         should be, which is not always where it is.
-      </div>
+              The elevation strip is <b>terrain height</b> looked up from open-meteo for each station,
+        not railway data &#8212; and it is measured at the stations only, so what happens between
+        them is a straight line, not the real gradient.
+</div>
     </div>
   </div>
 
@@ -1477,7 +1482,9 @@ function elevationSVG(pts,elev){
     + `text-anchor="${hiI>pts.length*0.7?"end":hiI<pts.length*0.3?"start":"middle"}">`
     + `${esc(shortStop(pts[hiI].name))}</text>`
     + `</svg><div class="elev-sum">&#9968; climbs <b>${climb} m</b> &#183; `
-    + `${Math.round(elev[0])} m &#8594; ${Math.round(elev[elev.length-1])} m &#183; ${total.toFixed(0)} km</div>`;
+    + `${Math.round(elev[0])} m &#8594; ${Math.round(elev[elev.length-1])} m &#183; ${total.toFixed(0)} km`
+    + `<span class="elev-src" title="Terrain height from open-meteo, sampled at each station. Not railway data, and the line between stations is drawn straight, not surveyed.">`
+    + ` &#183; terrain height, not railway data</span></div>`;
 }
 async function fillElevation(panel,ci){
   const legs=routePoints(ci); if(!legs) return;
