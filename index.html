@@ -117,6 +117,37 @@
   .conn .meta b{color:var(--txt)}
   .conn .plt{color:var(--amber)}
 
+  /* ---- smart change-finder ---- */
+  .smartbar{display:flex; align-items:center; gap:10px; margin:2px 2px 14px; flex-wrap:wrap}
+  .smart-toggle{display:flex; align-items:center; gap:9px; cursor:pointer; user-select:none}
+  .smart-toggle input{position:absolute; opacity:0; pointer-events:none}
+  .smart-toggle .track{width:42px; height:24px; border-radius:999px; background:#2a2a33; border:1px solid var(--line); position:relative; transition:.25s; flex:0 0 auto}
+  .smart-toggle .knob{position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%; background:#6a6a76; transition:.25s}
+  .smart-toggle input:checked + .track{background:linear-gradient(145deg,var(--red),#a30000); border-color:transparent}
+  .smart-toggle input:checked + .track .knob{left:20px; background:#fff}
+  .smart-toggle .lbl{font-weight:700; font-size:14px}
+  .smart-hint{font-size:11px; color:var(--faint)}
+  .shead{font-size:13px; color:var(--dim); background:var(--card); border:1px solid var(--line); border-radius:12px; padding:11px 13px; margin-bottom:12px; line-height:1.5}
+  .shead.warn{background:rgba(245,158,11,.1); border-color:rgba(245,158,11,.3); color:#ffe0a3}
+  .shead.good{border-color:rgba(34,197,94,.25)}
+  .shead b{color:var(--txt)}
+  .conn.win{border-color:rgba(34,197,94,.5); box-shadow:0 0 0 1px rgba(34,197,94,.15),var(--shadow)}
+  .conn.hastight{border-color:rgba(245,158,11,.4)}
+  .chg{display:flex; flex-wrap:wrap; gap:6px; margin-top:11px}
+  .cx{font-size:11px; padding:3px 9px; border-radius:7px; background:#22222a; color:var(--dim); font-variant-numeric:tabular-nums}
+  .cx b{color:var(--txt); font-weight:800}
+  .cx.warn{background:rgba(245,158,11,.12); color:var(--amber)}
+  .cx.warn b{color:var(--amber)}
+  .cx.tight{background:rgba(235,0,0,.16); color:#ff8f8f}
+  .cx.tight b{color:#ff8f8f}
+  .rbrow{display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin-bottom:6px}
+  .rbrow:empty{display:none}
+  .rib{font-size:10px; font-weight:800; letter-spacing:.03em; text-transform:uppercase; padding:3px 8px; border-radius:6px; white-space:nowrap}
+  .rib.pick{background:rgba(34,197,94,.16); color:#7be6a3}
+  .rib.base{background:#26262f; color:var(--dim)}
+  .rib.tight{background:rgba(245,158,11,.16); color:var(--amber)}
+  .viatag{font-size:11px; color:var(--violet); font-weight:700}
+
   /* ---- states ---- */
   .skel{height:66px; border-radius:16px; margin-bottom:9px;
     background:linear-gradient(100deg,var(--card) 30%,#22222a 50%,var(--card) 70%); background-size:200% 100%;
@@ -176,6 +207,14 @@
       <input class="stn" id="iTo" placeholder="To&#8230;" autocomplete="off" autocapitalize="off" spellcheck="false">
       <button class="clr" onclick="clearField('to')">&#10005;</button>
       <div class="ac" id="acTo"></div>
+    </div>
+    <div class="smartbar">
+      <label class="smart-toggle">
+        <input type="checkbox" id="smartTog" checked onchange="onSmartToggle()">
+        <span class="track"><span class="knob"></span></span>
+        <span class="lbl">Smart change-finder</span>
+      </label>
+      <span class="smart-hint">sweeps hubs &amp; flags tight changes</span>
     </div>
     <div id="jrnOut"><div class="hint">Enter two stations to plan a journey.</div></div>
   </section>
@@ -352,35 +391,144 @@ function parseDur(s){ // "00d00:56:00"
   const d=+m[1], h=+m[2], mi=+m[3]; const tot=d*1440+h*60+mi;
   return tot>=60 ? `${Math.floor(tot/60)}h ${tot%60}m` : `${tot}m`;
 }
-async function planJourney(){
+/* the killer feature: SBB's default list often hides better routes that a
+   manual "what if I change at X" search finds, and buries a scary-tight
+   transfer in its #1 pick. Smart mode sweeps a set of interchange hubs via[],
+   widens the direct scan, computes real per-change buffers, and surfaces the
+   options SBB didn't lead with — flagging tight changes and roomier picks. */
+let smart = true;
+const HUBS = ["Z\u00fcrich HB","Bern","Basel SBB","Luzern","Olten","Arth-Goldau","Lausanne","Biel/Bienne","Z\u00fcrich Flughafen","Winterthur"];
+const TIGHT = 5;   // minutes: a change below this is a sprint
+const COMFY = 8;   // minutes: at/above this a change is relaxed
+
+function onSmartToggle(){
+  smart = $("smartTog").checked;
+  if(fromName&&toName) planJourney();
+}
+function planJourney(){ return smart ? smartPlan() : plainPlan(); }
+
+async function plainPlan(){
   if(!fromName||!toName) return;
   $("jrnOut").innerHTML = skel(4);
   try{
     const d=await api(`/connections?limit=6&from=${encodeURIComponent(fromName)}&to=${encodeURIComponent(toName)}`);
     const cs=d.connections||[];
     if(!cs.length){ $("jrnOut").innerHTML=`<div class="empty"><div class="big">&#9940;</div>No connections found.</div>`; return; }
+    cs.forEach(annotate);
     $("jrnOut").innerHTML = cs.map((c,i)=>connCard(c,i)).join("");
   }catch(e){
     $("jrnOut").innerHTML=`<div class="err">Couldn&#39;t plan that journey.<br>Check the station names and try again.</div>`;
   }
 }
+
+async function tryConns(qs){
+  try{ const d=await api("/connections?"+qs); return d.connections||[]; }
+  catch(e){ return []; }
+}
+function connSig(c){ return (c.from?.departure||"")+"|"+(c.to?.arrival||"")+"|"+(c.duration||""); }
+function changeDetails(c){
+  const rides=(c.sections||[]).filter(s=>s.journey);
+  const out=[];
+  for(let k=1;k<rides.length;k++){
+    const prevArr=rides[k-1].arrival?.arrival;
+    const nextDep=rides[k].departure?.departure;
+    const stn=rides[k].departure?.station?.name || rides[k-1].arrival?.station?.name || "";
+    if(!prevArr||!nextDep) continue;
+    const b=Math.round((new Date(nextDep)-new Date(prevArr))/60000);
+    if(b>=0 && b<600) out.push({stn, b});
+  }
+  return out;
+}
+function annotate(c){
+  c._arr = c.to?.arrival ? new Date(c.to.arrival).getTime() : Infinity;
+  c._dep = c.from?.departure ? new Date(c.from.departure).getTime() : 0;
+  c._chg = changeDetails(c);
+  c._buf = c._chg.length ? Math.min(...c._chg.map(x=>x.b)) : null;
+  c._tight = c._buf!=null && c._buf<TIGHT;
+  return c;
+}
+
+async function smartPlan(){
+  if(!fromName||!toName) return;
+  $("jrnOut").innerHTML = skel(4);
+  const f=encodeURIComponent(fromName), t=encodeURIComponent(toName);
+  const base = await tryConns(`from=${f}&to=${t}&limit=6`);
+  const baseline = base[0] ? annotate(base[0]) : null;
+
+  const jobs = [ tryConns(`from=${f}&to=${t}&limit=16`) ];
+  HUBS.forEach(h=>{
+    if(h===fromName||h===toName) return;
+    jobs.push(tryConns(`from=${f}&to=${t}&via[]=${encodeURIComponent(h)}&limit=3`)
+      .then(cs=>cs.map(c=>{c._via=h; return c;})));
+  });
+  const swept = (await Promise.all(jobs)).flat();
+
+  const seen=new Set(), all=[];
+  base.concat(swept).forEach(c=>{ const s=connSig(c); if(!seen.has(s)){ seen.add(s); all.push(annotate(c)); } });
+  if(!all.length){ $("jrnOut").innerHTML=`<div class="empty"><div class="big">&#9940;</div>No connections found.<br>Check the station names.</div>`; return; }
+
+  const now=Date.now();
+  const baseArr = baseline ? baseline._arr : Infinity;
+  const baseBuf = baseline ? baseline._buf : null;
+  const baseSig = baseline ? connSig(baseline) : "";
+  all.forEach(c=>{
+    c._isBase = connSig(c)===baseSig;
+    c._earlier = c._arr < baseArr;
+    c._safer   = !c._isBase && !c._tight && baseline!=null &&
+                 (baseline._tight || (baseBuf!=null && c._buf!=null && c._buf>=baseBuf+3)) &&
+                 c._arr <= baseArr + 4*60000;   // within 4 min of the fast arrival
+    c._beats = c._earlier || c._safer;
+    c._why = c._earlier ? "arrives earlier" : c._safer ? "roomier change" : "";
+  });
+
+  let cand = all.filter(c=> c._dep > now-60000 || c._isBase);
+  cand.sort((a,b)=> (b._beats-a._beats) || (a._arr-b._arr) || ((b._buf??-1)-(a._buf??-1)) || (a._chg.length-b._chg.length));
+  const top = cand.slice(0,7);
+  const nBeat = top.filter(c=>c._beats && !c._isBase).length;
+  const swN = new Set(swept.map(connSig)).size;
+
+  $("jrnOut").innerHTML = smartHead(baseline, nBeat, swN) + top.map((c,i)=>connCard(c,i)).join("");
+}
+
+function smartHead(baseline, nBeat, swN){
+  if(!baseline) return `<div class="shead">Swept ${swN} hub route${swN===1?"":"s"} &#183; best options below &#8595;</div>`;
+  const bb=baseline._buf;
+  if(baseline._tight){
+    return `<div class="shead warn">&#9888; SBB&#39;s fastest pick has a tight <b>${bb}&#8201;min</b> change at <b>${esc(baseline._chg.find(x=>x.b===bb)?.stn||"a hub")}</b>.`
+      + (nBeat?` Found <b>${nBeat}</b> route${nBeat===1?"":"s"} with roomier transfers &#8595;`:` No roomier alternative beat it &#8212; it&#39;s the fastest.`)
+      + `</div>`;
+  }
+  if(nBeat) return `<div class="shead good">Swept ${swN} routes &#183; <b>${nBeat}</b> option${nBeat===1?"":"s"} the default list didn&#39;t lead with &#8595;</div>`;
+  return `<div class="shead good">SBB&#39;s default looks solid${bb!=null?` (<b>${bb}&#8201;min</b> transfer slack)`:` (direct)`}. Full swept spread below &#8595;</div>`;
+}
+
 function connCard(c,i){
   const dep=c.from?.departure, arr=c.to?.arrival;
-  const tr=c.transfers||0;
   const secs=(c.sections||[]).filter(s=>s.journey);
+  const tr=c._chg ? c._chg.length : (c.transfers||0);
   const legs = secs.map(s=>{
     const b=badge(s.journey.category, s.journey.number);
     return `<span class="b2" style="background:${b.col}">${b.label}</span>`;
   }).join('<span class="sep">&#8250;</span>') || '<span class="sep">walk</span>';
+  const chg = c._chg || [];
+  const chgHTML = chg.length ? `<div class="chg">`+chg.map(x=>{
+    const cls = x.b<TIGHT?"tight":x.b<COMFY?"warn":"";
+    return `<span class="cx ${cls}">${esc(x.stn)} <b>${x.b}&#8242;</b></span>`;
+  }).join("")+`</div>` : "";
+  let ribs="";
+  if(c._beats) ribs+=`<span class="rib pick">&#9889; smart pick${c._why?" &#183; "+c._why:""}</span>`;
+  else if(c._isBase) ribs+=`<span class="rib base">SBB default</span>`;
+  if(c._tight && !c._beats) ribs+=`<span class="rib tight">tight change</span>`;
+  if(c._via) ribs+=`<span class="viatag">via ${esc(c._via)}</span>`;
   const dm=minsUntil(dep);
-  const pl=c.from?.platform;
-  return `<div class="conn" style="animation-delay:${i*30}ms">
+  return `<div class="conn ${c._beats?"win":""} ${c._tight?"hastight":""}" style="animation-delay:${i*30}ms">
     <div class="top">
       <div class="tt">${hhmm(dep)}</div><span class="arr">&#8594;</span><div class="tt">${hhmm(arr)}</div>
       <div class="dur"><b>${parseDur(c.duration)}</b><span>${tr} change${tr===1?"":"s"}</span></div>
     </div>
     <div class="legs">${legs}</div>
-    <div class="meta">${dm>0&&dm<90?`Departs in <b>${dm} min</b>`:"Departs "+hhmm(dep)}${pl?` &#183; <span class="plt">Pl. ${esc(pl)}</span>`:""}</div>
+    ${chgHTML}
+    <div class="meta"><div class="rbrow">${ribs}</div>${dm>0&&dm<90?`Departs in <b>${dm} min</b>`:"Departs "+hhmm(dep)}</div>
   </div>`;
 }
 
