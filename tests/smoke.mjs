@@ -193,6 +193,26 @@ await page.locator('#help').click({ position: { x: 5, y: 5 } });   // the scrim,
 check(!(await page.locator('#help').evaluate((n) => n.classList.contains('on'))), 'tapping outside closes help');
 check((await page.evaluate(() => document.body.style.overflow)) === '', 'page scroll restored after close');
 
+// Timezone note, BOTH directions, with the zone pinned explicitly — the runner's
+// own zone must not decide the outcome (an earlier assertion here did exactly that
+// and failed on correct code).
+for (const [tz, want] of [['America/New_York', true], ['Europe/Zurich', false]]) {
+  const ctx = await browser.newContext({ timezoneId: tz });
+  const p2 = await ctx.newPage();
+  await p2.route('**', (r) => r.request().url().startsWith('http://localhost') ? r.continue() : r.abort());
+  await p2.goto(base, { waitUntil: 'load' });
+  await p2.waitForTimeout(1200);                     // the note is written by the 1s clock tick
+  const note = (await p2.locator('#tzNote').innerHTML()).trim();
+  check(!!note === want, `${tz}: tz note ${want ? 'appears' : 'stays silent'} (got ${note ? 'note' : 'empty'})`);
+  if (want) {
+    check(note.includes('Swiss local'), `${tz}: note says times are Swiss local`);
+    // 09:30 Swiss must read 09:30 on a New York phone, not 03:30
+    check(await p2.evaluate(() => hhmm('2026-07-24T09:30:00+02:00') === '09:30'),
+      `${tz}: departure times still read as Swiss wall-clock`);
+  }
+  await ctx.close();
+}
+
 check(problems.length === 0, `no console errors / uncaught exceptions (${problems.length})`);
 problems.forEach((p) => console.error('     ' + p));
 

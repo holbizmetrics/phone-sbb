@@ -514,7 +514,6 @@ function hhmm(iso){
 }
 /* If the phone is on another zone, say so once -- otherwise the header clock
    (device time) and every departure (Swiss time) disagree with no explanation. */
-function swissOffsetMinutes(){ return -new Date().getTimezoneOffset(); }
 function tzNoteHTML(){
   try{
     const here=Intl.DateTimeFormat().resolvedOptions().timeZone||"";
@@ -1707,6 +1706,13 @@ function tickClock(){
   const d=new Date();
   $("clk").textContent=d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",hourCycle:"h23"});
   $("clkd").textContent=d.toLocaleDateString([], {weekday:"short",day:"numeric",month:"short"});
+  /* The note was written but never rendered -- #tzNote sat empty, so the one
+     thing that explains why this clock (device time) disagrees with every
+     departure below it (Swiss time) never appeared. Rewritten only when the
+     text actually changes, since this runs every second. */
+  const box=$("tzNote"); if(!box) return;
+  const html=tzNoteHTML();
+  if(box.innerHTML!==html) box.innerHTML=html;
 }
 
 wireAC("iDep","acDep","fDep", showDepartures);
