@@ -25,23 +25,39 @@
      no extra UI. Dark stays the default; this only fires when the user has
      already chosen light at system level. Outdoor readability in bright sun,
      and light-on-dark is genuinely harder to read with astigmatism. */
-  @media (prefers-color-scheme: light){
-    :root{
-      --bg:#f6f6f8; --bg2:#ececf0; --card:#ffffff; --card2:#f2f2f6;
-      --line:#d9d9e0; --txt:#16161a; --dim:#5c5c68; --faint:#8a8a96;
-      --shadow:0 6px 20px rgba(20,20,30,.10);
-    }
-    body{
-      background:
-        radial-gradient(1200px 600px at 50% -10%, #efe6f4 0%, transparent 55%),
-        radial-gradient(900px 500px at 100% 0%, #e4edf6 0%, transparent 50%),
-        var(--bg);
-    }
-    .tabs button.on{background:linear-gradient(145deg,#ffffff,#eeeef3); color:#16161a}
-    .tog .track, .smart-toggle .track{background:#d5d5de}
-    .tog .knob, .smart-toggle .knob{background:#ffffff}
-    .plat{background:#ececf1}
+  /* Two explicit themes, selected by data-theme on <html>. DARK IS THE DEFAULT
+     FOR EVERYONE -- see the note below; the OS preference is deliberately not
+     consulted. Every widget reads --chip/--track/--knob/--segon so a theme is a
+     variable swap, never a pile of per-element patches. */
+  :root[data-theme="light"]{
+    --bg:#f6f6f8; --bg2:#ececf0; --card:#ffffff; --card2:#f2f2f6;
+    --line:#d9d9e0; --txt:#16161a; --dim:#5c5c68; --faint:#7a7a86;
+    --chip:#e8e8ee; --knob:#ffffff; --track:#c8c8d2; --segon:#16161a; --segontxt:#ffffff; --shadow:0 6px 20px rgba(20,20,30,.10);
   }
+  :root[data-theme="dark"]{
+    --bg:#0a0a0c; --bg2:#141418; --card:#17171c; --card2:#1e1e24;
+    --line:#26262e; --txt:#f4f4f6; --dim:#9a9aa6; --faint:#5a5a66;
+    --chip:#22222a; --knob:#6a6a76; --track:#2a2a33; --segon:linear-gradient(145deg,#2a2a33,#202027); --segontxt:#ffffff; --shadow:0 8px 30px rgba(0,0,0,.45);
+  }
+  :root{ --chip:#22222a; --knob:#6a6a76; --track:#2a2a33; --segon:linear-gradient(145deg,#2a2a33,#202027); --segontxt:#fff; }   /* dark defaults */
+
+  /* DEFAULT IS DARK FOR EVERYONE. The dark canvas IS the product's look, so it
+     is not left to the OS to guess -- prefers-color-scheme is deliberately NOT
+     consulted for the default. Light is opt-IN via the theme button, and that
+     choice persists. (This reverses an earlier auto-only design: the operator
+     runs a light desktop but wants the app dark, which is exactly the case an
+     OS-follows-you default gets wrong.) */
+  /* the washed-out header gradient only suits the dark canvas */
+  :root[data-theme="light"] body{ background:var(--bg) }
+  :root[data-theme="dark"] body{
+    background:
+      radial-gradient(1200px 600px at 50% -10%, #1b1220 0%, transparent 55%),
+      radial-gradient(900px 500px at 100% 0%, #101822 0%, transparent 50%),
+      var(--bg);
+  }
+  .themebtn{background:none; border:0; color:var(--dim); font-size:17px; cursor:pointer;
+    padding:4px 6px; border-radius:8px; line-height:1}
+  .themebtn:active{background:var(--chip)}
 
   /* Honour "reduce motion": the app is a utility, not a show. Users who asked
      the OS for less animation get none -- the SBB app's refusal to make its
@@ -83,7 +99,7 @@
   .tabs{display:flex; background:var(--bg2); border:1px solid var(--line); border-radius:14px; padding:4px; margin-bottom:14px}
   .tabs button{flex:1; border:0; background:transparent; color:var(--dim); font:600 14px/1 inherit;
     padding:11px; border-radius:10px; transition:.25s; cursor:pointer}
-  .tabs button.on{background:linear-gradient(145deg,#2a2a33,#202027); color:#fff; box-shadow:0 2px 8px rgba(0,0,0,.4)}
+  .tabs button.on{background:var(--segon); color:var(--segontxt); box-shadow:0 2px 8px rgba(0,0,0,.22)}
 
   /* ---- search / inputs ---- */
   .field{position:relative; margin-bottom:10px}
@@ -92,7 +108,7 @@
     font:500 16px inherit; padding:15px 44px 15px 42px; border-radius:14px; outline:none; transition:.2s}
   input.stn:focus{border-color:#3a3a46; background:var(--card2)}
   .field .clr{position:absolute; right:10px; top:50%; transform:translateY(-50%); width:26px; height:26px;
-    border:0; border-radius:50%; background:#2a2a33; color:var(--dim); font-size:14px; display:none; place-items:center; cursor:pointer}
+    border:0; border-radius:50%; background:var(--chip); color:var(--dim); font-size:14px; display:none; place-items:center; cursor:pointer}
   .field.has .clr{display:grid}
 
   .ac{position:absolute; z-index:40; left:0; right:0; top:calc(100% + 6px); background:var(--card2);
@@ -100,10 +116,10 @@
   .ac.show{display:block; animation:pop .16s ease}
   .ac div{padding:13px 16px; border-bottom:1px solid var(--line); cursor:pointer; display:flex; align-items:center; gap:10px}
   .ac div:last-child{border-bottom:0}
-  .ac div:active{background:#26262f}
+  .ac div:active{background:var(--bg2)}
   .ac div .t{color:var(--faint); font-size:14px}
 
-  .swap{display:flex; justify-content:center; margin:-4px 0}
+  .swap{display:flex; justify-content:center; margin:-4px 0; position:relative; z-index:5}
   .swap button{width:38px; height:38px; border-radius:50%; border:1px solid var(--line); background:var(--card);
     color:var(--dim); font-size:17px; cursor:pointer; transition:.25s; box-shadow:var(--shadow)}
   .swap button:active{transform:rotate(180deg) scale(.9); color:#fff}
@@ -136,7 +152,7 @@
   .dep .min.now{color:var(--grn)}
   .dep .at{font-size:12px; color:var(--dim); font-variant-numeric:tabular-nums}
   .dep .at .late{color:var(--redsoft); font-weight:700}
-  .plat{display:inline-block; margin-top:3px; font-size:11px; color:var(--dim); background:#22222a; padding:2px 7px; border-radius:6px}
+  .plat{display:inline-block; margin-top:3px; font-size:11px; color:var(--dim); background:var(--chip); padding:2px 7px; border-radius:6px}
   .plat.chg{color:var(--amber); background:rgba(245,158,11,.12)}
 
   /* ---- connections ---- */
@@ -152,9 +168,9 @@
     box-shadow:var(--shadow); padding:10px 13px; font-size:13px; color:var(--txt);
     line-height:1.45; animation:pop .14s ease}
   /* ---- route sketch ---- */
-  .skbtn{margin-left:auto; border:1px solid var(--line); background:var(--card2); color:var(--dim);
+  .skbtn{margin-left:auto; border:1px solid var(--line); background:var(--chip); color:var(--dim);
     font-size:13px; line-height:1; padding:5px 8px; border-radius:9px; cursor:pointer; transition:.2s}
-  .skbtn.on{background:linear-gradient(145deg,#2a2a33,#202027); color:#fff; border-color:transparent}
+  .skbtn.on{background:var(--segon); color:var(--segontxt); border-color:transparent}
   .sketch:not(:empty){margin-top:12px; padding-top:12px; border-top:1px solid var(--line)}
   .sk{width:100%; height:auto; display:block; overflow:visible}
   .sklbl{fill:var(--dim); font-size:11px; font-weight:700;
@@ -189,8 +205,8 @@
   .smartbar{display:flex; align-items:center; gap:10px; margin:2px 2px 14px; flex-wrap:wrap}
   .smart-toggle{display:flex; align-items:center; gap:9px; cursor:pointer; user-select:none}
   .smart-toggle input{position:absolute; opacity:0; pointer-events:none}
-  .smart-toggle .track{width:42px; height:24px; border-radius:999px; background:#2a2a33; border:1px solid var(--line); position:relative; transition:.25s; flex:0 0 auto}
-  .smart-toggle .knob{position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%; background:#6a6a76; transition:.25s}
+  .smart-toggle .track{width:42px; height:24px; border-radius:999px; background:var(--track); border:1px solid var(--line); position:relative; transition:.25s; flex:0 0 auto}
+  .smart-toggle .knob{position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%; background:var(--knob); transition:.25s}
   .smart-toggle input:checked + .track{background:linear-gradient(145deg,var(--red),#a30000); border-color:transparent}
   .smart-toggle input:checked + .track .knob{left:20px; background:#fff}
   .smart-toggle .lbl{font-weight:700; font-size:14px}
@@ -201,16 +217,12 @@
   .seg{display:flex; background:var(--bg2); border:1px solid var(--line); border-radius:12px; padding:3px}
   .seg button{border:0; background:transparent; color:var(--dim); font:600 13px/1 inherit;
     padding:8px 12px; border-radius:9px; cursor:pointer; transition:.2s}
-  .seg button.on{background:linear-gradient(145deg,#2a2a33,#202027); color:#fff; box-shadow:0 2px 8px rgba(0,0,0,.35)}
-  .whenat{background:var(--card); border:1px solid var(--line); color:var(--txt);
+  .seg button.on{background:var(--segon); color:var(--segontxt); box-shadow:0 2px 8px rgba(0,0,0,.18)}
+  .whenat{color-scheme:dark; background:var(--card); border:1px solid var(--line); color:var(--txt);
     font:600 13px inherit; padding:9px 11px; border-radius:11px; outline:none; color-scheme:dark}
-  .whenclear{width:30px; height:30px; border:0; border-radius:50%; background:#2a2a33; color:var(--dim);
+  .whenclear{width:30px; height:30px; border:0; border-radius:50%; background:var(--chip); color:var(--dim);
     font-size:13px; cursor:pointer}
-  @media (prefers-color-scheme: light){
-    .seg button.on{background:linear-gradient(145deg,#ffffff,#eeeef3); color:#16161a}
-    .whenat{color-scheme:light}
-    .whenclear{background:#e2e2e9}
-  }
+  :root[data-theme="light"] .whenat{color-scheme:light}
   .shead{font-size:13px; color:var(--dim); background:var(--card); border:1px solid var(--line); border-radius:12px; padding:11px 13px; margin-bottom:12px; line-height:1.5}
   .shead.warn{background:rgba(245,158,11,.1); border-color:rgba(245,158,11,.3); color:#ffe0a3}
   .shead.good{border-color:rgba(34,197,94,.25)}
@@ -239,7 +251,7 @@
   .conn.win{border-color:rgba(34,197,94,.5); box-shadow:0 0 0 1px rgba(34,197,94,.15),var(--shadow)}
   .conn.hastight{border-color:rgba(245,158,11,.4)}
   .chg{display:flex; flex-wrap:wrap; gap:6px; margin-top:11px}
-  .cx{font-size:11px; padding:3px 9px; border-radius:7px; background:#22222a; color:var(--dim); font-variant-numeric:tabular-nums}
+  .cx{font-size:11px; padding:3px 9px; border-radius:7px; background:var(--chip); color:var(--dim); font-variant-numeric:tabular-nums}
   .cx b{color:var(--txt); font-weight:800}
   .cx.warn{background:rgba(245,158,11,.12); color:var(--amber)}
   .cx.warn b{color:var(--amber)}
@@ -249,7 +261,7 @@
   .rbrow:empty{display:none}
   .rib{font-size:10px; font-weight:800; letter-spacing:.03em; text-transform:uppercase; padding:3px 8px; border-radius:6px; white-space:nowrap}
   .rib.pick{background:rgba(34,197,94,.16); color:#7be6a3}
-  .rib.base{background:#26262f; color:var(--dim)}
+  .rib.base{background:var(--chip); color:var(--dim)}
   .rib.tight{background:rgba(245,158,11,.16); color:var(--amber)}
   .rib.scenic{background:rgba(192,38,211,.16); color:#e9a3f2}
   .viatag{font-size:11px; color:var(--violet); font-weight:700}
@@ -279,6 +291,7 @@
       <div class="mark">&#9679;</div>
       <div>Rail<small>live swiss departures</small></div>
     </div>
+    <button class="themebtn" id="themeBtn" type="button" onclick="cycleTheme()" title="Switch light / dark" aria-label="Switch theme">&#9681;</button>
     <div class="clock"><b id="clk">--:--</b><span id="clkd">&nbsp;</span></div>
   </header>
 
@@ -351,7 +364,7 @@
 <script>
 const API = "https://transport.opendata.ch/v1";
 const $ = id => document.getElementById(id);
-const LS = { favs:"rail.favs", last:"rail.last" };
+const LS = { favs:"rail.favs", last:"rail.last", theme:"rail.theme" };
 let favs = load(LS.favs, []);
 let current = "";        // current departures station
 let refreshTimer = null;
@@ -526,7 +539,8 @@ function toggleFav(name){
   const i=favs.indexOf(name);
   if(i<0) favs.unshift(name); else favs.splice(i,1);
   favs=favs.slice(0,12); save(LS.favs,favs);
-  renderFavs(); const f=$("fav"); if(f){ const on=favs.includes(name); f.className="star "+(on?"on":""); f.innerHTML=on?"&#9733;":"&#9734;"; }
+  applyTheme(load(LS.theme,"dark"));
+renderFavs(); const f=$("fav"); if(f){ const on=favs.includes(name); f.className="star "+(on?"on":""); f.innerHTML=on?"&#9733;":"&#9734;"; }
 }
 function renderFavs(){
   const el=$("favs");
@@ -1171,6 +1185,26 @@ function setTab(t){
   const dep=t==="dep";
   $("tabDep").classList.toggle("on",dep); $("tabJrn").classList.toggle("on",!dep);
   $("vDep").classList.toggle("on",dep); $("vJrn").classList.toggle("on",!dep);
+}
+/* Theme: auto (follow OS) -> light -> dark -> auto. The OS preference is the
+   DEFAULT, never the final word: a user who prefers the app dark on a light
+   desktop must be able to say so. Persisted; "auto" removes the attribute so
+   prefers-color-scheme takes over again. */
+const THEMES=["dark","light"];
+function applyTheme(t){
+  const r=document.documentElement;
+  r.setAttribute("data-theme", t==="light" ? "light" : "dark");
+  const b=$("themeBtn");
+  if(b){
+    b.innerHTML = t==="light" ? "&#9728;" : "&#9790;";     // sun when light, moon when dark
+    b.setAttribute("aria-label", t==="light" ? "Light theme. Switch to dark." : "Dark theme. Switch to light.");
+    b.title = t==="light" ? "Light -- tap for dark" : "Dark -- tap for light";
+  }
+}
+function cycleTheme(){
+  const cur=load(LS.theme,"dark");
+  const next=THEMES[(THEMES.indexOf(cur)+1)%THEMES.length];
+  save(LS.theme,next); applyTheme(next);
 }
 function tickClock(){
   const d=new Date();
