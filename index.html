@@ -157,6 +157,9 @@
     padding:9px 14px; border-radius:999px; font:600 13px inherit; cursor:pointer; white-space:nowrap; transition:.2s}
   .chip:active{transform:scale(.94)}
   .chip.star{color:var(--amber)}
+  .chip.mode{font-size:12px; padding:7px 11px; opacity:.62}
+  .chip.mode.on{opacity:1; border-color:var(--blue); color:var(--txt)}
+  .chip.mode.clear{opacity:.8; border-style:dashed}
 
   /* ---- board ---- */
   .boardhead{display:flex; align-items:baseline; gap:8px; margin:6px 2px 12px}
@@ -470,6 +473,7 @@
       <button type="button" id="whenClear" class="whenclear" onclick="setWhen('now')" hidden
               aria-label="Back to departures from now">&#10005;</button>
     </div>
+    <div class="favs" id="modeChips"></div>
     <div id="jrnOut"><div class="hint">Enter two stations to plan a journey.</div></div>
   </section>
 </div>
@@ -477,7 +481,7 @@
 <script>
 const API = "https://transport.opendata.ch/v1";
 const $ = id => document.getElementById(id);
-const LS = { favs:"rail.favs", last:"rail.last", theme:"rail.theme" };
+const LS = { favs:"rail.favs", last:"rail.last", modes:"rail.modes", theme:"rail.theme" };
 let favs = load(LS.favs, []);
 let current = "";        // current departures station
 let refreshTimer = null;
@@ -759,7 +763,7 @@ function toggleFav(name){
   if(i<0) favs.unshift(name); else favs.splice(i,1);
   favs=favs.slice(0,12); save(LS.favs,favs);
   applyTheme(load(LS.theme,"dark"));
-renderFavs(); const f=$("fav"); if(f){ const on=favs.includes(name); f.className="star "+(on?"on":""); f.innerHTML=on?"&#9733;":"&#9734;"; }
+renderFavs(); renderModes(); const f=$("fav"); if(f){ const on=favs.includes(name); f.className="star "+(on?"on":""); f.innerHTML=on?"&#9733;":"&#9734;"; }
 }
 function renderFavs(){
   const el=$("favs");
@@ -851,13 +855,42 @@ function onWhenChange(){
   if(whenValue && fromName && toName) planJourney();
 }
 
+/* ---------- transport-mode filter ----------
+   The one ZVV-style filter that this API actually honours. Tested: direct,
+   bike, accessibility and sleeper are all silently IGNORED, but transportations[]
+   genuinely changes the result set -- Luzern->Ruetli goes from a 2-change bus and
+   train slog to a single direct BAT lake steamer. For this app's audience a boat
+   crossing is not a detour, it is the reason to travel, and SBB buries it behind
+   a generic leg. Off by default: an empty selection means "all modes", exactly
+   as before. */
+const MODES=[{k:"train",label:"Train",ic:"\u{1F686}"},{k:"ship",label:"Boat",ic:"\u{1F6A2}"},
+             {k:"cableway",label:"Cable car",ic:"\u{1F6A0}"},{k:"bus",label:"Bus",ic:"\u{1F68C}"},
+             {k:"tram",label:"Tram",ic:"\u{1F68B}"}];
+let modeSel = load(LS.modes, []);
+function modeQS(){
+  return (modeSel||[]).map(m=>`&transportations[]=${encodeURIComponent(m)}`).join("");
+}
+function toggleMode(k){
+  modeSel = modeSel.includes(k) ? modeSel.filter(x=>x!==k) : [...modeSel,k];
+  save(LS.modes, modeSel); renderModes();
+  if(fromName&&toName) planJourney();
+}
+function renderModes(){
+  const el=$("modeChips"); if(!el) return;
+  el.innerHTML = MODES.map(m=>
+    `<button class="chip mode${modeSel.includes(m.k)?" on":""}" type="button" onclick="toggleMode('${m.k}')" `
+    + `aria-pressed="${modeSel.includes(m.k)}" title="${modeSel.includes(m.k)?"Only these modes":"Include every mode"}">`
+    + `${m.ic} ${m.label}</button>`).join("")
+    + (modeSel.length?`<button class="chip mode clear" type="button" onclick="clearModes()">&#10005; all modes</button>`:"");
+}
+function clearModes(){ modeSel=[]; save(LS.modes,modeSel); renderModes(); if(fromName&&toName) planJourney(); }
 function planJourney(){ return smart ? smartPlan() : plainPlan(); }
 
 async function plainPlan(){
   if(!fromName||!toName) return;
   $("jrnOut").innerHTML = skel(4);
   try{
-    const d=await api(`/connections?limit=6&from=${encodeURIComponent(fromName)}&to=${encodeURIComponent(toName)}${whenQS()}`);
+    const d=await api(`/connections?limit=6&from=${encodeURIComponent(fromName)}&to=${encodeURIComponent(toName)}${whenQS()}${modeQS()}`);
     const cs=d.connections||[];
     if(!cs.length){ $("jrnOut").innerHTML=`<div class="empty"><div class="big">&#9940;</div>No connections found.</div>`; return; }
     cs.forEach(annotate);
@@ -1190,12 +1223,12 @@ async function smartPlan(){
     const f=encodeURIComponent(fromName), t=encodeURIComponent(toName);
     // Fire everything at once. The two direct queries (base + wide) are the fast core;
     // hub sweeps run in parallel, each capped so the slowest hub can't hold up first paint.
-    const baseP = tryConns(`from=${f}&to=${t}&limit=6${whenQS()}`);
-    const wideP = tryConns(`from=${f}&to=${t}&limit=16${whenQS()}`);
+    const baseP = tryConns(`from=${f}&to=${t}&limit=6${whenQS()}${modeQS()}`);
+    const wideP = tryConns(`from=${f}&to=${t}&limit=16${whenQS()}${modeQS()}`);
     const hubList = [...HUBS, ...(preferScenic?SCENIC_HUBS:[])].filter(h=>h!==fromName&&h!==toName);
     const HUB_CAP=5000;  // tunable: bounds hub fill-in (hubs measured 3.3-9.3s); the base render fixes PERCEIVED latency regardless of this
     const hubJobs = hubList.map(h=>
-      withTimeout(tryConns(`from=${f}&to=${t}&via[]=${encodeURIComponent(h)}&limit=3${whenQS()}`), HUB_CAP)
+      withTimeout(tryConns(`from=${f}&to=${t}&via[]=${encodeURIComponent(h)}&limit=3${whenQS()}${modeQS()}`), HUB_CAP)
         .then(cs=>cs.map(c=>{c._via=h; return c;})).catch(()=>[]));
 
     // Phase 1 -- render the direct/wide results the moment they land (~base latency), hint that more is coming
