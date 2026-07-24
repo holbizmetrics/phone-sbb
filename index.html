@@ -181,6 +181,22 @@
   .smart-toggle input:checked + .track .knob{left:20px; background:#fff}
   .smart-toggle .lbl{font-weight:700; font-size:14px}
   .smart-hint{font-size:11px; color:var(--faint)}
+
+  /* ---- when-to-travel (now / leave at / arrive by) ---- */
+  .whenbar{display:flex; align-items:center; gap:8px; margin:0 2px 14px; flex-wrap:wrap}
+  .seg{display:flex; background:var(--bg2); border:1px solid var(--line); border-radius:12px; padding:3px}
+  .seg button{border:0; background:transparent; color:var(--dim); font:600 13px/1 inherit;
+    padding:8px 12px; border-radius:9px; cursor:pointer; transition:.2s}
+  .seg button.on{background:linear-gradient(145deg,#2a2a33,#202027); color:#fff; box-shadow:0 2px 8px rgba(0,0,0,.35)}
+  .whenat{background:var(--card); border:1px solid var(--line); color:var(--txt);
+    font:600 13px inherit; padding:9px 11px; border-radius:11px; outline:none; color-scheme:dark}
+  .whenclear{width:30px; height:30px; border:0; border-radius:50%; background:#2a2a33; color:var(--dim);
+    font-size:13px; cursor:pointer}
+  @media (prefers-color-scheme: light){
+    .seg button.on{background:linear-gradient(145deg,#ffffff,#eeeef3); color:#16161a}
+    .whenat{color-scheme:light}
+    .whenclear{background:#e2e2e9}
+  }
   .shead{font-size:13px; color:var(--dim); background:var(--card); border:1px solid var(--line); border-radius:12px; padding:11px 13px; margin-bottom:12px; line-height:1.5}
   .shead.warn{background:rgba(245,158,11,.1); border-color:rgba(245,158,11,.3); color:#ffe0a3}
   .shead.good{border-color:rgba(34,197,94,.25)}
@@ -301,6 +317,18 @@
         <span class="lbl">&#9925; Weather</span>
       </label>
       <span class="smart-hint">sweeps hubs &amp; flags tight changes</span>
+    </div>
+
+    <div class="whenbar">
+      <div class="seg" role="group" aria-label="When to travel">
+        <button type="button" id="segNow"  class="on" onclick="setWhen('now')">Now</button>
+        <button type="button" id="segDep"  onclick="setWhen('dep')">Leave at</button>
+        <button type="button" id="segArr"  onclick="setWhen('arr')">Arrive by</button>
+      </div>
+      <input type="datetime-local" id="whenAt" class="whenat" aria-label="Date and time"
+             onchange="onWhenChange()" hidden>
+      <button type="button" id="whenClear" class="whenclear" onclick="setWhen('now')" hidden
+              aria-label="Back to departures from now">&#10005;</button>
     </div>
     <div id="jrnOut"><div class="hint">Enter two stations to plan a journey.</div></div>
   </section>
@@ -537,13 +565,49 @@ function onWeatherToggle(){
   weather = $("wxTog").checked;
   if(fromName&&toName) planJourney();
 }
+/* ---------- when to travel: now / leave at / arrive by ----------
+   The planner used to answer only "from now". Two things this adds:
+   jumping straight to a time (instead of paging through later trains), and
+   ARRIVE-BY -- "I must be there by 09:00, what do I catch?" -- which the app
+   could not express at all. Both ride the same API params: date/time, plus
+   isArrivalTime=1. Empty string = now, so the default path is unchanged.     */
+let whenMode = "now";        // now | dep | arr
+let whenValue = "";          // datetime-local value, e.g. "2026-07-24T09:00"
+
+function whenQS(){
+  if(whenMode === "now" || !whenValue) return "";
+  const [d,t] = whenValue.split("T");
+  return `&date=${d}&time=${t}` + (whenMode === "arr" ? "&isArrivalTime=1" : "");
+}
+function setWhen(mode){
+  whenMode = mode;
+  const at=$("whenAt"), clr=$("whenClear");
+  ["now","dep","arr"].forEach(m=>$("seg"+m[0].toUpperCase()+m.slice(1)).classList.toggle("on", m===mode));
+  if(mode === "now"){
+    at.hidden = true; clr.hidden = true; whenValue = "";
+    if(fromName && toName) planJourney();
+    return;
+  }
+  at.hidden = false; clr.hidden = false;
+  if(!at.value){                       // seed with the next round half-hour, local time
+    const d=new Date(Date.now()+30*60000); d.setSeconds(0,0); d.setMinutes(d.getMinutes()>=30?30:0);
+    at.value = new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  }
+  whenValue = at.value;
+  if(fromName && toName) planJourney();
+}
+function onWhenChange(){
+  whenValue = $("whenAt").value;
+  if(whenValue && fromName && toName) planJourney();
+}
+
 function planJourney(){ return smart ? smartPlan() : plainPlan(); }
 
 async function plainPlan(){
   if(!fromName||!toName) return;
   $("jrnOut").innerHTML = skel(4);
   try{
-    const d=await api(`/connections?limit=6&from=${encodeURIComponent(fromName)}&to=${encodeURIComponent(toName)}`);
+    const d=await api(`/connections?limit=6&from=${encodeURIComponent(fromName)}&to=${encodeURIComponent(toName)}${whenQS()}`);
     const cs=d.connections||[];
     if(!cs.length){ $("jrnOut").innerHTML=`<div class="empty"><div class="big">&#9940;</div>No connections found.</div>`; return; }
     cs.forEach(annotate);
@@ -801,12 +865,12 @@ async function smartPlan(){
     const f=encodeURIComponent(fromName), t=encodeURIComponent(toName);
     // Fire everything at once. The two direct queries (base + wide) are the fast core;
     // hub sweeps run in parallel, each capped so the slowest hub can't hold up first paint.
-    const baseP = tryConns(`from=${f}&to=${t}&limit=6`);
-    const wideP = tryConns(`from=${f}&to=${t}&limit=16`);
+    const baseP = tryConns(`from=${f}&to=${t}&limit=6${whenQS()}`);
+    const wideP = tryConns(`from=${f}&to=${t}&limit=16${whenQS()}`);
     const hubList = [...HUBS, ...(preferScenic?SCENIC_HUBS:[])].filter(h=>h!==fromName&&h!==toName);
     const HUB_CAP=5000;  // tunable: bounds hub fill-in (hubs measured 3.3-9.3s); the base render fixes PERCEIVED latency regardless of this
     const hubJobs = hubList.map(h=>
-      withTimeout(tryConns(`from=${f}&to=${t}&via[]=${encodeURIComponent(h)}&limit=3`), HUB_CAP)
+      withTimeout(tryConns(`from=${f}&to=${t}&via[]=${encodeURIComponent(h)}&limit=3${whenQS()}`), HUB_CAP)
         .then(cs=>cs.map(c=>{c._via=h; return c;})).catch(()=>[]));
 
     // Phase 1 -- render the direct/wide results the moment they land (~base latency), hint that more is coming
