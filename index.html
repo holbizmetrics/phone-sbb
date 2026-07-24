@@ -1504,12 +1504,72 @@ async function fillElevation(panel,ci){
   const box=panel.querySelector(".elevbox");
   if(box && panel.dataset.open==="1") box.innerHTML=elevationSVG(pts,elev);
 }
+/* ---------- summit verdict ----------
+   A cable car, gondola, cog railway or funicular means you are going UP, and the
+   only question that matters then is "is it worth it today?" -- because cloud at
+   the top ruins the entire point, and a forecast temperature does not tell you
+   that. Combines three things the app already has: the mountain leg category,
+   the destination forecast at ARRIVAL hour, and the terrain elevation. */
+const MOUNTAIN_CATS=/^(PB|GB|CC|FUN)$/i;
+function mountainLegs(c){
+  return (c.sections||[]).filter(s=>s.journey && MOUNTAIN_CATS.test(s.journey.category||""));
+}
+function summitVerdict(code){
+  if(code==null) return null;
+  if(code<=1)            return {v:"clear at the top", good:true};
+  if(code===2)           return {v:"partly cloudy up there", good:true};
+  if(code===3)           return {v:"overcast at the top — the view may be gone", good:false};
+  if(code>=45&&code<=48) return {v:"fog at the top — expect no view", good:false};
+  if(code>=71&&code<=77) return {v:"snow at the top", good:false};
+  if(code>=95)           return {v:"thunderstorm — not the day for it", good:false};
+  return {v:"wet at the top", good:false};
+}
+async function fillSummit(panel,ci){
+  const box=panel.querySelector(".summitbox"); if(!box) return;
+  const c=jrnConns[ci]; if(!c) return;
+  const legs=mountainLegs(c);
+  if(!legs.length){ box.innerHTML=""; return; }            // not an excursion, say nothing
+  const co=c.to?.station?.coordinate, arr=c.to?.arrival;
+  if(!co||!arr){ box.innerHTML=""; return; }
+  const kinds=[...new Set(legs.map(s=>({PB:"cable car",GB:"gondola",CC:"cog railway",FUN:"funicular"}[(s.journey.category||"").toUpperCase()]||"mountain railway")))];
+  box.innerHTML=`<div class="smtitle">&#128670; ${esc(kinds.join(" + "))} to ${esc(shortStop(c.to.station.name))}</div>`;
+  try{
+    const [wx, elevArr] = await Promise.all([
+      destWeather(co.x, co.y),
+      routeElevation([{x:+co.y, y:+co.x}]).catch(()=>null)
+    ]);
+    const w = wx && wxAt(wx.hourly, arr, sunFor(wx&&wx.daily, arr));
+    const alt = Array.isArray(elevArr) && elevArr.length ? Math.round(elevArr[0]) : null;
+    if(panel.dataset.open!=="1") return;
+    const verdict = w ? summitVerdictFromDesc(w) : null;
+    const bits=[];
+    if(alt!=null) bits.push(`<b>${alt} m</b>`);
+    if(w) bits.push(`${w.emoji} ${w.temp}° on arrival`);
+    if(w&&w.rise&&w.set) bits.push(`sun ${w.rise}–${w.set}`);
+    box.innerHTML=`<div class="smtitle">&#128670; ${esc(kinds.join(" + "))} to ${esc(shortStop(c.to.station.name))}`
+      + (bits.length?` <span class="smbits">${bits.join(" &#183; ")}</span>`:"")+`</div>`
+      + (verdict?`<div class="smv ${verdict.good?"good":"bad"}">${verdict.v}</div>`:"");
+  }catch(e){ /* fail-silent: the title alone is still useful */ }
+}
+/* wxAt gives a description string, not the raw code, so map back from it -- the
+   description map is the single source of truth for what a code means. */
+function summitVerdictFromDesc(w){
+  const t=(w.desc||"").toLowerCase();
+  if(!t) return null;
+  if(t.includes("clear")) return {v:"clear at the top", good:true};
+  if(t.includes("partly")) return {v:"partly cloudy up there", good:true};
+  if(t.includes("overcast")) return {v:"overcast at the top — the view may be gone", good:false};
+  if(t.includes("fog")) return {v:"fog at the top — expect no view", good:false};
+  if(t.includes("snow")) return {v:"snow at the top", good:false};
+  if(t.includes("thunder")) return {v:"thunderstorm — not the day for it", good:false};
+  return {v:"wet at the top", good:false};
+}
 function toggleSketch(btn,ci){
   const card=btn.closest(".conn"), panel=card.querySelector(".sketch");
   const open = panel.dataset.open==="1";
   panel.dataset.open = open?"":"1";
-  panel.innerHTML = open?"":(sketchSVG(ci)+`<div class="elevbox"></div>`+mapsLinks(ci));
-  if(!open) fillElevation(panel,ci);
+  panel.innerHTML = open?"":(sketchSVG(ci)+`<div class="elevbox"></div>`+`<div class="summitbox"></div>`+mapsLinks(ci));
+  if(!open) { fillElevation(panel,ci); fillSummit(panel,ci); }
   btn.classList.toggle("on",!open);
   btn.setAttribute("aria-expanded", String(!open));
 }
