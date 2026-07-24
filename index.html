@@ -208,6 +208,15 @@
     stroke:var(--card); stroke-width:3.5px; stroke-linejoin:round;
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif}
   .sklbl.chg{fill:var(--dim); font-weight:600}
+  .elevbox:not(:empty){margin-top:10px}
+  .elev{width:100%; height:auto; display:block}
+  .elev-fill{fill:var(--grn); opacity:.16}
+  .elev-line{stroke:var(--grn); stroke-width:2; stroke-linejoin:round}
+  .elev-ax{fill:var(--faint); font-size:9px; font-weight:700}
+  .elev-peak{fill:var(--txt)}
+  .elev-peaklbl{fill:var(--dim); font-size:10px; font-weight:700}
+  .elev-sum{font-size:12px; color:var(--dim); margin-top:4px}
+  .elev-sum b{color:var(--txt)}
   .skmaps{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px}
   .skmaps a{font-size:12px; font-weight:600; color:var(--dim); text-decoration:none;
     background:var(--chip); border:1px solid var(--line); border-radius:9px; padding:6px 10px}
@@ -1356,11 +1365,71 @@ function mapsLinks(ci){
     + (drive?`<a href="${drive}" target="_blank" rel="noopener">&#128663; by car instead</a>`:"")
     + `</div>`;
 }
+/* ---------- elevation profile ----------
+   The sketch shows the journey from ABOVE; this shows the same passList from
+   the SIDE. For a Swiss trip that IS the story: Interlaken 568m -> Jungfraujoch
+   3496m is not a detail, it is the point. Elevations come from open-meteo --
+   the SAME host already used for the weather, keyless and CORS-open. (Checked
+   opentopodata first: better dataset, but it sends no CORS header, so a browser
+   cannot call it. Verified before building, not after.) */
+const elevCache={};
+function routeElevation(pts){
+  const key=pts.map(p=>p.y.toFixed(3)+","+p.x.toFixed(3)).join("|");
+  if(!elevCache[key]){
+    const la=pts.map(p=>p.y.toFixed(4)).join(","), lo=pts.map(p=>p.x.toFixed(4)).join(",");
+    elevCache[key]=fetch(`https://api.open-meteo.com/v1/elevation?latitude=${la}&longitude=${lo}`)
+      .then(r=>r.json()).then(d=>Array.isArray(d.elevation)?d.elevation:null).catch(()=>null);
+  }
+  return elevCache[key];
+}
+function haversine(a,b){
+  const R=6371, r=Math.PI/180;
+  const dla=(b.y-a.y)*r, dlo=(b.x-a.x)*r;
+  const h=Math.sin(dla/2)**2+Math.cos(a.y*r)*Math.cos(b.y*r)*Math.sin(dlo/2)**2;
+  return 2*R*Math.asin(Math.sqrt(h));
+}
+function elevationSVG(pts,elev){
+  const W=560,H=110,PADL=34,PADR=10,PADT=14,PADB=18;
+  // x by REAL distance, not stop index -- a steep climb should look steep
+  const dist=[0];
+  for(let i=1;i<pts.length;i++) dist.push(dist[i-1]+haversine(pts[i-1],pts[i]));
+  const total=dist[dist.length-1]||1;
+  const lo=Math.min(...elev), hi=Math.max(...elev), span=(hi-lo)||1;
+  const px=i=>PADL+(dist[i]/total)*(W-PADL-PADR);
+  const py=v=>H-PADB-((v-lo)/span)*(H-PADT-PADB);
+  const line=pts.map((_,i)=>`${px(i).toFixed(1)},${py(elev[i]).toFixed(1)}`).join(" ");
+  const area=`${PADL},${H-PADB} ${line} ${px(pts.length-1).toFixed(1)},${H-PADB}`;
+  const climb=Math.round(elev.reduce((s,v,i)=>i?s+Math.max(0,v-elev[i-1]):0,0));
+  const hiI=elev.indexOf(hi);
+  return `<svg class="elev" viewBox="0 0 ${W} ${H}" role="img" aria-label="Elevation profile: `
+    + `${Math.round(elev[0])} to ${Math.round(elev[elev.length-1])} metres, ${climb} metres of climb">`
+    + `<polygon class="elev-fill" points="${area}"/>`
+    + `<polyline class="elev-line" points="${line}" fill="none"/>`
+    + `<text class="elev-ax" x="2" y="${(py(hi)+4).toFixed(1)}">${Math.round(hi)}m</text>`
+    + `<text class="elev-ax" x="2" y="${(py(lo)+4).toFixed(1)}">${Math.round(lo)}m</text>`
+    + `<circle class="elev-peak" cx="${px(hiI).toFixed(1)}" cy="${py(hi).toFixed(1)}" r="3.5"/>`
+    + `<text class="elev-peaklbl" x="${px(hiI).toFixed(1)}" y="${(py(hi)-7).toFixed(1)}" `
+    + `text-anchor="${hiI>pts.length*0.7?"end":hiI<pts.length*0.3?"start":"middle"}">`
+    + `${esc(shortStop(pts[hiI].name))}</text>`
+    + `</svg><div class="elev-sum">&#9968; climbs <b>${climb} m</b> &#183; `
+    + `${Math.round(elev[0])} m &#8594; ${Math.round(elev[elev.length-1])} m &#183; ${total.toFixed(0)} km</div>`;
+}
+async function fillElevation(panel,ci){
+  const legs=routePoints(ci); if(!legs) return;
+  let pts=legs.flatMap(l=>l.pts);
+  if(pts.length>60) pts=pts.filter((_,i)=>i%Math.ceil(pts.length/60)===0);   // stay polite
+  if(pts.length<2) return;
+  const elev=await routeElevation(pts);
+  if(!elev||elev.length!==pts.length) return;      // fail-silent: no strip, no error
+  const box=panel.querySelector(".elevbox");
+  if(box && panel.dataset.open==="1") box.innerHTML=elevationSVG(pts,elev);
+}
 function toggleSketch(btn,ci){
   const card=btn.closest(".conn"), panel=card.querySelector(".sketch");
   const open = panel.dataset.open==="1";
   panel.dataset.open = open?"":"1";
-  panel.innerHTML = open?"":(sketchSVG(ci)+mapsLinks(ci));
+  panel.innerHTML = open?"":(sketchSVG(ci)+`<div class="elevbox"></div>`+mapsLinks(ci));
+  if(!open) fillElevation(panel,ci);
   btn.classList.toggle("on",!open);
   btn.setAttribute("aria-expanded", String(!open));
 }
