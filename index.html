@@ -238,6 +238,7 @@
   .elev-peaklbl{fill:var(--dim); font-size:10px; font-weight:700}
   .elev-sum{font-size:12px; color:var(--dim); margin-top:4px}
   .elev-sum b{color:var(--txt)}
+  .elev-src{color:var(--faint); cursor:help}
   .skmaps{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px}
   .skmaps a{font-size:12px; font-weight:600; color:var(--dim); text-decoration:none;
     background:var(--chip); border:1px solid var(--line); border-radius:9px; padding:6px 10px}
@@ -389,6 +390,7 @@
       <div class="hrow"><span class="k">7&#8594;5</span><span class="v">on a change means you arrive at 7 and leave from 5 &#8212; you have to cross the station.</span></div>
       <div class="hrow"><span class="k">Tap a leg</span><span class="v">(the coloured badge) for the stops in between.</span></div>
       <div class="hrow"><span class="k">&#128506; map</span><span class="v">sketches the whole route, with a pulsing dot for where the train is now.</span></div>
+      <div class="hrow"><span class="k">&#9968; climbs</span><span class="v">under the sketch: the same journey from the side, so a valley run and a mountain climb are one glance apart. Terrain height, not railway data.</span></div>
 
       <h3>The two switches</h3>
       <div class="hrow"><span class="k">Smart</span><span class="v">sweeps the hubs for connections the default search misses, and flags changes too tight to trust.</span></div>
@@ -1369,8 +1371,15 @@ function sketchSVG(ci){
     if(anchor==="middle"){ if(x-w/2 < 2) anchor="start"; else if(x+w/2 > W-2) anchor="end"; }
     const dx = anchor==="start" ? 6 : anchor==="end" ? -6 : 0;
     // above unless that would clip the top, or another label already sits there
-    let dy = -10;
-    if(y < 16 || placed.some(q=>Math.abs(q.x-(x+dx))<70 && Math.abs(q.y-(y-10))<11)) dy = 16;
+    // dense clusters (Zermatt / Furi / Trockener Steg sit within a few px of each
+    // other) stacked labels on top of one another. Try above, then below, and if
+    // both slots are taken OMIT the label -- an unreadable pile is worse than a
+    // missing name, and the dot is still there.
+    const clash=(cx,cy)=>placed.some(q=>Math.abs(q.x-cx)<Math.max(46,w*0.55) && Math.abs(q.y-cy)<11);
+    let dy=null;
+    if(y>=16 && !clash(x+dx,y-10)) dy=-10;
+    else if(!clash(x+dx,y+16)) dy=16;
+    if(dy===null) return;                       // no room: skip this label
     placed.push({x:x+dx, y:y+dy});
     out+=`<text x="${(x+dx).toFixed(1)}" y="${(y+dy).toFixed(1)}" text-anchor="${anchor}" `
        + `class="sklbl${m.change?" chg":""}">${esc(m.t)}</text>`;
@@ -1464,7 +1473,15 @@ function elevationSVG(pts,elev){
   const py=v=>H-PADB-((v-lo)/span)*(H-PADT-PADB);
   const line=pts.map((_,i)=>`${px(i).toFixed(1)},${py(elev[i]).toFixed(1)}`).join(" ");
   const area=`${PADL},${H-PADB} ${line} ${px(pts.length-1).toFixed(1)},${H-PADB}`;
-  const climb=Math.round(elev.reduce((s,v,i)=>i?s+Math.max(0,v-elev[i-1]):0,0));
+  // A journey off a summit DESCENDS. Summing only the upward segments and calling
+  // it "climbs" was actively misleading on Klein Matterhorn -> Lauterbrunnen: it
+  // read "climbs 231 m" for a trip that drops three kilometres.
+  let up=0, down=0;
+  for(let i=1;i<elev.length;i++){ const dv=elev[i]-elev[i-1]; if(dv>0) up+=dv; else down-=dv; }
+  up=Math.round(up); down=Math.round(down);
+  const move = down>up*1.5 ? `&#8595; descends <b>${down} m</b>`
+             : up>down*1.5 ? `&#9968; climbs <b>${up} m</b>`
+             : `&#9968; climbs <b>${up} m</b> &#183; &#8595; descends <b>${down} m</b>`;
   const hiI=elev.indexOf(hi);
   return `<svg class="elev" viewBox="0 0 ${W} ${H}" role="img" aria-label="Elevation profile: `
     + `${Math.round(elev[0])} to ${Math.round(elev[elev.length-1])} metres, ${climb} metres of climb">`
@@ -1476,8 +1493,10 @@ function elevationSVG(pts,elev){
     + `<text class="elev-peaklbl" x="${px(hiI).toFixed(1)}" y="${(py(hi)-7).toFixed(1)}" `
     + `text-anchor="${hiI>pts.length*0.7?"end":hiI<pts.length*0.3?"start":"middle"}">`
     + `${esc(shortStop(pts[hiI].name))}</text>`
-    + `</svg><div class="elev-sum">&#9968; climbs <b>${climb} m</b> &#183; `
-    + `${Math.round(elev[0])} m &#8594; ${Math.round(elev[elev.length-1])} m &#183; ${total.toFixed(0)} km</div>`;
+    + `</svg><div class="elev-sum">${move} &#183; `
+    + `${Math.round(elev[0])} m &#8594; ${Math.round(elev[elev.length-1])} m &#183; ${total.toFixed(0)} km`
+    + `<span class="elev-src" title="Terrain height from open-meteo, sampled at each station. Not railway data, and the line between stations is drawn straight, not surveyed.">`
+    + ` &#183; terrain height, not railway data</span></div>`;
 }
 async function fillElevation(panel,ci){
   const legs=routePoints(ci); if(!legs) return;
