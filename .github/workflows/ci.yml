@@ -6,6 +6,7 @@ name: CI — build test
 
 on:
   push:
+    branches-ignore: [master]   # master pushes are handled by deploy.yml (test + deploy-on-green)
   pull_request:
 
 concurrency:

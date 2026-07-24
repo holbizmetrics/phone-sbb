@@ -1,0 +1,56 @@
+name: Deploy to Pages (gated)
+
+# Tier-2 atomic deploy: master goes live ONLY when the build test passes.
+# A failed test = the deploy is skipped and Pages keeps serving the last good
+# version (the site never goes down on a bad push). Requires the repo's Pages
+# "Source" to be set to "GitHub Actions" (Settings -> Pages -> Build and
+# deployment -> Source). While Source is still "Deploy from a branch", this
+# workflow's deploy step is a no-op-that-fails harmlessly; the cutover is the
+# Source switch, and it is reversible (switch back to a branch anytime).
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Syntax-check the inline script
+        run: node tests/syntax-check.mjs
+      - name: Install Playwright (Chromium)
+        run: |
+          npm init -y >/dev/null
+          npm install --no-save playwright@^1.47.0
+          npx playwright install --with-deps chromium
+      - name: Smoke test
+        run: node tests/smoke.mjs
+
+  deploy:
+    needs: test              # <-- the gate: no deploy unless the test job is green
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .            # static single-file site + manifest/icons (same content Pages serves today)
+      - id: deployment
+        uses: actions/deploy-pages@v4
