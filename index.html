@@ -124,7 +124,7 @@
   .ac div:active{background:var(--bg2)}
   .ac div .t{color:var(--faint); font-size:14px}
 
-  .swap{display:flex; justify-content:center; margin:-4px 0; position:relative; z-index:5}
+  .swap{display:flex; justify-content:center; margin:0 0 10px; position:relative; z-index:5}
   .swap button{width:38px; height:38px; border-radius:50%; border:1px solid var(--line); background:var(--card);
     color:var(--dim); font-size:17px; cursor:pointer; transition:.25s; box-shadow:var(--shadow)}
   .swap button:active{transform:rotate(180deg) scale(.9); color:#fff}
@@ -195,7 +195,15 @@
   .skbtn.on{background:var(--segon); color:var(--segontxt); border-color:transparent}
   .sketch:not(:empty){margin-top:12px; padding-top:12px; border-top:1px solid var(--line)}
   .sk{width:100%; height:auto; display:block; overflow:visible}
-  .sklbl{fill:var(--dim); font-size:11px; font-weight:700;
+  .sklbl{fill:var(--txt); font-size:11px; font-weight:700; paint-order:stroke;
+    stroke:var(--card); stroke-width:3.5px; stroke-linejoin:round;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif}
+  .sklbl.chg{fill:var(--dim); font-weight:600}
+  .skmaps{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px}
+  .skmaps a{font-size:12px; font-weight:600; color:var(--dim); text-decoration:none;
+    background:var(--chip); border:1px solid var(--line); border-radius:9px; padding:6px 10px}
+  .skmaps a:active{opacity:.6}
+  .sk-unused{font-size:11px; font-weight:700;
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif}
   .conn .dur{margin-left:auto; text-align:right}
   .conn .dur b{font-size:16px; font-weight:700}
@@ -205,7 +213,7 @@
   .legs .b2:active{transform:scale(.94)}
   .legs .b2.on{box-shadow:0 0 0 2px var(--bg), 0 0 0 4px currentColor}
   .legs .sep{color:var(--faint); font-size:13px}
-  .legs .lhint{font-size:10px; color:var(--faint); margin-left:auto; letter-spacing:.02em}
+  .legs .lhint{margin-right:auto; font-size:10px; color:var(--faint); margin-left:auto; letter-spacing:.02em}
 
   /* ---- expandable leg -> intermediate stops (from section.journey.passList) ---- */
   .stops:empty{display:none}
@@ -1178,6 +1186,14 @@ function routePoints(ci){
   });
   return legs.length?legs:null;
 }
+/* Station names can be very long ("DTC Dynamic Test Center AG, Vauffelin,
+   Route Principale 127"). The SVG is overflow:visible so an unshortened label
+   paints outside the card -- shorten first, then clamp by estimated width. */
+function shortStop(n){
+  let s=(n||"").replace(/,\s*(Bahnhof|Gare|Stazione|Bahnhof\/Gare)\s*$/i,"");
+  s=s.split(",")[0].trim();                       // keep the place, drop the address tail
+  return s.length>20 ? s.slice(0,19)+"…" : s;
+}
 function sketchSVG(ci){
   const legs=routePoints(ci);
   if(!legs) return `<div class="snone">No map data for this route.</div>`;
@@ -1201,17 +1217,58 @@ function sketchSVG(ci){
          + `fill="${end?"#fff":l.col}" stroke="${l.col}" stroke-width="${end?2.2:0}"/>`;
     });
   });
-  const first=legs[0].pts[0], last=legs[legs.length-1].pts.slice(-1)[0];
-  const lbl=(p,t,anchor)=>`<text x="${Math.min(Math.max(px(p),4),W-4).toFixed(1)}" y="${(py(p)-9).toFixed(1)}" `
-    + `text-anchor="${anchor}" class="sklbl">${esc(t)}</text>`;
-  out+=lbl(first,first.name,"start")+lbl(last,last.name,"end");
+  // Label the MEANINGFUL vertices: origin, every change station, destination.
+  // Anonymous dots make a correct shape unreadable -- the changes are the story.
+  const marks=[{p:legs[0].pts[0], t:legs[0].pts[0].name}];
+  legs.forEach((l,i)=>{
+    const end=l.pts[l.pts.length-1];
+    const name=shortStop(end.name);
+    if(!marks.some(m=>m.t===name)) marks.push({p:end, t:name, change:i<legs.length-1});
+  });
+  marks[0].t=shortStop(marks[0].t);
+  // place each label on the side with room, and anchor so it never runs off-frame
+  const placed=[];
+  marks.forEach(m=>{
+    const x=px(m.p), y=py(m.p);
+    const w=m.t.length*5.6;                        // ~6px/char at 11px bold
+    let anchor = x < W*0.28 ? "start" : x > W*0.72 ? "end" : "middle";
+    // a label must never leave the box: flip the anchor if this side has no room
+    if(anchor==="end"   && x-w < 2)   anchor="start";
+    if(anchor==="start" && x+w > W-2) anchor="end";
+    if(anchor==="middle"){ if(x-w/2 < 2) anchor="start"; else if(x+w/2 > W-2) anchor="end"; }
+    const dx = anchor==="start" ? 6 : anchor==="end" ? -6 : 0;
+    // above unless that would clip the top, or another label already sits there
+    let dy = -10;
+    if(y < 16 || placed.some(q=>Math.abs(q.x-(x+dx))<70 && Math.abs(q.y-(y-10))<11)) dy = 16;
+    placed.push({x:x+dx, y:y+dy});
+    out+=`<text x="${(x+dx).toFixed(1)}" y="${(y+dy).toFixed(1)}" text-anchor="${anchor}" `
+       + `class="sklbl${m.change?" chg":""}">${esc(m.t)}</text>`;
+  });
   return out+`</svg>`;
+}
+/* The app solves the RAIL part and stops at a station -- but the real
+   destination is usually the trailhead / hotel / cable-car base beyond it.
+   These two links are that handoff, and they cost nothing: pure hrefs built
+   from coordinates already in the connection. By COORDINATE, never by name,
+   so they cannot land on a same-named place elsewhere. */
+function mapsLinks(ci){
+  const c=jrnConns[ci]; if(!c) return "";
+  const f=c.from?.station?.coordinate, t=c.to?.station?.coordinate;
+  if(!t) return "";
+  const dest=`${t.x},${t.y}`;
+  const pin=`https://www.google.com/maps/search/?api=1&query=${dest}`;
+  const drive=f?`https://www.google.com/maps/dir/?api=1&origin=${f.x},${f.y}&destination=${dest}&travelmode=driving`:"";
+  const name=esc(shortStop(c.to?.station?.name||"destination"));
+  return `<div class="skmaps">`
+    + `<a href="${pin}" target="_blank" rel="noopener">&#128205; ${name} in Maps</a>`
+    + (drive?`<a href="${drive}" target="_blank" rel="noopener">&#128663; by car instead</a>`:"")
+    + `</div>`;
 }
 function toggleSketch(btn,ci){
   const card=btn.closest(".conn"), panel=card.querySelector(".sketch");
   const open = panel.dataset.open==="1";
   panel.dataset.open = open?"":"1";
-  panel.innerHTML = open?"":sketchSVG(ci);
+  panel.innerHTML = open?"":(sketchSVG(ci)+mapsLinks(ci));
   btn.classList.toggle("on",!open);
   btn.setAttribute("aria-expanded", String(!open));
 }
@@ -1251,7 +1308,8 @@ function connCard(c,i){
     </div>
     <div class="legs">${legs}${lhint}
       <button class="skbtn" type="button" aria-expanded="false" onclick="toggleSketch(this,${i})"
-              title="Sketch the route geography">&#128506;</button></div>
+              aria-label="Show a sketch of the whole route"
+              title="Sketch the whole route">&#128506; map</button></div>
     <div class="stops"></div>
     <div class="sketch"></div>
     ${chgHTML}
