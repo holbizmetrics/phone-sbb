@@ -104,6 +104,52 @@ if (stubbed === 'ok') {
   check(cx.includes('7') && cx.includes('5'), `change shows the platform switch (${cx.trim()})`);
 }
 
+// Regression lock for the three traveller-breaking bugs an independent review found
+// on 2026-07-25. All three rendered plausibly, so only an assertion catches them.
+const rev = await page.evaluate(() => { try {
+  const base = () => ({
+    from: { departure: '2026-07-24T10:00:00+02:00', platform: '3' },
+    to:   { arrival:   '2026-07-24T11:00:00+02:00', platform: '5' },
+    duration: '00d01:00:00', transfers: 1,
+    sections: [
+      { journey: { category: 'IR', number: '16', passList: [] },
+        departure: { departure: '2026-07-24T10:00:00+02:00' },
+        arrival:   { arrival:   '2026-07-24T10:30:00+02:00', station: { name: 'Bern' } } },
+      { journey: { category: 'S', number: '1', passList: [] },
+        departure: { departure: '2026-07-24T10:35:00+02:00', station: { name: 'Bern' } },
+        arrival:   { arrival:   '2026-07-24T11:00:00+02:00' } },
+    ],
+  });
+  // #2: arrival delayed 20 min PAST the onward departure -> a change you cannot make
+  const m = base();
+  m.sections[0].arrival.prognosis = { arrival: '2026-07-24T10:55:00+02:00' };
+  const mChg = changeDetails(m);
+  m._chg = mChg; m._buf = Math.min(...mChg.map(x => x.b)); m._tight = m._buf < TIGHT;
+  // #3: departure 11 min late -> the card must agree with the board
+  const d = base();
+  d.from.prognosis = { departure: '2026-07-24T10:11:00+02:00' };
+  d._chg = [];
+  return { negKept: mChg.some(x => x.missed), missHTML: connCard(m, 0), lateHTML: connCard(d, 0),
+           tickUsesLabel: String(tickBoard).includes('depLabel') };
+} catch (e) { return { err: e.message }; } });
+check(!rev.err, `review-regression fixture builds (${rev.err || 'ok'})`);
+if (!rev.err) {
+  check(rev.negKept, 'impossible change is kept, not silently dropped');
+  check(rev.missHTML.includes('missed by'), 'missed change is labelled in words');
+  check(rev.missHTML.includes('cx tight'), 'missed change is flagged tight');
+  check(rev.lateHTML.includes('10:11'), 'journey card shows the real (prognosis) departure');
+  check(!/<div class="tt">10:00/.test(rev.lateHTML), 'journey card no longer shows the scheduled time instead');
+  check(rev.lateHTML.includes('+11'), 'journey card shows the delay, as the board does');
+  check(rev.tickUsesLabel, 'tickBoard uses the one depLabel definition');
+}
+check(await page.evaluate(() => wxAt({ time: ['2026-07-24T10:00'], weather_code: [0],
+  temperature_2m: [null] }, '2026-07-24T10:00:00+02:00') === null),
+  'missing temperature returns null, not a confident 0 degrees');
+check(await page.evaluate(() => { favs = ["O'Brien \" <b>x</b>"]; renderFavs();
+  const b = document.querySelector('#favs .star');
+  return !!b && b.dataset.n === "O'Brien \" <b>x</b>" && !document.querySelector('#favs b'); }),
+  'station name with quotes/markup cannot break out of the favourite button');
+
 // Help sheet: the logo opens it, and it must be closable three ways — a modal
 // you cannot dismiss on a phone is worse than no modal.
 check(!(await page.locator('#help').evaluate((n) => n.classList.contains('on'))), 'help starts closed');
