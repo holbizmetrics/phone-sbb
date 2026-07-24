@@ -142,7 +142,7 @@
   .ac.show{display:block; animation:pop .16s ease}
   .ac div{padding:13px 16px; border-bottom:1px solid var(--line); cursor:pointer; display:flex; align-items:center; gap:10px}
   .ac div:last-child{border-bottom:0}
-  .ac div:active{background:var(--bg2)}
+  .ac div:active,.ac div.sel{background:var(--bg2)}
   .ac div .t{color:var(--faint); font-size:14px}
 
   .swap{display:flex; justify-content:center; margin:0 0 10px; position:relative; z-index:5}
@@ -1732,6 +1732,35 @@ function tickClock(){
   if(box.innerHTML!==html) box.innerHTML=html;
 }
 
+/* Enter must work. Until now only the departures box had a key handler: on the
+   journey side you could type a full station name, press Enter, and nothing at
+   all happened -- the search only fired if you TAPPED a dropdown row. Typing
+   the name and hitting Enter is the most ordinary thing a person does with two
+   text fields, so it now takes the top suggestion (or the literal text) and
+   searches. Also gives the dropdown keyboard selection, which it never had. */
+function acEnter(inpId, acId, onPick){
+  const inp=$(inpId), ac=$(acId);
+  inp.addEventListener("keydown", e=>{
+    const rows=[...ac.querySelectorAll("div")], open=ac.classList.contains("show");
+    if(e.key==="ArrowDown"||e.key==="ArrowUp"){
+      if(!open||!rows.length) return;
+      e.preventDefault();
+      const cur=rows.findIndex(r=>r.classList.contains("sel"));
+      const nxt=e.key==="ArrowDown" ? Math.min(cur+1,rows.length-1) : Math.max(cur-1,0);
+      rows.forEach(r=>r.classList.remove("sel")); rows[nxt<0?0:nxt].classList.add("sel");
+      return;
+    }
+    if(e.key!=="Enter") return;
+    e.preventDefault();
+    const sel=rows.find(r=>r.classList.contains("sel")) || (open?rows[0]:null);
+    const name=sel? sel.dataset.n : inp.value.trim();
+    if(!name) return;
+    inp.value=name; ac.classList.remove("show"); inp.blur();
+    onPick(name);
+  });
+}
+acEnter("iFrom","acFrom", n=>{ fromName=n; $("fFrom").classList.add("has"); if(toName) planJourney(); });
+acEnter("iTo","acTo",     n=>{ toName=n;   $("fTo").classList.add("has");   if(fromName) planJourney(); });
 wireAC("iDep","acDep","fDep", showDepartures);
 wireAC("iFrom","acFrom","fFrom", n=>{ fromName=n; if(toName) planJourney(); });
 wireAC("iTo","acTo","fTo",     n=>{ toName=n;   if(fromName) planJourney(); });
