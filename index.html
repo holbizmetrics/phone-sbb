@@ -54,6 +54,7 @@
       radial-gradient(1200px 600px at 50% -10%, #1b1220 0%, transparent 55%),
       radial-gradient(900px 500px at 100% 0%, #101822 0%, transparent 50%),
       var(--bg);
+    background-repeat:no-repeat; background-attachment:fixed;
   }
   .themebtn{background:none; border:0; color:var(--dim); font-size:17px; cursor:pointer;
     padding:4px 6px; border-radius:8px; line-height:1}
@@ -78,6 +79,10 @@
       var(--bg);
     color:var(--txt);
     font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;
+    /* backgrounds REPEAT by default: body is height:100% (one viewport) while the
+       page scrolls far past it, so the radial gradients tiled and produced a hard
+       horizontal seam with dark wedges. Pin them: no-repeat + fixed to the viewport. */
+    background-repeat:no-repeat; background-attachment:fixed;
     -webkit-font-smoothing:antialiased; overscroll-behavior-y:contain;
     display:flex; flex-direction:column; min-height:100%;
   }
