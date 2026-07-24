@@ -397,9 +397,12 @@ function parseDur(s){ // "00d00:56:00"
    widens the direct scan, computes real per-change buffers, and surfaces the
    options SBB didn't lead with — flagging tight changes and roomier picks. */
 let smart = true;
+let smartBusy = false;          // guard: the ~12-call sweep must not overlap itself
 const HUBS = ["Z\u00fcrich HB","Bern","Basel SBB","Luzern","Olten","Arth-Goldau","Lausanne","Biel/Bienne","Z\u00fcrich Flughafen","Winterthur"];
 const TIGHT = 5;   // minutes: a change below this is a sprint
 const COMFY = 8;   // minutes: at/above this a change is relaxed
+const SAFER_LATER = 10;  // a roomier option up to this many min slower still counts as "safer"
+const WINDOW_MIN = 25;   // drop absurd detours arriving >this many min past the fastest
 
 function onSmartToggle(){
   smart = $("smartTog").checked;
@@ -430,8 +433,10 @@ function changeDetails(c){
   const rides=(c.sections||[]).filter(s=>s.journey);
   const out=[];
   for(let k=1;k<rides.length;k++){
-    const prevArr=rides[k-1].arrival?.arrival;
-    const nextDep=rides[k].departure?.departure;
+    // real-time prognosis when present (a delayed train's change is tighter
+    // than scheduled — the whole point of tight-vs-safe), else scheduled
+    const prevArr=rides[k-1].arrival?.prognosis?.arrival || rides[k-1].arrival?.arrival;
+    const nextDep=rides[k].departure?.prognosis?.departure || rides[k].departure?.departure;
     const stn=rides[k].departure?.station?.name || rides[k-1].arrival?.station?.name || "";
     if(!prevArr||!nextDep) continue;
     const b=Math.round((new Date(nextDep)-new Date(prevArr))/60000);
@@ -440,8 +445,10 @@ function changeDetails(c){
   return out;
 }
 function annotate(c){
-  c._arr = c.to?.arrival ? new Date(c.to.arrival).getTime() : Infinity;
-  c._dep = c.from?.departure ? new Date(c.from.departure).getTime() : 0;
+  const arrIso = c.to?.prognosis?.arrival || c.to?.arrival;
+  const depIso = c.from?.prognosis?.departure || c.from?.departure;
+  c._arr = arrIso ? new Date(arrIso).getTime() : Infinity;
+  c._dep = depIso ? new Date(depIso).getTime() : 0;
   c._chg = changeDetails(c);
   c._buf = c._chg.length ? Math.min(...c._chg.map(x=>x.b)) : null;
   c._tight = c._buf!=null && c._buf<TIGHT;
@@ -449,56 +456,69 @@ function annotate(c){
 }
 
 async function smartPlan(){
-  if(!fromName||!toName) return;
+  if(!fromName||!toName || smartBusy) return;   // no overlapping sweeps (F1)
+  smartBusy=true;
   $("jrnOut").innerHTML = skel(4);
-  const f=encodeURIComponent(fromName), t=encodeURIComponent(toName);
-  const base = await tryConns(`from=${f}&to=${t}&limit=6`);
-  const baseline = base[0] ? annotate(base[0]) : null;
+  try{
+    const f=encodeURIComponent(fromName), t=encodeURIComponent(toName);
+    const base = await tryConns(`from=${f}&to=${t}&limit=6`);
+    const baseline = base[0] ? annotate(base[0]) : null;
 
-  const jobs = [ tryConns(`from=${f}&to=${t}&limit=16`) ];
-  HUBS.forEach(h=>{
-    if(h===fromName||h===toName) return;
-    jobs.push(tryConns(`from=${f}&to=${t}&via[]=${encodeURIComponent(h)}&limit=3`)
-      .then(cs=>cs.map(c=>{c._via=h; return c;})));
-  });
-  const swept = (await Promise.all(jobs)).flat();
+    const jobs = [ tryConns(`from=${f}&to=${t}&limit=16`) ];
+    HUBS.forEach(h=>{
+      if(h===fromName||h===toName) return;
+      jobs.push(tryConns(`from=${f}&to=${t}&via[]=${encodeURIComponent(h)}&limit=3`)
+        .then(cs=>cs.map(c=>{c._via=h; return c;})));
+    });
+    const swept = (await Promise.all(jobs)).flat();
 
-  const seen=new Set(), all=[];
-  base.concat(swept).forEach(c=>{ const s=connSig(c); if(!seen.has(s)){ seen.add(s); all.push(annotate(c)); } });
-  if(!all.length){ $("jrnOut").innerHTML=`<div class="empty"><div class="big">&#9940;</div>No connections found.<br>Check the station names.</div>`; return; }
+    const seen=new Set(), all=[];
+    base.concat(swept).forEach(c=>{ const s=connSig(c); if(!seen.has(s)){ seen.add(s); all.push(annotate(c)); } });
+    if(!all.length){ $("jrnOut").innerHTML=`<div class="empty"><div class="big">&#9940;</div>No connections found.<br>Check the station names.</div>`; return; }
 
-  const now=Date.now();
-  const baseArr = baseline ? baseline._arr : Infinity;
-  const baseBuf = baseline ? baseline._buf : null;
-  const baseSig = baseline ? connSig(baseline) : "";
-  all.forEach(c=>{
-    c._isBase = connSig(c)===baseSig;
-    c._earlier = c._arr < baseArr;
-    c._safer   = !c._isBase && !c._tight && baseline!=null &&
-                 (baseline._tight || (baseBuf!=null && c._buf!=null && c._buf>=baseBuf+3)) &&
-                 c._arr <= baseArr + 4*60000;   // within 4 min of the fast arrival
-    c._beats = c._earlier || c._safer;
-    c._why = c._earlier ? "arrives earlier" : c._safer ? "roomier change" : "";
-  });
+    const now=Date.now();
+    const baseArr = baseline ? baseline._arr : Infinity;
+    const baseBuf = baseline ? baseline._buf : null;
+    const baseSig = baseline ? connSig(baseline) : "";
+    all.forEach(c=>{
+      c._isBase = connSig(c)===baseSig;
+      c._earlier = c._arr < baseArr;
+      c._safer   = !c._isBase && !c._tight && baseline!=null &&
+                   (baseline._tight || (baseBuf!=null && c._buf!=null && c._buf>=baseBuf+3)) &&
+                   c._arr <= baseArr + SAFER_LATER*60000;   // roomier, within the slower-tolerance window (F4)
+      c._beats = c._earlier || c._safer;
+      // F3: a genuine "smart pick" (green) must NOT be tight; an earlier-but-tight
+      // option is an honest tradeoff, never crowned as safe and never hides its warning
+      c._safePick   = c._beats && !c._tight;
+      c._fasterTight = c._beats && c._tight;
+      c._why = c._safer && c._earlier ? "earlier & roomier"
+             : c._safer ? "roomier change"
+             : "arrives earlier";
+    });
 
-  let cand = all.filter(c=> c._dep > now-60000 || c._isBase);
-  cand.sort((a,b)=> (b._beats-a._beats) || (a._arr-b._arr) || ((b._buf??-1)-(a._buf??-1)) || (a._chg.length-b._chg.length));
-  const top = cand.slice(0,7);
-  const nBeat = top.filter(c=>c._beats && !c._isBase).length;
-  const swN = new Set(swept.map(connSig)).size;
+    let cand = all.filter(c=> c._dep > now-60000 || c._isBase);
+    const fastest = Math.min(...cand.map(c=>c._arr));
+    cand = cand.filter(c=> c._isBase || c._arr <= fastest + WINDOW_MIN*60000);   // drop absurd detours
+    cand.sort((a,b)=> (b._safePick-a._safePick) || (b._beats-a._beats) || (a._arr-b._arr) || ((b._buf??-1)-(a._buf??-1)) || (a._chg.length-b._chg.length));
+    const top = cand.slice(0,7);
+    const nSafe = top.filter(c=>c._safePick).length;
+    const swN = new Set(swept.map(connSig)).size;
 
-  $("jrnOut").innerHTML = smartHead(baseline, nBeat, swN) + top.map((c,i)=>connCard(c,i)).join("");
+    $("jrnOut").innerHTML = smartHead(baseline, nSafe, swN) + top.map((c,i)=>connCard(c,i)).join("");
+  }catch(e){
+    $("jrnOut").innerHTML=`<div class="err">Couldn&#39;t plan that journey.<br>Check the station names and try again.</div>`;
+  }finally{ smartBusy=false; }
 }
 
-function smartHead(baseline, nBeat, swN){
+function smartHead(baseline, nSafe, swN){
   if(!baseline) return `<div class="shead">Swept ${swN} hub route${swN===1?"":"s"} &#183; best options below &#8595;</div>`;
   const bb=baseline._buf;
   if(baseline._tight){
     return `<div class="shead warn">&#9888; SBB&#39;s fastest pick has a tight <b>${bb}&#8201;min</b> change at <b>${esc(baseline._chg.find(x=>x.b===bb)?.stn||"a hub")}</b>.`
-      + (nBeat?` Found <b>${nBeat}</b> route${nBeat===1?"":"s"} with roomier transfers &#8595;`:` No roomier alternative beat it &#8212; it&#39;s the fastest.`)
+      + (nSafe?` Found <b>${nSafe}</b> option${nSafe===1?"":"s"} with a safer change &#8595;`:` No safer alternative beat it &#8212; it&#39;s the fastest.`)
       + `</div>`;
   }
-  if(nBeat) return `<div class="shead good">Swept ${swN} routes &#183; <b>${nBeat}</b> option${nBeat===1?"":"s"} the default list didn&#39;t lead with &#8595;</div>`;
+  if(nSafe) return `<div class="shead good">Swept ${swN} routes &#183; <b>${nSafe}</b> option${nSafe===1?"":"s"} the default list didn&#39;t lead with &#8595;</div>`;
   return `<div class="shead good">SBB&#39;s default looks solid${bb!=null?` (<b>${bb}&#8201;min</b> transfer slack)`:` (direct)`}. Full swept spread below &#8595;</div>`;
 }
 
@@ -516,12 +536,13 @@ function connCard(c,i){
     return `<span class="cx ${cls}">${esc(x.stn)} <b>${x.b}&#8242;</b></span>`;
   }).join("")+`</div>` : "";
   let ribs="";
-  if(c._beats) ribs+=`<span class="rib pick">&#9889; smart pick${c._why?" &#183; "+c._why:""}</span>`;
+  if(c._safePick) ribs+=`<span class="rib pick">&#9889; smart pick${c._why?" &#183; "+c._why:""}</span>`;
+  else if(c._fasterTight) ribs+=`<span class="rib tight">&#9889; faster &#183; tight ${c._buf}&#8242; change</span>`;
   else if(c._isBase) ribs+=`<span class="rib base">SBB default</span>`;
-  if(c._tight && !c._beats) ribs+=`<span class="rib tight">tight change</span>`;
+  if(c._tight && !c._fasterTight) ribs+=`<span class="rib tight">&#9888; tight change</span>`;
   if(c._via) ribs+=`<span class="viatag">via ${esc(c._via)}</span>`;
   const dm=minsUntil(dep);
-  return `<div class="conn ${c._beats?"win":""} ${c._tight?"hastight":""}" style="animation-delay:${i*30}ms">
+  return `<div class="conn ${c._safePick?"win":""} ${c._tight?"hastight":""}" style="animation-delay:${i*30}ms">
     <div class="top">
       <div class="tt">${hhmm(dep)}</div><span class="arr">&#8594;</span><div class="tt">${hhmm(arr)}</div>
       <div class="dur"><b>${parseDur(c.duration)}</b><span>${tr} change${tr===1?"":"s"}</span></div>
