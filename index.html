@@ -704,6 +704,7 @@ const wnorm=s=>(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g
   .replace(/\b(le|la|les|l|der|die|das|il|lo|the|de|du)\b/g," ").replace(/\s+/g," ").trim();
 // geo-constrained title lookup: only accept an article NEAR the wonder's coord whose name matches,
 // so an untagged "Le Belvedere" near Sion can't grab Ravel's identically-named house in France
+const FUZZY_MAX_M=2000;   // exact titles may sit anywhere in the radius; fuzzy ones must be this close
 async function wikiGeoTitle(lat,lon,name,lang){
   try{
     const u=`https://${lang}.wikipedia.org/w/api.php?action=query&list=geosearch`
@@ -711,12 +712,17 @@ async function wikiGeoTitle(lat,lon,name,lang){
     const r=await fetch(u);
     if(!r.ok) return null;
     const d=await r.json();
-    const hits=(d&&d.query&&d.query.geosearch)||[];   // returned nearest-first
+    const hits=(d&&d.query&&d.query.geosearch)||[];   // returned nearest-first, each with .dist (m)
     const want=wnorm(name);
     if(want.length<3) return null;
+    const multi=want.includes(" ");
     for(const h of hits){
       const t=wnorm(h.title);
-      if(t===want || t.startsWith(want+" ") || want.startsWith(t+" ")) return h.title;
+      if(t===want) return h.title;                    // exact title: trust it anywhere in the radius
+      // Prefix matches are where a generic name grabs a namesake ("Pont" pulling
+      // "Pont de la Machine"), so they must ALSO be close -- a POI's own article
+      // sits near its coordinate. A single-token name is too generic to prefix-match at all.
+      if(multi && h.dist!=null && h.dist<=FUZZY_MAX_M && (t.startsWith(want+" ") || want.startsWith(t+" "))) return h.title;
     }
     return null;
   }catch(e){ return null; }
