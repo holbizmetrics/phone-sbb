@@ -279,6 +279,7 @@
   .smart-toggle input:checked + .track{background:linear-gradient(145deg,var(--red),#a30000); border-color:transparent}
   .smart-toggle input:checked + .track .knob{left:20px; background:#fff}
   .smart-toggle .lbl{font-weight:700; font-size:14px}
+  .tzecho{font-size:11px; color:var(--faint); margin-top:2px; font-variant-numeric:tabular-nums}
   .tznote{font-size:11px; color:var(--amber); background:rgba(245,158,11,.10);
     border:1px solid rgba(245,158,11,.28); border-radius:10px; padding:7px 11px; margin-bottom:10px}
   .smart-hint{font-size:11px; color:var(--faint)}
@@ -1529,6 +1530,32 @@ function toggleSketch(btn,ci){
   btn.setAttribute("aria-expanded", String(!open));
 }
 
+/* Dual time. A visitor thinks in the zone they came from: "arrives 22:47 Swiss"
+   means nothing until it also says "= 16:47 your time" -- for calling home, for
+   a connecting flight, for knowing whether that is late. Swiss time stays the
+   headline (it is what the platform board says and what you must act on); the
+   home-zone reading is the quiet second line. Invisible for anyone already in
+   Swiss time, which is almost everyone -- so it costs the calm nothing. */
+let _tzDiff=null;
+function tzDiffers(){
+  if(_tzDiff!==null) return _tzDiff;
+  try{
+    const probe=new Date();
+    const swiss=probe.toLocaleTimeString("en-GB",{timeZone:"Europe/Zurich",hour:"2-digit",minute:"2-digit",hourCycle:"h23"});
+    const here =probe.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",hourCycle:"h23"});
+    _tzDiff = swiss!==here;
+  }catch(e){ _tzDiff=false; }
+  return _tzDiff;
+}
+function deviceEcho(iso){                       // the SAME instant, read on the traveller's own clock
+  if(!tzDiffers()) return "";
+  const d=new Date(iso);
+  return isNaN(d) ? "" : d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",hourCycle:"h23"});
+}
+function tzZoneLabel(){
+  try{ return (Intl.DateTimeFormat().resolvedOptions().timeZone||"").split("/").pop().replace(/_/g," "); }
+  catch(e){ return "your time"; }
+}
 function connCard(c,i){
   const dep=c.from?.departure, arr=c.to?.arrival;
   const secs=(c.sections||[]).filter(s=>s.journey);
@@ -1572,6 +1599,7 @@ function connCard(c,i){
       ${wxO}<div class="tt">${hhmm(dep)}</div><span class="arr">&#8594;</span>${wxD}<div class="tt">${hhmm(arr)}</div>
       <div class="dur"><b>${parseDur(c.duration)}</b><span>${tr} change${tr===1?"":"s"}</span></div>
     </div>
+    ${tzDiffers()&&dep&&arr ? `<div class="tzecho">${esc(tzZoneLabel())} time: ${deviceEcho(dep)} &#8594; ${deviceEcho(arr)}</div>` : ""}
     ${pfrow}
     <div class="legs">${legs}${lhint}
       <button class="skbtn" type="button" aria-expanded="false" onclick="toggleSketch(this,${i})"
