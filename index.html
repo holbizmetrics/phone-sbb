@@ -1191,10 +1191,9 @@ function setTab(t){
   $("tabDep").classList.toggle("on",dep); $("tabJrn").classList.toggle("on",!dep);
   $("vDep").classList.toggle("on",dep); $("vJrn").classList.toggle("on",!dep);
 }
-/* Theme: auto (follow OS) -> light -> dark -> auto. The OS preference is the
-   DEFAULT, never the final word: a user who prefers the app dark on a light
-   desktop must be able to say so. Persisted; "auto" removes the attribute so
-   prefers-color-scheme takes over again. */
+/* Theme: dark <-> light, dark by default, persisted. The OS preference is
+   deliberately not consulted -- the operator runs a light desktop and wants the
+   app dark, which is exactly the case an OS-follows-you default gets wrong. */
 const THEMES=["dark","light"];
 function applyTheme(t){
   const r=document.documentElement;
