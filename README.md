@@ -67,12 +67,18 @@ Turn the toggle off any time for the plain, single-list view.
   searches from either field; arrow keys pick from the dropdown.
 - **Now · Leave at · Arrive by** — "Arrive by" works backwards from when you
   have to be there.
-- **Sunset** — a fourth way to say when. It looks up sunset *at the destination*
-  on the day you are travelling and works backwards from that, because "get me
-  there before dark" is a real reason to catch an earlier train and not a sum
-  anyone should be doing on a platform. Tap it after dark and it plans for
-  tomorrow. The forecast reaches two days out; past that it says so rather than
-  quietly answering about today.
+- **Sunset · Sunrise** — two more ways to say when, both of them arrive-by
+  questions you shouldn't have to do arithmetic for. Each looks the time up *at
+  the destination* on the day you are travelling and works backwards from it,
+  because "get me there before dark" and "have me up there before first light"
+  are real reasons to catch a particular train. Tap Sunset after dark, or
+  Sunrise at any hour after dawn, and it plans for the next day rather than
+  asking for an arrival that has already been and gone. The forecast reaches two
+  days out; past that it says so rather than quietly answering about today.
+  Sunrise fails more often than Sunset does, and says why: the first train of
+  the day frequently cannot get you anywhere before the sun, and **"nothing runs
+  that early" is printed as exactly that** — not as an empty result that looks
+  like you misspelled the station.
 - **Scenic** floats panoramic routes (via Zweisimmen, Andermatt, Chur, Brig)
   to the top when one exists.
 - **Weather** at your departure hour *and* your arrival hour — the two that

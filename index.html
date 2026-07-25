@@ -306,7 +306,9 @@
 
   /* ---- when-to-travel (now / leave at / arrive by) ---- */
   .whenbar{display:flex; align-items:center; gap:8px; margin:0 2px 14px; flex-wrap:wrap}
-  .seg{display:flex; background:var(--bg2); border:1px solid var(--line); border-radius:12px; padding:3px}
+  /* wraps because five options do not fit one phone-width row; the group stays
+     one bordered block so a second line still reads as the same control */
+  .seg{display:flex; flex-wrap:wrap; background:var(--bg2); border:1px solid var(--line); border-radius:12px; padding:3px}
   .seg button{border:0; background:transparent; color:var(--dim); font:600 13px/1 inherit;
     padding:8px 12px; border-radius:9px; cursor:pointer; transition:.2s}
   .seg button.on{background:var(--segon); color:var(--segontxt); box-shadow:0 2px 8px rgba(0,0,0,.18)}
@@ -415,7 +417,8 @@
       <div class="hrow"><span class="k">A &#8594; B</span><span class="v">the chips above the two fields are routes you have searched before, newest first. Nothing to save &#8212; a search records itself. The two directions are kept apart, because the morning trip and the evening one are not the same trip.</span></div>
       <div class="hrow"><span class="k">&#8645;</span><span class="v">swaps the two stations.</span></div>
       <div class="hrow"><span class="k">Now</span><span class="v">&#183; Leave at &#183; Arrive by &#8212; Arrive by works backwards from when you must be there.</span></div>
-      <div class="hrow"><span class="k">&#127749; Sunset</span><span class="v">a fourth way to say when: arrive before the sun goes down at the place you are going, on the day you are going. It looks the sunset up there, not here, and fills in the arrive-by time for you. Tap it after dark and it plans for tomorrow instead. The forecast only reaches two days out, so for anything further it says so rather than quietly answering about today.</span></div>
+      <div class="hrow"><span class="k">&#127751; Sunset</span><span class="v">a fourth way to say when: arrive before the sun goes down at the place you are going, on the day you are going. It looks the sunset up there, not here, and fills in the arrive-by time for you. Tap it after dark and it plans for tomorrow instead. The forecast only reaches two days out, so for anything further it says so rather than quietly answering about today.</span></div>
+      <div class="hrow"><span class="k">&#127749; Sunrise</span><span class="v">the same thing at the other end of the day, and it usually means tomorrow: it plans to have you there <i>before</i> first light, which is the point of going up a mountain early. Tapping it after the sun is already up rolls to the next day by itself. If nothing gets you there that early it says so plainly &#8212; that is the first train of the day, not a mistake in your search.</span></div>
       <div class="hrow"><span class="k">Pl.&#8201;7</span><span class="v">is the platform you leave from. Amber with &#9888; means it changed from the scheduled one.</span></div>
       <div class="hrow"><span class="k">7&#8594;5</span><span class="v">on a change means you arrive at 7 and leave from 5 &#8212; you have to cross the station.</span></div>
       <div class="hrow"><span class="k">Tap a leg</span><span class="v">(the coloured badge) for the stops in between.</span></div>
@@ -502,7 +505,8 @@
         <button type="button" id="segNow"  class="on" onclick="setWhen('now')">Now</button>
         <button type="button" id="segDep"  onclick="setWhen('dep')">Leave at</button>
         <button type="button" id="segArr"  onclick="setWhen('arr')">Arrive by</button>
-        <button type="button" id="segSun"  onclick="setWhenSunset()" title="Arrive before sunset at your destination">&#127749; Sunset</button>
+        <button type="button" id="segSun"  onclick="setWhenSun('set')"  title="Arrive before sunset at your destination">&#127751; Sunset</button>
+        <button type="button" id="segRise" onclick="setWhenSun('rise')" title="Be at your destination for sunrise">&#127749; Sunrise</button>
       </div>
       <input type="datetime-local" id="whenAt" class="whenat" aria-label="Date and time"
              onchange="onWhenChange()" hidden>
@@ -923,61 +927,75 @@ function sunFor(daily, iso){
   if(i<0) return null;
   return {rise:(daily.sunrise?.[i]||"").slice(11,16), set:(daily.sunset?.[i]||"").slice(11,16)};
 }
-/* "Get me there before the sun goes down" is a real travel intent for this app's
-   audience, and it is an ARRIVE-BY question the user should not have to compute.
-   Fetches the destination's sunset for the chosen day and fills the arrive-by
-   time with it. Needs a destination first -- there is no sunset without a place. */
-async function setWhenSunset(){
+/* Both ends of the day, one function. "Get me there before the sun goes down" and
+   "have me up there when it comes up" are the same ARRIVE-BY question with a
+   different target, and the user should not have to compute either. Needs a
+   destination first -- there is no sunrise or sunset without a place.
+   The two differ in ONE way worth naming: today's sunset is usually still ahead
+   of you, today's sunrise usually is not, so the roll-to-tomorrow path below is
+   the exception for one and the normal case for the other. */
+const SUN_WORDS={
+  set : {word:"sunset",  emoji:"&#127751;", past:"already set",   plan:"planning to arrive before it"},
+  rise: {word:"sunrise", emoji:"&#127749;", past:"already risen", plan:"planning to be there for it"},
+};
+async function setWhenSun(which){
+  const W=SUN_WORDS[which]; if(!W) return;
   /* Every dead end here says what happened. A tap that silently does nothing
      reads as a broken button, and the user cannot tell "the forecast does not
      reach that far" apart from "the app is stuck". */
   const say=m=>{ const s=$("sunHint"); if(s) s.innerHTML=m; };
-  if(!toName){ $("jrnOut").innerHTML=`<div class="hint">Pick a destination first &#8212; sunset depends on where you are going.</div>`; return; }
-  const btn=$("segSun"); if(btn) btn.classList.add("busy");
+  const btnId = which==="rise" ? "segRise" : "segSun";
+  if(!toName){ $("jrnOut").innerHTML=`<div class="hint">Pick a destination first &#8212; ${W.word} depends on where you are going.</div>`; return; }
+  const btn=$(btnId); if(btn) btn.classList.add("busy");
   try{
     say("");
     const probe = jrnConns[0]?.to?.station?.coordinate
       || (await locations(toName).catch(()=>[]))[0]?.coordinate;
-    if(!probe||!probe.x){ say(`Could not place ${esc(shortStop(toName))} on the map, so there is no sunset to look up.`); return; }
+    if(!probe||!probe.x){ say(`Could not place ${esc(shortStop(toName))} on the map, so there is no ${W.word} to look up.`); return; }
     const wx=await destWeather(probe.x, probe.y);
     const days=(wx && wx.daily && Array.isArray(wx.daily.time)) ? wx.daily.time : [];
-    if(!days.length){ say("The forecast service did not answer, so sunset is unknown right now."); return; }
-    /* ONE day, decided once. Reading the sunset off one day and stamping it onto
+    if(!days.length){ say(`The forecast service did not answer, so ${W.word} is unknown right now.`); return; }
+    /* ONE day, decided once. Reading the time off one day and stamping it onto
        another is how a trip planned for next Saturday silently became tonight.
        Open-Meteo runs timezone=auto, so days[0] is today AT THE DESTINATION --
        more correct than the phone's own date near midnight. */
     let want=(whenValue||"").slice(0,10) || days[0];
     if(!days.includes(want)){
-      say(`Sunset is only known ${days.length} day${days.length>1?"s":""} ahead, not for <b>${esc(want)}</b>. `
+      say(`${W.word[0].toUpperCase()+W.word.slice(1)} is only known ${days.length} day${days.length>1?"s":""} ahead, not for <b>${esc(want)}</b>. `
         + `Pick a nearer day, or set the arrival time yourself.`);
       return;
     }
     let sun=sunFor(wx.daily, want);
-    if(!sun||!sun.set){ say(`No sunset time came back for ${esc(shortStop(toName))} on ${esc(want)}.`); return; }
-    // Tapping this at nine in the evening must not ask for an arrival that is
-    // already behind us; roll to the next day the forecast actually covers.
+    if(!sun||!sun[which]){ say(`No ${W.word} time came back for ${esc(shortStop(toName))} on ${esc(want)}.`); return; }
+    // Tapping this at nine in the evening -- or asking for sunrise at any hour
+    // after it -- must not request an arrival that is already behind us; roll to
+    // the next day the forecast actually covers.
     let rolled=false;
     if(!whenValue){
       const now=new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16);
-      if(`${want}T${sun.set}` <= now){
+      if(`${want}T${sun[which]}` <= now){
         const nxt=days[days.indexOf(want)+1], nsun=nxt?sunFor(wx.daily,nxt):null;
-        if(nsun&&nsun.set){ want=nxt; sun=nsun; rolled=true; }
-        else { say(`The sun has already set at ${esc(shortStop(toName))} today, and tomorrow is beyond the forecast.`); return; }
+        if(nsun&&nsun[which]){ want=nxt; sun=nsun; rolled=true; }
+        else { say(`The sun has ${W.past} at ${esc(shortStop(toName))} today, and tomorrow is beyond the forecast.`); return; }
       }
     }
     whenMode="arr";
-    ["now","dep","arr","sun"].forEach(m=>{const b=$("seg"+m[0].toUpperCase()+m.slice(1)); if(b) b.classList.toggle("on", m==="sun");});
+    const onSeg = which==="rise" ? "rise" : "sun";
+    ["now","dep","arr","sun","rise"].forEach(m=>{const b=$("seg"+m[0].toUpperCase()+m.slice(1)); if(b) b.classList.toggle("on", m===onSeg);});
     const at=$("whenAt"), clr=$("whenClear");
     at.hidden=false; clr.hidden=false;
-    at.value=`${want}T${sun.set}`; whenValue=at.value;
-    say(`&#127749; sunset at ${esc(shortStop(toName))} is <b>${sun.set}</b>`
-      + (rolled?` tomorrow`:``) + ` &#183; planning to arrive before it`);
+    at.value=`${want}T${sun[which]}`; whenValue=at.value;
+    sunTarget={word:W.word, time:sun[which]};
+    say(`${W.emoji} ${W.word} at ${esc(shortStop(toName))} is <b>${sun[which]}</b>`
+      + (rolled?` tomorrow`:``) + ` &#183; ${W.plan}`);
     if(fromName) planJourney();
-  } finally { const b=$("segSun"); if(b) b.classList.remove("busy"); }
+  } finally { const b=$(btnId); if(b) b.classList.remove("busy"); }
 }
 function setWhen(mode){
   whenMode = mode;
-  { const s=$("sunHint"); if(s) s.innerHTML=""; const b=$("segSun"); if(b) b.classList.remove("on"); }
+  // the explanation must not outlive the request that caused it
+  { sunTarget=null; const s=$("sunHint"); if(s) s.innerHTML="";
+    ["segSun","segRise"].forEach(id=>{ const b=$(id); if(b) b.classList.remove("on"); }); }
   const at=$("whenAt"), clr=$("whenClear");
   ["now","dep","arr"].forEach(m=>$("seg"+m[0].toUpperCase()+m.slice(1)).classList.toggle("on", m===mode));
   if(mode === "now"){
@@ -995,6 +1013,7 @@ function setWhen(mode){
 }
 function onWhenChange(){
   whenValue = $("whenAt").value;
+  sunTarget=null;   // hand-edited: whatever the sun said, this is the user's time now
   if(whenValue && fromName && toName) planJourney();
 }
 
@@ -1032,6 +1051,18 @@ function clearModes(){ modeSel=[]; save(LS.modes,modeSel); renderModes(); if(fro
    bare "no connections found" would send you hunting for a typo in a station
    name that is perfectly correct. Say which filter is doing it, and let the
    sentence itself be the way out. */
+/* Same idea for the two sun buttons, and it matters most for sunrise: asking to
+   be somewhere before first light very often has NO answer, because the first
+   train of the day leaves after it. That is the night refusing, not the search
+   failing, and a bare "no connections found" would send you checking the station
+   names for a spelling mistake that isn't there. */
+let sunTarget=null;
+function sunWhyEmpty(){
+  if(!sunTarget) return "";
+  return `<div class="emptywhy">You asked to arrive before ${esc(sunTarget.word)} at `
+    + `<b>${esc(sunTarget.time)}</b>. Nothing gets you there that early &#8212; that is the timetable, not a typo. `
+    + `<button type="button" class="linkish" onclick="setWhen('now')">Show the next departures instead</button></div>`;
+}
 function modeWhyEmpty(){
   if(!modeSel.length) return "";
   const names=MODES.filter(m=>modeSel.includes(m.k)).map(m=>m.label.toLowerCase());
@@ -1076,7 +1107,7 @@ async function plainPlan(){
   try{
     const d=await api(`/connections?limit=6&from=${encodeURIComponent(fromName)}&to=${encodeURIComponent(toName)}${whenQS()}${modeQS()}`);
     const cs=d.connections||[];
-    if(!cs.length){ $("jrnOut").innerHTML=`<div class="empty"><div class="big">&#9940;</div>No connections found.${modeWhyEmpty()}</div>`; return; }
+    if(!cs.length){ $("jrnOut").innerHTML=`<div class="empty"><div class="big">&#9940;</div>No connections found.${sunWhyEmpty()}${modeWhyEmpty()}</div>`; return; }
     cs.forEach(annotate);
     jrnConns = cs;   // render order == the ci the leg buttons index back into
     $("jrnOut").innerHTML = cs.map((c,i)=>connCard(c,i)).join("") + wondersExpanderHTML(cs[0].to?.station);
@@ -1451,7 +1482,7 @@ function renderSmart(base, swept, baseline, searching){
   base.concat(swept).forEach(c=>{ const s=connSig(c); if(!seen.has(s)){ seen.add(s); all.push(annotate(c)); } });
   if(!all.length){
     // an empty base can still be rescued by the incoming hub sweep -- don't paint the dead-end while still searching
-    if(!searching) $("jrnOut").innerHTML=`<div class="empty"><div class="big">&#9940;</div>No connections found.<br>Check the station names.${modeWhyEmpty()}</div>`;
+    if(!searching) $("jrnOut").innerHTML=`<div class="empty"><div class="big">&#9940;</div>No connections found.${sunWhyEmpty()||"<br>Check the station names."}${modeWhyEmpty()}</div>`;
     return;
   }
 
