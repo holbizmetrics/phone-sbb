@@ -126,6 +126,12 @@ answer is worse than an absent one:
 - **"We could not reach OpenStreetMap" is never rendered as "there is nothing
   here."** Both the wonders list and the en-route finder tell you which one
   happened, and a failed lookup is not cached, so the next tap really retries.
+- **Same rule on the journey search.** A refused, rate-limited or offline
+  timetable request used to arrive at the screen as "No connections found —
+  check the station names", sending you hunting for a typo in a name that was
+  perfectly correct. An unreachable timetable now says so, and says explicitly
+  that it is **not a "no"**. A hub sweep that times out stays silent, because a
+  slow interchange has never meant the journey doesn't exist.
 - If your phone isn't on Swiss time, a note says so — every time below is
   Swiss local, and the clock at the top is yours.
 - **A phone with no free space says so and keeps working.** `localStorage` throws
@@ -192,6 +198,7 @@ node tests/enroute.mjs          # where to get off — runs anywhere, no browser
 node tests/summit.mjs           # is it worth going up — runs anywhere, no browser
 node tests/storage-full.mjs     # a full phone must not kill the app — runs anywhere
 node tests/board-refresh.mjs    # the 30s refresh keeps its rows — runs anywhere
+node tests/outage-not-verdict.mjs # an outage is not "no such journey" — runs anywhere
 node tests/smoke.mjs            # Playwright end-to-end — CI only
 ```
 

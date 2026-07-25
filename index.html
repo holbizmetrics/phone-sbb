@@ -1176,13 +1176,21 @@ async function plainPlan(){
     $("jrnOut").innerHTML = cs.map((c,i)=>connCard(c,i)).join("") + wondersExpanderHTML(cs[0].to?.station);
     if(weather) fillWeather();
   }catch(e){
-    $("jrnOut").innerHTML=`<div class="err">Couldn&#39;t plan that journey.<br>Check the station names and try again.</div>`;
+    $("jrnOut").innerHTML=`<div class="err">We could not reach the timetable, so we do not know whether this journey runs.<br>This is not a &quot;no&quot; &#8212; check your connection and tap Search again.</div>`;
   }
 }
 
-async function tryConns(qs){
+/* Swallowing an error into [] made the app say "No connections found. Check the
+   station names." when the truth was that the request never landed -- sending
+   you hunting for a typo in a station name that is perfectly correct. That is
+   absence-of-data rendered as data, the one thing this app refuses everywhere
+   else, and it was doing it on the busiest path in the app. So the caller is
+   told. Pass a note object for queries whose failure CHANGES THE VERDICT (the
+   two direct ones); hub sweeps pass nothing, because a hub that times out is
+   ordinary and never means the journey does not exist. */
+async function tryConns(qs, note){
   try{ const d=await api("/connections?"+qs); return d.connections||[]; }
-  catch(e){ return []; }
+  catch(e){ if(note) note.failed=true; return []; }
 }
 function connSig(c){ return (c.from?.departure||"")+"|"+(c.to?.arrival||"")+"|"+(c.duration||""); }
 function changeDetails(c){
@@ -1526,8 +1534,9 @@ async function smartPlan(){
     const f=encodeURIComponent(fromName), t=encodeURIComponent(toName);
     // Fire everything at once. The two direct queries (base + wide) are the fast core;
     // hub sweeps run in parallel, each capped so the slowest hub can't hold up first paint.
-    const baseP = tryConns(`from=${f}&to=${t}&limit=6${whenQS()}${modeQS()}`);
-    const wideP = tryConns(`from=${f}&to=${t}&limit=16${whenQS()}${modeQS()}`);
+    const direct={failed:false};   // only the two DIRECT queries decide whether "not found" is honest
+    const baseP = tryConns(`from=${f}&to=${t}&limit=6${whenQS()}${modeQS()}`, direct);
+    const wideP = tryConns(`from=${f}&to=${t}&limit=16${whenQS()}${modeQS()}`, direct);
     const hubList = [...HUBS, ...(preferScenic?SCENIC_HUBS:[])].filter(h=>h!==fromName&&h!==toName);
     const HUB_CAP=5000;  // tunable: bounds hub fill-in (hubs measured 3.3-9.3s); the base render fixes PERCEIVED latency regardless of this
     const hubJobs = hubList.map(h=>
@@ -1539,25 +1548,28 @@ async function smartPlan(){
     if(gen!==smartGen) return;                                     // superseded
     const baseline = base[0] ? annotate(base[0]) : null;
     if(base.length||wide.length) rememberRoute(fromName,toName);   // a real result -- now it is worth a chip
-    renderSmart(base, wide.slice(), baseline, true);
+    renderSmart(base, wide.slice(), baseline, true, direct.failed);
 
     // Phase 2 -- hub routes fill in when they arrive; any past the cap are dropped silently
     const hubResults = (await Promise.allSettled(hubJobs)).flatMap(r=>r.status==="fulfilled"?r.value:[]);
     if(gen!==smartGen) return;                                     // superseded
-    renderSmart(base, wide.concat(hubResults), baseline, false);
+    renderSmart(base, wide.concat(hubResults), baseline, false, direct.failed);
   }catch(e){
     if(gen!==smartGen) return;                                     // superseded
-    $("jrnOut").innerHTML=`<div class="err">Couldn&#39;t plan that journey.<br>Check the station names and try again.</div>`;
+    $("jrnOut").innerHTML=`<div class="err">We could not reach the timetable, so we do not know whether this journey runs.<br>This is not a &quot;no&quot; &#8212; check your connection and tap Search again.</div>`;
   }
 }
 
 // score + pin + paint a candidate set; called twice (fast base-only, then full sweep)
-function renderSmart(base, swept, baseline, searching){
+function renderSmart(base, swept, baseline, searching, reqFailed){
   const seen=new Set(), all=[];
   base.concat(swept).forEach(c=>{ const s=connSig(c); if(!seen.has(s)){ seen.add(s); all.push(annotate(c)); } });
   if(!all.length){
     // an empty base can still be rescued by the incoming hub sweep -- don't paint the dead-end while still searching
-    if(!searching) $("jrnOut").innerHTML=`<div class="empty"><div class="big">&#9940;</div>No connections found.${sunWhyEmpty()||"<br>Check the station names."}${modeWhyEmpty()}</div>`;
+    if(!searching) $("jrnOut").innerHTML = reqFailed
+      ? `<div class="err">We could not reach the timetable, so we do not know whether this journey runs.<br>`
+        + `This is not a &quot;no&quot; &#8212; check your connection and tap Search again.</div>`
+      : `<div class="empty"><div class="big">&#9940;</div>No connections found.${sunWhyEmpty()||"<br>Check the station names."}${modeWhyEmpty()}</div>`;
     return;
   }
 

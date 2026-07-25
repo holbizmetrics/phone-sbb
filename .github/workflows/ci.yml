@@ -37,6 +37,7 @@ jobs:
           node tests/summit.mjs
           node tests/storage-full.mjs
           node tests/board-refresh.mjs
+          node tests/outage-not-verdict.mjs
 
       - name: Install Playwright (Chromium)
         run: |
