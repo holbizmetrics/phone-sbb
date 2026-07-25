@@ -107,9 +107,26 @@ function build(start = []) {
   chk("newest chip is the newest route", t.el.innerHTML.indexOf("Luzern") < t.el.innerHTML.indexOf("Bern"), t.el.innerHTML);
 }
 
-// planJourney must be the thing that records, or nothing ever gets remembered
-chk("planJourney records the route", /function planJourney\(\)\{\s*rememberRoute\(/.test(src),
-  "rememberRoute is not called from planJourney -- history would stay empty forever");
+// A chip is an offer to repeat a journey, so it has to BE a journey. Recording
+// from planJourney() -- before any answer is known -- turned every typo into a
+// permanent chip, and six slots are few enough that a couple of them evict the
+// trips you actually take. So: recorded from the success path of BOTH planners,
+// and NOT from planJourney. Both halves are load-bearing; asserting only the
+// first would pass a version that never records at all.
+chk("planJourney does not record before there is a result",
+  !/function planJourney\(\)\{\s*rememberRoute\(/.test(src),
+  "recording up front again -- a failed search becomes a permanent chip");
+chk("both planners record on success", (src.match(/rememberRoute\(fromName,toName\)/g) || []).length === 2,
+  "expected exactly two call sites (plainPlan + smartPlan); found " +
+  (src.match(/rememberRoute\(fromName,toName\)/g) || []).length);
+chk("the smart path records only with results in hand",
+  /if\(base\.length\|\|wide\.length\)\s*rememberRoute\(/.test(src),
+  "smartPlan records unconditionally -- an empty sweep would still leave a chip");
+chk("the plain path records after the empty-result return",
+  (() => { const p = src.indexOf("async function plainPlan");
+    const e = src.indexOf("No connections found", p), r = src.indexOf("rememberRoute(fromName,toName)", p);
+    return p > 0 && e > 0 && r > e; })(),
+  "rememberRoute sits before the no-connections return -- empty results still recorded");
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

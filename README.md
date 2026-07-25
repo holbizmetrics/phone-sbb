@@ -50,7 +50,11 @@ Turn the toggle off any time for the plain, single-list view.
   chips, platform-change warnings in amber, auto-refresh every 30 seconds.
   The board **stops polling when the tab is hidden** and catches up when you
   come back; a forgotten background tab used to cost the free API ~2,900
-  requests a day for nobody.
+  requests a day for nobody. Refreshes **reconcile by train, not by position** —
+  a departure that is still listed keeps its row when the one above it leaves,
+  so only genuinely new departures animate in and a busy board stops flickering.
+  Clearing the station also clears the board and its poller: a list under an
+  empty box would read as departures for whatever you type next.
 - **Real times, not scheduled ones.** Cards and board read the same live
   prognosis, so the same train can't show `14:02` in one place and
   `14:02 +11′` in the other.
@@ -124,6 +128,13 @@ answer is worse than an absent one:
   happened, and a failed lookup is not cached, so the next tap really retries.
 - If your phone isn't on Swiss time, a note says so — every time below is
   Swiss local, and the clock at the top is yours.
+- **A phone with no free space says so and keeps working.** `localStorage` throws
+  when the device can't write, and that used to take the whole app down with it —
+  no journeys, no board, and a reload fixed nothing, because the disk was still
+  full. Now only the *remembering* fails, and the app tells you which parts
+  aren't being remembered rather than letting a star look like it stuck.
+- **Recent routes record journeys that exist, not searches that were tried** — a
+  mistyped station never becomes a permanent chip.
 
 ## Also
 
@@ -179,6 +190,8 @@ node tests/route-history.mjs    # route chips — runs anywhere, no browser
 node tests/golden-hour.mjs      # arrive-before-sunset — runs anywhere, no browser
 node tests/enroute.mjs          # where to get off — runs anywhere, no browser
 node tests/summit.mjs           # is it worth going up — runs anywhere, no browser
+node tests/storage-full.mjs     # a full phone must not kill the app — runs anywhere
+node tests/board-refresh.mjs    # the 30s refresh keeps its rows — runs anywhere
 node tests/smoke.mjs            # Playwright end-to-end — CI only
 ```
 

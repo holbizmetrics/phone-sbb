@@ -646,9 +646,21 @@ function wireAC(inpId, acId, fieldId, onPick){
   inp.addEventListener("focus", ()=>{ if(inp.value.trim().length>=2) run(); });
   document.addEventListener("click", e=>{ if(!field.contains(e.target)) ac.classList.remove("show"); });
 }
+/* Clearing the departures box used to empty only the TEXT: the board for the
+   old station stayed on screen under an empty field -- reading as live
+   departures for whatever you typed next -- and, worse, its 30-second poller
+   kept running against a volunteer API for a station you had visibly removed.
+   Clearing the field means you are done with that station, so the board and
+   its timers go with it. */
 function clearField(which){
   const map={dep:["iDep","fDep"],from:["iFrom","fFrom"],to:["iTo","fTo"]};
   const [i,f]=map[which]; $(i).value=""; $(f).classList.remove("has"); $(i).focus();
+  if(which==="dep"){
+    stopBoardTimers();
+    current=""; lastBoard=[]; openDep="";
+    save(LS.last,"");
+    $("depOut").innerHTML=`<div class="empty"><div class="big">&#128647;</div>Search a station to see live departures.</div>`;
+  }
 }
 
 /* ---------- DEPARTURES ---------- */
@@ -687,12 +699,35 @@ async function loadBoard(name, quiet){
     const d=await api("/stationboard?limit=12&station="+encodeURIComponent(name));
     lastBoard = d.stationboard||[];
     const disp=d.station?.name||name;
-    const existing=[...$("depOut").querySelectorAll(".dep")];
-    const newKeys=lastBoard.map(depKey), oldKeys=existing.map(el=>el.dataset.key);
-    const sameSet = existing.length===lastBoard.length && newKeys.every((k,i)=>k===oldKeys[i]);
-    if(quiet && lastBoard.length && sameSet){
-      // no-flicker path: same departures in same order → patch fields in place, keep the head + nodes
-      lastBoard.forEach((j,i)=>patchRow(existing[i], j));
+    /* The first no-flicker attempt patched in place only when the board was
+       byte-for-byte the same set in the same order, and fell back to a full
+       innerHTML rewrite otherwise. But a departure board CHANGES -- a train
+       leaves, every index shifts -- so the fallback was the normal case, and
+       rewriting replays `animation:rise` on all twelve rows. The flicker was
+       therefore worst exactly when the board was busiest. Reconcile by key
+       instead: a train that is still listed keeps its node wherever it moved
+       to, only genuinely new departures are created (so only they animate),
+       and departed ones are removed. */
+    const box=$("depOut"), head=box.querySelector(".boardhead");
+    if(quiet && lastBoard.length && head){
+      const spare=new Map([...box.querySelectorAll(".dep[data-key]")].map(el=>[el.dataset.key,el]));
+      let prev=head;
+      lastBoard.forEach((j,i)=>{
+        const k=depKey(j);
+        let row=spare.get(k);
+        if(row){ spare.delete(k); patchRow(row,j); }
+        else{
+          const tmp=document.createElement("div");
+          tmp.innerHTML=depRow(j,i);
+          row=tmp.firstElementChild;
+          row.style.animationDelay="0ms";   // one arriving row should not wait on the stagger
+        }
+        row.dataset.i=i;                    // indices shift as trains leave; the row must carry the current one
+        if(prev.nextElementSibling!==row) prev.after(row);
+        prev=row;
+      });
+      spare.forEach(el=>el.remove());       // departed
+      restoreOpenDep();
     }else{
       const rows = lastBoard.map((j,i)=>depRow(j,i)).join("");
       $("depOut").innerHTML = boardHeadHTML(disp) +
@@ -720,7 +755,7 @@ function depRow(j,i){
   return `<div class="dep" data-key="${esc(depKey(j))}" data-i="${i}" style="animation-delay:${i*28}ms">
     <div class="badge" style="background:${b.col}">${b.label}</div>
     <div class="mid">
-      <div class="to"><button class="togo" type="button" onclick="planFromBoard(event,${i})"
+      <div class="to"><button class="togo" type="button" onclick="planFromBoard(event)"
         title="Plan a journey to ${esc(j.to||"")}">${esc(j.to||"&#8212;")}</button></div>
       <div class="via">${effPl?`<span class="plat${plChanged?" chg":""}">Pl. ${esc(effPl)}${plChanged?" &#9888;":""}</span> `:""}${esc(j.category||"")} ${esc(j.operator||"")}</div>
     </div>
@@ -779,8 +814,13 @@ function restoreOpenDep(){
   row.classList.add("open");
 }
 /* destination name -> Journey tab, prefilled, timed to THIS train */
-function planFromBoard(ev,i){
+/* The index is read off the row at tap time, never baked into the handler: rows
+   are now reused across refreshes, so a number frozen at render time would point to
+   whichever train later took that slot -- and planning a journey on the wrong
+   train is the kind of wrong answer you would not catch until the platform. */
+function planFromBoard(ev){
   ev.stopPropagation();                       // never also toggle the row
+  const i=+(ev.target.closest(".dep[data-i]")?.dataset.i ?? -1);
   const j=lastBoard[i]; if(!j||!j.to) return;
   fromName=current; toName=j.to;
   $("iFrom").value=fromName; $("iTo").value=toName;
@@ -789,9 +829,11 @@ function planFromBoard(ev,i){
   setTab("jrn");
   /* Seed the time BEFORE the mode switch. setWhen() replans as its last act, so
      setting at.value afterwards planned the PREVIOUS train, and the follow-up
-     planJourney() was swallowed by smartBusy's in-flight guard, leaving the wrong
+     planJourney() was swallowed by the in-flight guard, leaving the wrong
      result standing. It looked correct -- right stations, plausible times -- which
-     is why it survived. The order is the entire fix. */
+     is why it survived. The order is the entire fix. (That guard dropped a second
+     user action later and is gone now: smartPlan supersedes instead of refusing.
+     The ordering here still matters -- two sweeps for one tap is waste.) */
   if(dep && at && typeof setWhen==="function"){
     at.value=dep.slice(0,16); whenValue=at.value;
     setWhen("dep");                           // replans, now timed to THIS train
@@ -894,7 +936,6 @@ function parseDur(s){ // "00d00:56:00"
    widens the direct scan, computes real per-change buffers, and surfaces the
    options SBB didn't lead with — flagging tight changes and roomier picks. */
 let smart = true;
-let smartBusy = false;          // guard: the ~12-call sweep must not overlap itself
 const HUBS = ["Z\u00fcrich HB","Bern","Basel SBB","Luzern","Olten","Arth-Goldau","Lausanne","Biel/Bienne","Z\u00fcrich Flughafen","Winterthur"];
 const TIGHT = 5;   // minutes: a change below this is a sprint
 const COMFY = 8;   // minutes: at/above this a change is relaxed
@@ -1115,7 +1156,12 @@ function renderRoutes(){
     + `title="${esc(r.f)} to ${esc(r.t)}">${esc(shortStop(r.f))} <span class="ra">&#8594;</span> ${esc(shortStop(r.t))}</button>`
   ).join("");
 }
-function planJourney(){ rememberRoute(fromName,toName); return smart ? smartPlan() : plainPlan(); }
+/* Recorded when a search RETURNS something, not when one is typed. Remembering
+   up front meant every fat-fingered station name became a permanent chip for a
+   route that does not exist, and the six slots are small enough that a couple of
+   typos evict the trips you actually take. A chip is an offer to repeat a
+   journey, so it has to be a journey. */
+function planJourney(){ return smart ? smartPlan() : plainPlan(); }
 
 async function plainPlan(){
   if(!fromName||!toName) return;
@@ -1124,6 +1170,7 @@ async function plainPlan(){
     const d=await api(`/connections?limit=6&from=${encodeURIComponent(fromName)}&to=${encodeURIComponent(toName)}${whenQS()}${modeQS()}`);
     const cs=d.connections||[];
     if(!cs.length){ $("jrnOut").innerHTML=`<div class="empty"><div class="big">&#9940;</div>No connections found.${sunWhyEmpty()}${modeWhyEmpty()}</div>`; return; }
+    rememberRoute(fromName,toName);   // a real result -- now it is worth a chip
     cs.forEach(annotate);
     jrnConns = cs;   // render order == the ci the leg buttons index back into
     $("jrnOut").innerHTML = cs.map((c,i)=>connCard(c,i)).join("") + wondersExpanderHTML(cs[0].to?.station);
@@ -1463,9 +1510,17 @@ function enrichWonders(top, body){
 // resolve to [] if a slow query outruns the cap, so one lagging hub can't stall first paint
 function withTimeout(p, ms){ return Promise.race([p, new Promise(r=>setTimeout(()=>r([]), ms))]); }
 
+/* A sweep takes up to five seconds. Refusing to start a new one while the old
+   one runs meant a mode chip tapped in that window did NOTHING -- no result, no
+   feedback -- and the only reading available to you is that the control is
+   broken. A tap is an instruction, so it supersedes: the older sweep keeps its
+   requests (they are already in flight) but is barred from painting over the
+   newer answer. That costs one extra sweep per impatient tap, which is a price
+   worth paying to never drop something you asked for. */
+let smartGen=0;
 async function smartPlan(){
-  if(!fromName||!toName || smartBusy) return;   // no overlapping sweeps (F1)
-  smartBusy=true;
+  if(!fromName||!toName) return;
+  const gen=++smartGen;
   $("jrnOut").innerHTML = skel(4);
   try{
     const f=encodeURIComponent(fromName), t=encodeURIComponent(toName);
@@ -1481,15 +1536,19 @@ async function smartPlan(){
 
     // Phase 1 -- render the direct/wide results the moment they land (~base latency), hint that more is coming
     const [base, wide] = await Promise.all([baseP, wideP]);
+    if(gen!==smartGen) return;                                     // superseded
     const baseline = base[0] ? annotate(base[0]) : null;
+    if(base.length||wide.length) rememberRoute(fromName,toName);   // a real result -- now it is worth a chip
     renderSmart(base, wide.slice(), baseline, true);
 
     // Phase 2 -- hub routes fill in when they arrive; any past the cap are dropped silently
     const hubResults = (await Promise.allSettled(hubJobs)).flatMap(r=>r.status==="fulfilled"?r.value:[]);
+    if(gen!==smartGen) return;                                     // superseded
     renderSmart(base, wide.concat(hubResults), baseline, false);
   }catch(e){
+    if(gen!==smartGen) return;                                     // superseded
     $("jrnOut").innerHTML=`<div class="err">Couldn&#39;t plan that journey.<br>Check the station names and try again.</div>`;
-  }finally{ smartBusy=false; }
+  }
 }
 
 // score + pin + paint a candidate set; called twice (fast base-only, then full sweep)
