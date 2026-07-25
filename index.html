@@ -245,6 +245,13 @@
   .elev-src{display:block; font-size:10px; color:var(--faint); margin-top:2px}
   .elev-sum b{color:var(--txt)}
   .elev-src{color:var(--faint); cursor:help}
+  .enroutebox:not(:empty){margin-top:12px; padding-top:10px; border-top:1px solid var(--line)}
+  .ertitle{font-size:12px; font-weight:800; color:var(--dim); margin-bottom:6px}
+  .ersearch{font-size:11px; color:var(--faint)}
+  .errow{display:flex; align-items:baseline; gap:8px; padding:3px 0; font-size:13px}
+  .errow .ern{font-weight:700; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .errow .ers{margin-left:auto; color:var(--faint); font-size:11px; white-space:nowrap}
+  .errow .erm{text-decoration:none; opacity:.75}
   .skmaps{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px}
   .skmaps a{font-size:12px; font-weight:600; color:var(--dim); text-decoration:none;
     background:var(--chip); border:1px solid var(--line); border-radius:9px; padding:6px 10px}
@@ -409,6 +416,7 @@
       <div class="hrow"><span class="k">&#128506; map</span><span class="v">sketches the whole route, with a pulsing dot for where the train is now.</span></div>
       <div class="hrow"><span class="k">&#9968;</span><span class="v">under the sketch: the same journey seen from the side, so a valley run and a mountain climb are one glance apart. It is the ground height at each stop joined by straight lines &#8212; terrain, not railway data, and nothing about the track&#8217;s own gradient. Routes with too few stops to say anything get no strip at all.</span></div>
 
+      <div class="hrow"><span class="k">&#9968; on the way</span><span class="v">under the same sketch: places worth breaking the journey for, each pinned to a stop the train actually calls at and the time it gets there. Only things within a few kilometres of a stop are listed &#8212; a peak you would need a four-hour hike to reach is not a stop-off. The first and last stations are left out, because you are going there anyway.</span></div>
       <div class="hrow"><span class="k">&#128674; Boat</span><span class="v">the mode chips under the time row. Tap one and only journeys using it are shown &#8212; a Luzern&#8211;R&#252;tli search turns from a bus-and-train slog into the direct lake steamer. They stay set until you tap &#10005;&#8201;all modes, so if a search comes back empty it will tell you the filter is why.</span></div>
 
       <h3>The two switches</h3>
@@ -1241,30 +1249,40 @@ function wonderType(t){
   if(t.tourism==="viewpoint")       return {emoji:CP(0x1F304),label:"viewpoint"};
   return {emoji:CP(0x1F4CD), label:""};
 }
+/* ONE Overpass client for the whole app. Two features ask OSM questions -- the
+   wonders list around a destination and the en-route finder along a corridor --
+   and they had grown two copies of the mirror list, the retry loop and the cache.
+   Returns null when NO mirror answered, [] when OSM genuinely has nothing there.
+   Callers must keep those apart: "we could not ask" and "there is nothing" look
+   identical on screen otherwise, and the second is a lie. A failure is not
+   cached, so the next tap tries again instead of inheriting an outage. */
+const OVERPASS_HOSTS=["https://overpass-api.de/api/interpreter","https://overpass.kumi.systems/api/interpreter"];
 const overpassCache={};
-function overpass(lat,lon){
-  const key=lat+","+lon;
+function overpassQuery(key,q){
   if(overpassCache[key]) return overpassCache[key];
-  const q=`[out:json][timeout:25];(`
+  const p=(async()=>{
+    for(const h of OVERPASS_HOSTS){
+      try{
+        const r=await fetch(h,{method:"POST",body:"data="+encodeURIComponent(q)});
+        if(!r.ok) continue;
+        return (await r.json()).elements||[];
+      }catch(e){ /* try the next mirror */ }
+    }
+    delete overpassCache[key];               // an outage must not become a verdict
+    return null;
+  })();
+  overpassCache[key]=p;
+  return p;
+}
+function overpass(lat,lon){
+  return overpassQuery(lat+","+lon,
+    `[out:json][timeout:25];(`
     +`node(around:8000,${lat},${lon})[tourism=viewpoint];`
     +`node(around:8000,${lat},${lon})[natural~"^(cave_entrance|waterfall|peak|glacier)$"];`
     +`way(around:8000,${lat},${lon})[natural~"^(cave_entrance|waterfall|peak|glacier)$"];`
     +`node(around:8000,${lat},${lon})[waterway=waterfall];`
     +`way(around:8000,${lat},${lon})[waterway=waterfall];`
-    +`);out center 40;`;
-  const hosts=["https://overpass-api.de/api/interpreter","https://overpass.kumi.systems/api/interpreter"];
-  overpassCache[key]=(async()=>{
-    for(const h of hosts){
-      try{
-        const r=await fetch(h,{method:"POST",body:"data="+encodeURIComponent(q)});
-        if(!r.ok) continue;
-        const d=await r.json();
-        return d.elements||[];
-      }catch(e){ /* try the next mirror */ }
-    }
-    return [];
-  })();
-  return overpassCache[key];
+    +`);out center 40;`);
 }
 function wondersExpanderHTML(dest){
   if(!dest||!dest.coordinate) return "";
@@ -1280,6 +1298,9 @@ async function loadWonders(btn,lat,lon){
   wrap.dataset.loaded="1"; btn.classList.add("open");
   body.innerHTML=`<div class="wloading">searching nearby&#8230;</div>`;
   const els=await overpass(lat,lon);
+  // "we could not ask OSM" is not "OSM says there is nothing here" -- saying the
+  // second when the first is true tells you a mountain range is empty.
+  if(els===null){ body.innerHTML=`<div class="wempty">Could not reach the map data just now. That is not the same as nothing being here &#8212; tap again to retry.</div>`; return; }
   const seen=new Set(), list=[];
   els.forEach(e=>{
     const t=e.tags||{};
@@ -1732,12 +1753,82 @@ async function fillElevation(panel,ci){
   const box=panel.querySelector(".elevbox");
   if(box && panel.dataset.open==="1") box.innerHTML=elevationSVG(pts,elev);
 }
+/* ---------- en-route discovery ----------
+   Every rail app answers "how do I get from A to B". Nobody answers "I am
+   crossing the country -- where should I get OFF?". The passList already gives
+   every intermediate stop with coordinates AND times, so ONE Overpass BBOX query
+   over the whole corridor (not one per stop) finds what is worth breaking the
+   trip for, and each find is anchored to a real stop with a real time. That
+   anchoring is the point: an OSM peak might be a four-hour hike, but a wonder
+   600 m from a stop the train actually calls at is genuinely reachable. */
+function overpassBBox(s,w,n,e){
+  const box=`${s.toFixed(4)},${w.toFixed(4)},${n.toFixed(4)},${e.toFixed(4)}`;
+  return overpassQuery("bbox:"+[s,w,n,e].map(v=>v.toFixed(3)).join(","),
+    `[out:json][timeout:25];(`
+    +`node(${box})[tourism=viewpoint];`
+    +`node(${box})[natural~"^(cave_entrance|waterfall|peak|glacier)$"];`
+    +`way(${box})[waterway=waterfall];`
+    +`);out center 120;`);
+}
+const NEAR_KM=3.5;          // further than this is not "get off here"
+async function enrouteFind(ci){
+  const c=jrnConns[ci]; if(!c) return null;
+  const stops=[];
+  (c.sections||[]).filter(s=>s.journey).forEach((s,si)=>{
+    (legStops(ci,si)||[]).forEach(p=>{
+      const co=p.station?.coordinate;
+      if(co&&isFinite(+co.x)) stops.push({name:p.station.name, y:+co.x, x:+co.y, t:(p.arrival||p.departure||"").slice(11,16)});
+    });
+  });
+  if(stops.length<3) return null;
+  const mid=stops.slice(1,-1);                 // endpoints are not stop-off candidates
+  if(!mid.length) return null;
+  const pad=0.03;
+  const s=Math.min(...stops.map(p=>p.y))-pad, n=Math.max(...stops.map(p=>p.y))+pad;
+  const w=Math.min(...stops.map(p=>p.x))-pad, e=Math.max(...stops.map(p=>p.x))+pad;
+  const els=await overpassBBox(s,w,n,e);
+  if(els===null) return "unreachable";        // kept apart from "found nothing"
+  const out=[];
+  for(const el of els){
+    const t=el.tags||{}; const name=t.name||t["name:de"]||t["name:fr"]||t["name:it"];
+    if(!name) continue;
+    const la=el.lat ?? el.center?.lat, lo=el.lon ?? el.center?.lon;
+    if(la==null) continue;
+    let best=null;
+    for(const p of mid){
+      const dkm=haversine({x:lo,y:la},{x:p.x,y:p.y});
+      if(!best||dkm<best.d) best={d:dkm,p};
+    }
+    if(best && best.d<=NEAR_KM) out.push({name, ty:wonderType(t), km:best.d, stop:best.p});
+  }
+  const byStop=new Map();
+  out.sort((a,b)=>a.km-b.km).forEach(o=>{ if(!byStop.has(o.stop.name)) byStop.set(o.stop.name,o); });
+  return [...byStop.values()].sort((a,b)=>(a.stop.t||"").localeCompare(b.stop.t||"")).slice(0,6);
+}
+async function fillEnroute(panel,ci){
+  const box=panel.querySelector(".enroutebox"); if(!box) return;
+  box.innerHTML=`<div class="ersearch">looking for reasons to break the trip&#8230;</div>`;
+  let finds=null;
+  try{ finds=await enrouteFind(ci); }catch(e){ finds=null; }
+  if(panel.dataset.open!=="1") return;
+  /* Three outcomes, not two. A route with nothing near it and a route we could
+     not ask about both used to render as blank, so a dead Overpass mirror looked
+     exactly like a dull journey. Only "this route has no stop-offs" stays
+     silent -- that one really is nothing to say. */
+  if(finds==="unreachable"){ box.innerHTML=`<div class="ersearch">Could not reach the map data, so there may still be something worth stopping for. Close and reopen to retry.</div>`; return; }
+  if(!finds||!finds.length){ box.innerHTML=""; return; }
+  box.innerHTML=`<div class="ertitle">&#9968; Worth stopping for, on the way</div>`
+    + finds.map(f=>`<div class="errow"><span class="erk">${f.ty.emoji}</span>`
+        + `<span class="ern">${esc(f.name)}</span>`
+        + `<span class="ers">${esc(shortStop(f.stop.name))}${f.stop.t?` &#183; ${f.stop.t}`:""} &#183; ${f.km.toFixed(1)} km</span>`
+        + `<a class="erm" href="https://www.google.com/maps/search/?api=1&query=${f.stop.y},${f.stop.x}" target="_blank" rel="noopener" title="Open this stop in Maps">&#128205;</a></div>`).join("");
+}
 function toggleSketch(btn,ci){
   const card=btn.closest(".conn"), panel=card.querySelector(".sketch");
   const open = panel.dataset.open==="1";
   panel.dataset.open = open?"":"1";
-  panel.innerHTML = open?"":(sketchSVG(ci)+`<div class="elevbox"></div>`+mapsLinks(ci));
-  if(!open) fillElevation(panel,ci);
+  panel.innerHTML = open?"":(sketchSVG(ci)+`<div class="elevbox"></div>`+`<div class="enroutebox"></div>`+mapsLinks(ci));
+  if(!open){ fillElevation(panel,ci); fillEnroute(panel,ci); }
   btn.classList.toggle("on",!open);
   btn.setAttribute("aria-expanded", String(!open));
 }

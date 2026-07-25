@@ -39,6 +39,7 @@ jobs:
           node tests/mode-filter.mjs
           node tests/route-history.mjs
           node tests/golden-hour.mjs
+          node tests/enroute.mjs
 
       - name: Install Playwright (Chromium)
         run: |

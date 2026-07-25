@@ -87,6 +87,14 @@ Turn the toggle off any time for the plain, single-list view.
 - **Natural wonders near your destination** — peaks, glaciers, waterfalls,
   caves and viewpoints from OpenStreetMap, with a Wikipedia summary where a
   confident match exists.
+- **Worth stopping for, on the way** — every other rail app answers "how do I
+  get from A to B". This one also answers *"I am crossing the country, where
+  should I get off?"*. The stop list already carries coordinates and times, so
+  one query over the whole corridor finds what is near the line, and pins each
+  find to a stop the train genuinely calls at, with the time it arrives. The
+  anchoring is the whole point: a peak thirty kilometres away is scenery, but a
+  waterfall a short walk from a stop is a plan. First and last stations are
+  excluded — you are already going there.
 
 ## Telling you what it doesn't know
 
@@ -99,6 +107,9 @@ answer is worse than an absent one:
   than a made-up diagonal through country nobody measured.
 - The moving train dot is interpolated, not tracked.
 - A missing forecast reads as missing, never as `0°`.
+- **"We could not reach OpenStreetMap" is never rendered as "there is nothing
+  here."** Both the wonders list and the en-route finder tell you which one
+  happened, and a failed lookup is not cached, so the next tap really retries.
 - If your phone isn't on Swiss time, a note says so — every time below is
   Swiss local, and the clock at the top is yours.
 
@@ -154,6 +165,7 @@ node tests/keyboard.mjs         # Enter/arrow handling — runs anywhere, no bro
 node tests/mode-filter.mjs      # transport-mode filter — runs anywhere, no browser
 node tests/route-history.mjs    # route chips — runs anywhere, no browser
 node tests/golden-hour.mjs      # arrive-before-sunset — runs anywhere, no browser
+node tests/enroute.mjs          # where to get off — runs anywhere, no browser
 node tests/smoke.mjs            # Playwright end-to-end — CI only
 ```
 
