@@ -61,6 +61,22 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+
+      # Stamp the build into the page that goes live. There is no build step and
+      # this must not create one: the repo file keeps saying "dev" and only the
+      # artifact carries the SHA, so opening index.html locally still works.
+      # The verify is the whole point -- a stamp that quietly stopped updating
+      # would be worse than none, because it would be believed.
+      - name: Stamp the build
+        run: |
+          set -euo pipefail
+          SHA="$(git rev-parse --short HEAD)"
+          STAMP="$SHA $(date -u +%Y-%m-%d\ %H:%MZ)"
+          sed -i "s|^const BUILD = \"dev\";  // BUILD-STAMP\$|const BUILD = \"$STAMP\";  // BUILD-STAMP|" index.html
+          grep -q "^const BUILD = \"$STAMP\";  // BUILD-STAMP\$" index.html \
+            || { echo "::error::build stamp did not apply -- the BUILD-STAMP line in index.html moved or changed shape"; exit 1; }
+          echo "stamped: $STAMP"
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

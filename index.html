@@ -116,6 +116,8 @@
   .hrow .v{color:var(--dim); min-width:0}
   .hnote{margin-top:16px; padding-top:13px; border-top:1px dashed var(--line);
     font-size:12px; color:var(--faint); line-height:1.5}
+  .hbuild{margin-top:10px; font-size:11px; color:var(--faint);
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace; user-select:all}
   .brand small{display:block; font-weight:500; font-size:11px; color:var(--dim); letter-spacing:.06em; text-transform:uppercase}
   .clock{margin-left:auto; text-align:right; font-variant-numeric:tabular-nums}
   .clock b{font-size:22px; font-weight:700; letter-spacing:-.02em}
@@ -444,6 +446,7 @@
         <b>scheduled</b> position worked out from the timetable, not GPS &#8212; it shows where the train
         should be, which is not always where it is.
       </div>
+      <div class="hbuild" id="buildStamp"></div>
     </div>
   </div>
 
@@ -520,6 +523,12 @@
 </div>
 
 <script>
+/* Rewritten at deploy time by .github/workflows/deploy.yml, which keys on this
+   exact line and FAILS THE DEPLOY if the replacement does not take -- a stamp
+   that silently stops updating is worse than no stamp at all, because you would
+   trust it and test the same old build twice. A file you opened yourself keeps
+   saying "dev", which is the truth: it is not a deploy. */
+const BUILD = "dev";  // BUILD-STAMP
 const API = "https://transport.opendata.ch/v1";
 const $ = id => document.getElementById(id);
 const LS = { favs:"rail.favs", last:"rail.last", modes:"rail.modes", routes:"rail.routes", theme:"rail.theme" };
@@ -1155,6 +1164,16 @@ function renderRoutes(){
     `<button class="chip route" type="button" onclick="useRoute(${i})" `
     + `title="${esc(r.f)} to ${esc(r.t)}">${esc(shortStop(r.f))} <span class="ra">&#8594;</span> ${esc(shortStop(r.t))}</button>`
   ).join("");
+}
+/* Which build you are actually looking at, at the foot of this help sheet. It
+   exists because "I retested and it still fails" and "I retested the old file"
+   are indistinguishable from the outside, and we burnt a debugging round on
+   exactly that ambiguity. Long-press to select and read it back. */
+function renderBuild(){
+  const el=$("buildStamp"); if(!el) return;
+  el.innerHTML = BUILD==="dev"
+    ? "build: dev (opened locally, not a deploy)"
+    : "build: "+esc(BUILD);
 }
 /* Recorded when a search RETURNS something, not when one is typed. Remembering
    up front meant every fat-fingered station name became a permanent chip for a
@@ -2218,6 +2237,7 @@ $("iDep").addEventListener("keydown",e=>{ if(e.key==="Enter"){e.target.blur(); s
 renderFavs();
 renderModes();
 renderRoutes();
+renderBuild();
 tickClock(); setInterval(tickClock,1000); setInterval(tickSketches,15000);
 const last=load(LS.last,"");
 if(last) showDepartures(last);

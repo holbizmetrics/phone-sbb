@@ -144,6 +144,13 @@ answer is worse than an absent one:
 
 ## Also
 
+- **It tells you which build you are looking at** — at the foot of the help
+  sheet (the **●**). "I retested and it still fails" and "I retested the old
+  file" look identical from the outside, and that ambiguity cost a whole
+  debugging round. The commit and time are stamped into the page at deploy
+  time, and **the deploy fails if the stamp doesn't apply** — a version marker
+  that quietly stopped updating would be worse than none, because it would be
+  believed. A copy you opened yourself says `dev`, which is the truth.
 - **Installable** — "Add to Home Screen" for an app-like, full-screen feel.
 - **Dark and light** — dark is the default for everyone and it stays where
   you put it.
