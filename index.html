@@ -245,6 +245,12 @@
   .elev-src{display:block; font-size:10px; color:var(--faint); margin-top:2px}
   .elev-sum b{color:var(--txt)}
   .elev-src{color:var(--faint); cursor:help}
+  .summitbox:not(:empty){margin-top:12px; padding-top:10px; border-top:1px solid var(--line)}
+  .smtitle{font-size:13px; font-weight:800; color:var(--txt)}
+  .smbits{font-weight:600; color:var(--dim); font-size:11px; white-space:nowrap}
+  .smv{margin-top:4px; font-size:13px; font-weight:700}
+  .smv.good{color:var(--grn)}
+  .smv.bad{color:var(--amber)}
   .enroutebox:not(:empty){margin-top:12px; padding-top:10px; border-top:1px solid var(--line)}
   .ertitle{font-size:12px; font-weight:800; color:var(--dim); margin-bottom:6px}
   .ersearch{font-size:11px; color:var(--faint)}
@@ -416,6 +422,7 @@
       <div class="hrow"><span class="k">&#128506; map</span><span class="v">sketches the whole route, with a pulsing dot for where the train is now.</span></div>
       <div class="hrow"><span class="k">&#9968;</span><span class="v">under the sketch: the same journey seen from the side, so a valley run and a mountain climb are one glance apart. It is the ground height at each stop joined by straight lines &#8212; terrain, not railway data, and nothing about the track&#8217;s own gradient. Routes with too few stops to say anything get no strip at all.</span></div>
 
+      <div class="hrow"><span class="k">&#128670; to the top</span><span class="v">when a leg is a cable car, gondola, cog railway or funicular you are going up, and the only question is whether it is worth it today &#8212; cloud at the summit ruins the whole point, and a temperature will not tell you that. Shows the height, the forecast for the hour you arrive, and a plain verdict. City funiculars are left out: a ride to a university terrace is not an excursion.</span></div>
       <div class="hrow"><span class="k">&#9968; on the way</span><span class="v">under the same sketch: places worth breaking the journey for, each pinned to a stop the train actually calls at and the time it gets there. Only things within a few kilometres of a stop are listed &#8212; a peak you would need a four-hour hike to reach is not a stop-off. The first and last stations are left out, because you are going there anyway.</span></div>
       <div class="hrow"><span class="k">&#128674; Boat</span><span class="v">the mode chips under the time row. Tap one and only journeys using it are shown &#8212; a Luzern&#8211;R&#252;tli search turns from a bus-and-train slog into the direct lake steamer. They stay set until you tap &#10005;&#8201;all modes, so if a search comes back empty it will tell you the filter is why.</span></div>
 
@@ -1165,7 +1172,9 @@ function wxAt(hourly, arrIso, sunCarry){
   // which printed a confident "0 degrees" for a place we simply have no data for.
   const t=at(hourly.temperature_2m); if(t==null) return null;
   return {
-    emoji:wxEmoji(code), temp:Math.round(t), desc:wxText(code),
+    // the raw code travels with the reading: callers that need to JUDGE the
+    // weather must not have to guess it back out of the English description
+    code, emoji:wxEmoji(code), temp:Math.round(t), desc:wxText(code),
     feels:at(hourly.apparent_temperature)!=null?Math.round(at(hourly.apparent_temperature)):null,
     rain:at(hourly.precipitation_probability),
     wind:at(hourly.wind_speed_10m)!=null?Math.round(at(hourly.wind_speed_10m)):null,
@@ -1823,12 +1832,77 @@ async function fillEnroute(panel,ci){
         + `<span class="ers">${esc(shortStop(f.stop.name))}${f.stop.t?` &#183; ${f.stop.t}`:""} &#183; ${f.km.toFixed(1)} km</span>`
         + `<a class="erm" href="https://www.google.com/maps/search/?api=1&query=${f.stop.y},${f.stop.x}" target="_blank" rel="noopener" title="Open this stop in Maps">&#128205;</a></div>`).join("");
 }
+/* ---------- summit verdict ----------
+   A cable car, gondola, cog railway or funicular means you are going UP, and the
+   only question that matters then is "is it worth it today?" -- because cloud at
+   the top ruins the entire point, and a forecast temperature does not tell you
+   that. Combines three things the app already has: the mountain leg category,
+   the destination forecast at ARRIVAL hour, and the terrain elevation. */
+/* Checked against the live API, not guessed: Zermatt-Gornergrat and
+   Vitznau-Rigi come back CC, Stanserhorn FUN then PB, Schilthorn PB, Pilatus
+   GB then PB, Jungfraujoch GB. What it does NOT catch is a mountain railway the
+   operator files as an ordinary R -- Montreux-Rochers-de-Naye is R 37, and the
+   last leg up to Jungfraujoch is R 65. Those get no verdict rather than a
+   guessed one; sniffing operator codes to catch them would be a bigger lie than
+   the omission. */
+const MOUNTAIN_CATS=/^(PB|GB|CC|FUN)$/i;
+/* A funicular in a city is not an excursion. The Polybahn climbs 41 metres to a
+   university building; asking "is the view worth it today" about it is nonsense.
+   The destination has to actually be up somewhere -- 800 m clears the Mittelland
+   (Bern sits at 540) while keeping the small local viewpoints that are exactly
+   this feature's point, like Bern's own Gurten at 858. */
+const SUMMIT_MIN_M=800;
+function mountainLegs(c){
+  return (c.sections||[]).filter(s=>s.journey && MOUNTAIN_CATS.test(s.journey.category||""));
+}
+function summitVerdict(code){
+  if(code==null) return null;
+  if(code<=1)            return {v:"clear at the top", good:true};
+  if(code===2)           return {v:"partly cloudy up there", good:true};
+  if(code===3)           return {v:"overcast at the top — the view may be gone", good:false};
+  if(code>=45&&code<=48) return {v:"fog at the top — expect no view", good:false};
+  if(code>=71&&code<=77) return {v:"snow at the top", good:false};
+  if(code>=95)           return {v:"thunderstorm — not the day for it", good:false};
+  return {v:"wet at the top", good:false};
+}
+async function fillSummit(panel,ci){
+  const box=panel.querySelector(".summitbox"); if(!box) return;
+  const c=jrnConns[ci]; if(!c) return;
+  const legs=mountainLegs(c);
+  if(!legs.length){ box.innerHTML=""; return; }            // not an excursion, say nothing
+  const co=c.to?.station?.coordinate, arr=c.to?.arrival;
+  if(!co||!arr){ box.innerHTML=""; return; }
+  const kinds=[...new Set(legs.map(s=>({PB:"cable car",GB:"gondola",CC:"cog railway",FUN:"funicular"}[(s.journey.category||"").toUpperCase()]||"mountain railway")))];
+  /* Nothing is drawn until the altitude is known. Painting the title first and
+     retracting it a second later, once the mountain turns out to be a 41-metre
+     city funicular, is worse than the short wait. */
+  try{
+    const [wx, elevArr] = await Promise.all([
+      destWeather(co.x, co.y),
+      routeElevation([{x:+co.y, y:+co.x}]).catch(()=>null)
+    ]);
+    if(panel.dataset.open!=="1") return;
+    const alt = Array.isArray(elevArr) && elevArr.length && isFinite(+elevArr[0]) ? Math.round(+elevArr[0]) : null;
+    // Unknown altitude keeps the verdict -- a cable car is evidence enough on its
+    // own. Only a KNOWN low one rules it out.
+    if(alt!=null && alt<SUMMIT_MIN_M){ box.innerHTML=""; return; }
+    const w = wx && wxAt(wx.hourly, arr, sunFor(wx&&wx.daily, arr));
+    const verdict = w ? summitVerdict(w.code) : null;
+    const bits=[];
+    if(alt!=null) bits.push(`<b>${alt} m</b>`);
+    if(w) bits.push(`${w.emoji} ${w.temp}&#176; on arrival`);
+    if(w&&w.rise&&w.set) bits.push(`sun ${w.rise}&#8211;${w.set}`);
+    box.innerHTML=`<div class="smtitle">&#128670; ${esc(kinds.join(" + "))} to ${esc(shortStop(c.to.station.name))}`
+      + (bits.length?` <span class="smbits">${bits.join(" &#183; ")}</span>`:"")+`</div>`
+      + (verdict?`<div class="smv ${verdict.good?"good":"bad"}">${esc(verdict.v)}</div>`:"");
+  }catch(e){ box.innerHTML=""; }
+}
 function toggleSketch(btn,ci){
   const card=btn.closest(".conn"), panel=card.querySelector(".sketch");
   const open = panel.dataset.open==="1";
   panel.dataset.open = open?"":"1";
-  panel.innerHTML = open?"":(sketchSVG(ci)+`<div class="elevbox"></div>`+`<div class="enroutebox"></div>`+mapsLinks(ci));
-  if(!open){ fillElevation(panel,ci); fillEnroute(panel,ci); }
+  panel.innerHTML = open?"":(sketchSVG(ci)+`<div class="elevbox"></div>`+`<div class="summitbox"></div>`+`<div class="enroutebox"></div>`+mapsLinks(ci));
+  if(!open){ fillElevation(panel,ci); fillSummit(panel,ci); fillEnroute(panel,ci); }
   btn.classList.toggle("on",!open);
   btn.setAttribute("aria-expanded", String(!open));
 }

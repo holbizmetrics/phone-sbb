@@ -87,6 +87,12 @@ Turn the toggle off any time for the plain, single-list view.
 - **Natural wonders near your destination** — peaks, glaciers, waterfalls,
   caves and viewpoints from OpenStreetMap, with a Wikipedia summary where a
   confident match exists.
+- **Is it worth going up today?** — when a leg is a cable car, gondola, cog
+  railway or funicular you are on an excursion, and the question stops being
+  "when do I arrive" and becomes "will there be a view". It shows the summit
+  height, the forecast for the hour you actually get there, and a plain verdict:
+  *fog at the top — expect no view* is the whole feature. City funiculars are
+  excluded by altitude; a ride to a university terrace is not an excursion.
 - **Worth stopping for, on the way** — every other rail app answers "how do I
   get from A to B". This one also answers *"I am crossing the country, where
   should I get off?"*. The stop list already carries coordinates and times, so
@@ -166,6 +172,7 @@ node tests/mode-filter.mjs      # transport-mode filter — runs anywhere, no br
 node tests/route-history.mjs    # route chips — runs anywhere, no browser
 node tests/golden-hour.mjs      # arrive-before-sunset — runs anywhere, no browser
 node tests/enroute.mjs          # where to get off — runs anywhere, no browser
+node tests/summit.mjs           # is it worth going up — runs anywhere, no browser
 node tests/smoke.mjs            # Playwright end-to-end — CI only
 ```
 
