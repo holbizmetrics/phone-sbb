@@ -38,8 +38,8 @@ const runTry = (mode, withNote) => new Function("MODE", "WITHNOTE", `
     return { connections: [{ id: 1 }] };
   };
   ${grab("tryConns")}
-  const note = { failed:false };
-  return tryConns("q", WITHNOTE ? note : undefined).then(cs => ({ cs, failed: note.failed }));
+  const note = { failed:false, ok:false };
+  return tryConns("q", WITHNOTE ? note : undefined).then(cs => ({ cs, failed: note.failed, ok: note.ok }));
 `)(mode, withNote);
 
 // CONTROL: the stub must actually be able to throw, or every case below is vacuous.
@@ -59,18 +59,31 @@ chk("a healthy result does not raise the flag", (await runTry("ok", true)).faile
 chk("a failing query with no note does not throw", Array.isArray((await runTry("throw", false)).cs),
   "hub sweeps pass no note -- tryConns must tolerate that");
 
+/* An ANSWERED query has to be recorded too, not just a failed one. The two
+   direct queries ask the same question at two widths, so "one of them died" is
+   not the same as "we never got an answer" -- and only the second is an outage.
+   Reported live: a remembered tram filter plus the wide query timing out
+   (bus-filtered limit=16 is a 1 MB, 11-15 second response -- measured) turned a
+   perfectly definite "no trams between these towns" into "could not reach the
+   timetable", on a desktop where the phone had no trouble. */
+chk("a healthy result RAISES the answered flag", (await runTry("ok", true)).ok === true,
+  "a query that succeeded is not recorded -- its verdict can be overridden by its twin failing");
+chk("an empty-but-answered result RAISES the answered flag", (await runTry("empty", true)).ok === true,
+  "HTTP 200 with zero connections IS an answer: there is no such journey");
+chk("a failed request does NOT raise the answered flag", (await runTry("throw", true)).ok === false);
+
 // --- renderSmart: does the flag reach the words on screen? ---
-const render = (reqFailed) => new Function("REQFAILED", `
+const render = (reqFailed, modeHint) => new Function("REQFAILED", "MODEHINT", `
   let out = "";
   const $ = () => ({ set innerHTML(v){ out = v; }, get innerHTML(){ return out; } });
   const connSig = c => String(c && c.id);
   const annotate = c => c;
   const sunWhyEmpty = () => "";
-  const modeWhyEmpty = () => "";
+  const modeWhyEmpty = () => MODEHINT ? '<div class="emptywhy">only tram<button onclick="clearModes()">Show every mode</button></div>' : "";
   ${grab("renderSmart")}
   renderSmart([], [], null, false, REQFAILED);
   return out;
-`)(reqFailed);
+`)(reqFailed, modeHint);
 
 const outage = render(true), genuine = render(false);
 chk("an outage is not called 'no connections found'", !/No connections found/.test(outage), outage);
@@ -81,6 +94,22 @@ chk("an outage offers a retry", /again/i.test(outage), outage);
 chk("a genuine empty result still reads as no connections", /No connections found/.test(genuine), genuine);
 chk("a genuine empty result may still mention the station names", /station names/i.test(genuine), genuine);
 chk("the two states are not the same words", outage !== genuine);
+
+/* The mode filter is the one thing on this screen you can be stuck BEHIND, and
+   it is remembered across reloads. So the way out of it must survive the failure
+   branch: an outage plus a saved tram filter used to print the unreachable
+   message with the "Show every mode" button stripped out, which reads as an app
+   that is simply broken forever. Whether the request landed is unknown; that a
+   filter is on is not. */
+const outageFiltered = render(true, true), genuineFiltered = render(false, true);
+chk("CONTROL: with no filter set, neither branch invents a mode hint",
+  !/clearModes/.test(outage) && !/clearModes/.test(genuine),
+  "the hint must come from modeWhyEmpty, not from the branch");
+chk("a genuine empty result offers the way out of the filter", /clearModes\(\)/.test(genuineFiltered), genuineFiltered);
+chk("an OUTAGE also offers the way out of the filter", /clearModes\(\)/.test(outageFiltered),
+  "the escape hatch was deleted at exactly the moment it was needed");
+chk("the outage branch still says it is not a 'no' when filtered",
+  /could not reach the timetable/i.test(outageFiltered), outageFiltered);
 
 // --- WIRING: the flag has to be threaded, or this all ships green and never runs ---
 chk("the direct queries pass a note", (src.match(/tryConns\(`from=[^`]*`,\s*direct\)/g) || []).length === 2,
@@ -97,8 +126,11 @@ chk("hub sweeps deliberately pass no note", !/via\[\]=[^`]*`,\s*direct\)/.test(s
     .map(m => src.slice(m.index, src.indexOf(";", m.index)))
     .filter(c => !c.startsWith("renderSmart(base, swept"));
   chk("both render phases carry the failure flag",
-    calls.length === 2 && calls.every(c => /direct\.failed\)$/.test(c)),
+    calls.length === 2 && calls.every(c => /direct\.failed && !direct\.ok\)$/.test(c)),
     "found " + calls.length + " call(s): " + JSON.stringify(calls));
+  chk("no render phase reports a bare direct.failed",
+    !calls.some(c => /[^!]direct\.failed\)$/.test(c)),
+    "one failed twin would override an answered query's definite verdict");
 }
 chk("no catch block blames the station names any more", !/Check the station names and try again/.test(src),
   "a network error still tells you to check a name that is correct");

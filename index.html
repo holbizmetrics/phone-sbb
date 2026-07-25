@@ -1207,8 +1207,15 @@ async function plainPlan(){
    told. Pass a note object for queries whose failure CHANGES THE VERDICT (the
    two direct ones); hub sweeps pass nothing, because a hub that times out is
    ordinary and never means the journey does not exist. */
+/* Record BOTH outcomes, not just the failure. The two direct queries ask the
+   same question at two widths, so one answered query is a definite answer even
+   if the other died: an HTTP 200 carrying zero connections means "there is no
+   such journey", and that verdict must not be downgraded to "we could not reach
+   the timetable" just because its slower twin timed out. The wide query is the
+   likeliest request in the app to fail -- bus-filtered, limit 16, it is a 1 MB
+   14-second response -- so all-or-nothing was guaranteed to fire eventually. */
 async function tryConns(qs, note){
-  try{ const d=await api("/connections?"+qs); return d.connections||[]; }
+  try{ const d=await api("/connections?"+qs); if(note) note.ok=true; return d.connections||[]; }
   catch(e){ if(note) note.failed=true; return []; }
 }
 function connSig(c){ return (c.from?.departure||"")+"|"+(c.to?.arrival||"")+"|"+(c.duration||""); }
@@ -1553,7 +1560,7 @@ async function smartPlan(){
     const f=encodeURIComponent(fromName), t=encodeURIComponent(toName);
     // Fire everything at once. The two direct queries (base + wide) are the fast core;
     // hub sweeps run in parallel, each capped so the slowest hub can't hold up first paint.
-    const direct={failed:false};   // only the two DIRECT queries decide whether "not found" is honest
+    const direct={failed:false, ok:false};   // only the two DIRECT queries decide whether "not found" is honest
     const baseP = tryConns(`from=${f}&to=${t}&limit=6${whenQS()}${modeQS()}`, direct);
     const wideP = tryConns(`from=${f}&to=${t}&limit=16${whenQS()}${modeQS()}`, direct);
     const hubList = [...HUBS, ...(preferScenic?SCENIC_HUBS:[])].filter(h=>h!==fromName&&h!==toName);
@@ -1567,12 +1574,12 @@ async function smartPlan(){
     if(gen!==smartGen) return;                                     // superseded
     const baseline = base[0] ? annotate(base[0]) : null;
     if(base.length||wide.length) rememberRoute(fromName,toName);   // a real result -- now it is worth a chip
-    renderSmart(base, wide.slice(), baseline, true, direct.failed);
+    renderSmart(base, wide.slice(), baseline, true, direct.failed && !direct.ok);
 
     // Phase 2 -- hub routes fill in when they arrive; any past the cap are dropped silently
     const hubResults = (await Promise.allSettled(hubJobs)).flatMap(r=>r.status==="fulfilled"?r.value:[]);
     if(gen!==smartGen) return;                                     // superseded
-    renderSmart(base, wide.concat(hubResults), baseline, false, direct.failed);
+    renderSmart(base, wide.concat(hubResults), baseline, false, direct.failed && !direct.ok);
   }catch(e){
     if(gen!==smartGen) return;                                     // superseded
     $("jrnOut").innerHTML=`<div class="err">We could not reach the timetable, so we do not know whether this journey runs.<br>This is not a &quot;no&quot; &#8212; check your connection and tap Search again.</div>`;
@@ -1585,9 +1592,16 @@ function renderSmart(base, swept, baseline, searching, reqFailed){
   base.concat(swept).forEach(c=>{ const s=connSig(c); if(!seen.has(s)){ seen.add(s); all.push(annotate(c)); } });
   if(!all.length){
     // an empty base can still be rescued by the incoming hub sweep -- don't paint the dead-end while still searching
+    /* The mode filter is the one thing on this screen you can be stuck BEHIND,
+       and it survives reloads -- so the way out of it must be printed on the
+       failure branch too. Suppressing it there deleted the only exit at exactly
+       the moment it was needed: an outage plus a remembered tram filter reads as
+       a permanently broken app, and the button that fixes it was one line away
+       the whole time. Whether the request landed is unknown; that you set a
+       filter is not. */
     if(!searching) $("jrnOut").innerHTML = reqFailed
       ? `<div class="err">We could not reach the timetable, so we do not know whether this journey runs.<br>`
-        + `This is not a &quot;no&quot; &#8212; check your connection and tap Search again.</div>`
+        + `This is not a &quot;no&quot; &#8212; check your connection and tap Search again.</div>${modeWhyEmpty()}`
       : `<div class="empty"><div class="big">&#9940;</div>No connections found.${sunWhyEmpty()||"<br>Check the station names."}${modeWhyEmpty()}</div>`;
     return;
   }
