@@ -532,7 +532,23 @@ let openDep = "";        // depKey of the expanded departure -- survives a rebui
 
 /* ---------- utils ---------- */
 function load(k,d){ try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d} }
-function save(k,v){ localStorage.setItem(k, JSON.stringify(v)); }
+/* A phone with no free space throws from setItem. Unguarded, that threw out of
+   save() and took the CALLER down with it -- and save() runs BEFORE the work at
+   five of six call sites, so planning, the mode chips, the departure board and
+   the theme toggle all stopped at once, and reloading fixed nothing because the
+   disk was still full. Persistence is the only thing allowed to fail here. */
+let storageFull=false;
+function save(k,v){
+  try{ localStorage.setItem(k, JSON.stringify(v)); storageFull=false; }
+  catch(e){ storageFull=true; }
+}
+/* Silence would be a lie: a star that looks stuck but is not, is exactly the
+   confident wrong answer this app refuses everywhere else. */
+function storageNoteHTML(){
+  return storageFull
+    ? `<div class="tznote">Your phone is out of storage &#183; favourites, filters and recent routes are not being remembered. Everything else works.</div>`
+    : "";
+}
 function esc(s){ return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 // 24-hour, always: a Swiss departure board reads 22:27, never 10:27 PM. h23 (not
 // hour12:false) so midnight is 00:00 rather than 24:00.
@@ -2079,7 +2095,7 @@ function tickClock(){
      departure below it (Swiss time) never appeared. Rewritten only when the
      text actually changes, since this runs every second. */
   const box=$("tzNote"); if(!box) return;
-  const html=tzNoteHTML();
+  const html=tzNoteHTML()+storageNoteHTML();
   if(box.innerHTML!==html) box.innerHTML=html;
 }
 

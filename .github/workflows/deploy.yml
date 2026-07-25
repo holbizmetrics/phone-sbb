@@ -41,6 +41,7 @@ jobs:
           node tests/golden-hour.mjs
           node tests/enroute.mjs
           node tests/summit.mjs
+          node tests/storage-full.mjs
 
       - name: Install Playwright (Chromium)
         run: |
