@@ -67,6 +67,12 @@ Turn the toggle off any time for the plain, single-list view.
   searches from either field; arrow keys pick from the dropdown.
 - **Now · Leave at · Arrive by** — "Arrive by" works backwards from when you
   have to be there.
+- **Sunset** — a fourth way to say when. It looks up sunset *at the destination*
+  on the day you are travelling and works backwards from that, because "get me
+  there before dark" is a real reason to catch an earlier train and not a sum
+  anyone should be doing on a platform. Tap it after dark and it plans for
+  tomorrow. The forecast reaches two days out; past that it says so rather than
+  quietly answering about today.
 - **Scenic** floats panoramic routes (via Zweisimmen, Andermatt, Chur, Brig)
   to the top when one exists.
 - **Weather** at your departure hour *and* your arrival hour — the two that
@@ -147,11 +153,13 @@ node tests/boot-wiring.mjs      # remembered state is actually drawn on load
 node tests/keyboard.mjs         # Enter/arrow handling — runs anywhere, no browser
 node tests/mode-filter.mjs      # transport-mode filter — runs anywhere, no browser
 node tests/route-history.mjs    # route chips — runs anywhere, no browser
+node tests/golden-hour.mjs      # arrive-before-sunset — runs anywhere, no browser
 node tests/smoke.mjs            # Playwright end-to-end — CI only
 ```
 
-The middle two lift the real functions straight out of `index.html` and run
-them in Node against a stub DOM, so the logic stays testable on a phone where
+Everything but the last one lifts the real functions straight out of `index.html` and runs
+them in Node against a stub DOM (and, where it matters, a frozen clock), so the
+logic stays testable on a phone where
 Playwright can't be installed. Each one carries a control that fails if the
 harness itself stopped working — a check that silently doesn't run reads as a
 pass, which is worse than no check at all.

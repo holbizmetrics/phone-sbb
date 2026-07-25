@@ -299,6 +299,9 @@
   .seg button.on{background:var(--segon); color:var(--segontxt); box-shadow:0 2px 8px rgba(0,0,0,.18)}
   .whenat{color-scheme:dark; background:var(--card); border:1px solid var(--line); color:var(--txt);
     font:600 13px inherit; padding:9px 11px; border-radius:11px; outline:none; color-scheme:dark}
+  .sunhint:not(:empty){flex-basis:100%; font-size:11px; color:var(--amber); margin-top:2px}
+  .sunhint b{color:var(--txt)}
+  .seg button.busy{opacity:.5}
   .whenclear{width:30px; height:30px; border:0; border-radius:50%; background:var(--chip); color:var(--dim);
     font-size:13px; cursor:pointer}
   :root[data-theme="light"] .whenat{color-scheme:light}
@@ -399,6 +402,7 @@
       <div class="hrow"><span class="k">A &#8594; B</span><span class="v">the chips above the two fields are routes you have searched before, newest first. Nothing to save &#8212; a search records itself. The two directions are kept apart, because the morning trip and the evening one are not the same trip.</span></div>
       <div class="hrow"><span class="k">&#8645;</span><span class="v">swaps the two stations.</span></div>
       <div class="hrow"><span class="k">Now</span><span class="v">&#183; Leave at &#183; Arrive by &#8212; Arrive by works backwards from when you must be there.</span></div>
+      <div class="hrow"><span class="k">&#127749; Sunset</span><span class="v">a fourth way to say when: arrive before the sun goes down at the place you are going, on the day you are going. It looks the sunset up there, not here, and fills in the arrive-by time for you. Tap it after dark and it plans for tomorrow instead. The forecast only reaches two days out, so for anything further it says so rather than quietly answering about today.</span></div>
       <div class="hrow"><span class="k">Pl.&#8201;7</span><span class="v">is the platform you leave from. Amber with &#9888; means it changed from the scheduled one.</span></div>
       <div class="hrow"><span class="k">7&#8594;5</span><span class="v">on a change means you arrive at 7 and leave from 5 &#8212; you have to cross the station.</span></div>
       <div class="hrow"><span class="k">Tap a leg</span><span class="v">(the coloured badge) for the stops in between.</span></div>
@@ -483,9 +487,11 @@
         <button type="button" id="segNow"  class="on" onclick="setWhen('now')">Now</button>
         <button type="button" id="segDep"  onclick="setWhen('dep')">Leave at</button>
         <button type="button" id="segArr"  onclick="setWhen('arr')">Arrive by</button>
+        <button type="button" id="segSun"  onclick="setWhenSunset()" title="Arrive before sunset at your destination">&#127749; Sunset</button>
       </div>
       <input type="datetime-local" id="whenAt" class="whenat" aria-label="Date and time"
              onchange="onWhenChange()" hidden>
+      <div id="sunHint" class="sunhint"></div>
       <button type="button" id="whenClear" class="whenclear" onclick="setWhen('now')" hidden
               aria-label="Back to departures from now">&#10005;</button>
     </div>
@@ -892,8 +898,71 @@ function whenQS(){
   const [d,t] = whenValue.split("T");
   return `&date=${d}&time=${t}` + (whenMode === "arr" ? "&isArrivalTime=1" : "");
 }
+/* Sun times ride the SAME cached weather request -- open-meteo returns them in
+   the station's own zone, so they are read from the string exactly like every
+   other time in this app. */
+function sunFor(daily, iso){
+  if(!daily||!Array.isArray(daily.time)||!iso) return null;
+  const day=iso.slice(0,10);
+  const i=daily.time.indexOf(day);
+  if(i<0) return null;
+  return {rise:(daily.sunrise?.[i]||"").slice(11,16), set:(daily.sunset?.[i]||"").slice(11,16)};
+}
+/* "Get me there before the sun goes down" is a real travel intent for this app's
+   audience, and it is an ARRIVE-BY question the user should not have to compute.
+   Fetches the destination's sunset for the chosen day and fills the arrive-by
+   time with it. Needs a destination first -- there is no sunset without a place. */
+async function setWhenSunset(){
+  /* Every dead end here says what happened. A tap that silently does nothing
+     reads as a broken button, and the user cannot tell "the forecast does not
+     reach that far" apart from "the app is stuck". */
+  const say=m=>{ const s=$("sunHint"); if(s) s.innerHTML=m; };
+  if(!toName){ $("jrnOut").innerHTML=`<div class="hint">Pick a destination first &#8212; sunset depends on where you are going.</div>`; return; }
+  const btn=$("segSun"); if(btn) btn.classList.add("busy");
+  try{
+    say("");
+    const probe = jrnConns[0]?.to?.station?.coordinate
+      || (await locations(toName).catch(()=>[]))[0]?.coordinate;
+    if(!probe||!probe.x){ say(`Could not place ${esc(shortStop(toName))} on the map, so there is no sunset to look up.`); return; }
+    const wx=await destWeather(probe.x, probe.y);
+    const days=(wx && wx.daily && Array.isArray(wx.daily.time)) ? wx.daily.time : [];
+    if(!days.length){ say("The forecast service did not answer, so sunset is unknown right now."); return; }
+    /* ONE day, decided once. Reading the sunset off one day and stamping it onto
+       another is how a trip planned for next Saturday silently became tonight.
+       Open-Meteo runs timezone=auto, so days[0] is today AT THE DESTINATION --
+       more correct than the phone's own date near midnight. */
+    let want=(whenValue||"").slice(0,10) || days[0];
+    if(!days.includes(want)){
+      say(`Sunset is only known ${days.length} day${days.length>1?"s":""} ahead, not for <b>${esc(want)}</b>. `
+        + `Pick a nearer day, or set the arrival time yourself.`);
+      return;
+    }
+    let sun=sunFor(wx.daily, want);
+    if(!sun||!sun.set){ say(`No sunset time came back for ${esc(shortStop(toName))} on ${esc(want)}.`); return; }
+    // Tapping this at nine in the evening must not ask for an arrival that is
+    // already behind us; roll to the next day the forecast actually covers.
+    let rolled=false;
+    if(!whenValue){
+      const now=new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16);
+      if(`${want}T${sun.set}` <= now){
+        const nxt=days[days.indexOf(want)+1], nsun=nxt?sunFor(wx.daily,nxt):null;
+        if(nsun&&nsun.set){ want=nxt; sun=nsun; rolled=true; }
+        else { say(`The sun has already set at ${esc(shortStop(toName))} today, and tomorrow is beyond the forecast.`); return; }
+      }
+    }
+    whenMode="arr";
+    ["now","dep","arr","sun"].forEach(m=>{const b=$("seg"+m[0].toUpperCase()+m.slice(1)); if(b) b.classList.toggle("on", m==="sun");});
+    const at=$("whenAt"), clr=$("whenClear");
+    at.hidden=false; clr.hidden=false;
+    at.value=`${want}T${sun.set}`; whenValue=at.value;
+    say(`&#127749; sunset at ${esc(shortStop(toName))} is <b>${sun.set}</b>`
+      + (rolled?` tomorrow`:``) + ` &#183; planning to arrive before it`);
+    if(fromName) planJourney();
+  } finally { const b=$("segSun"); if(b) b.classList.remove("busy"); }
+}
 function setWhen(mode){
   whenMode = mode;
+  { const s=$("sunHint"); if(s) s.innerHTML=""; const b=$("segSun"); if(b) b.classList.remove("on"); }
   const at=$("whenAt"), clr=$("whenClear");
   ["now","dep","arr"].forEach(m=>$("seg"+m[0].toUpperCase()+m.slice(1)).classList.toggle("on", m===mode));
   if(mode === "now"){
@@ -1073,11 +1142,11 @@ function destWeather(lat,lon){
   const k=lat+","+lon;
   // widened hourly set: the extra fields cost nothing (same single request) and
   // are what the tap-to-detail overlay reads.
-  if(!wxCache[k]) wxCache[k]=fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,weather_code,apparent_temperature,precipitation_probability,wind_speed_10m&forecast_days=2&timezone=auto`)
-    .then(r=>r.json()).then(d=>d.hourly).catch(()=>null);
+  if(!wxCache[k]) wxCache[k]=fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,weather_code,apparent_temperature,precipitation_probability,wind_speed_10m&daily=sunrise,sunset&forecast_days=2&timezone=auto`)
+    .then(r=>r.json()).then(d=>({hourly:d.hourly, daily:d.daily})).catch(()=>null);
   return wxCache[k];
 }
-function wxAt(hourly, arrIso){
+function wxAt(hourly, arrIso, sunCarry){
   if(!hourly||!arrIso) return null;
   const key=arrIso.slice(0,13);   // yyyy-mm-ddTHH — Open-Meteo times are local (timezone=auto)
   const i=hourly.time.findIndex(t=>t.slice(0,13)===key);
@@ -1093,6 +1162,7 @@ function wxAt(hourly, arrIso){
     rain:at(hourly.precipitation_probability),
     wind:at(hourly.wind_speed_10m)!=null?Math.round(at(hourly.wind_speed_10m)):null,
     hour:hourly.time[i].slice(11,16),
+    rise:(sunCarry&&sunCarry.rise)||null, set:(sunCarry&&sunCarry.set)||null,
   };
 }
 function wxDetailText(w){
@@ -1101,6 +1171,7 @@ function wxDetailText(w){
   parts.push(`${w.temp}°` + (w.feels!=null && w.feels!==w.temp ? ` (feels ${w.feels}°)` : ""));
   if(w.rain!=null) parts.push(`${w.rain}% rain`);
   if(w.wind!=null) parts.push(`${w.wind} km/h wind`);
+  if(w.rise&&w.set) parts.push(`☀ ${w.rise}–${w.set}`);
   return parts.join(" · ") + (w.hour?` · at ${w.hour}`:"");
 }
 async function fillWeather(){
@@ -1110,9 +1181,9 @@ async function fillWeather(){
   els.forEach(e=>{ const k=e.dataset.lat+","+e.dataset.lon; (byCoord[k]=byCoord[k]||[]).push(e); });
   for(const k in byCoord){
     const [lat,lon]=k.split(",");
-    const hourly=await destWeather(lat,lon);
+    const wx=await destWeather(lat,lon); const hourly=wx&&wx.hourly;
     byCoord[k].forEach(e=>{
-      const w=wxAt(hourly, e.dataset.t);
+      const w=wxAt(hourly, e.dataset.t, sunFor(wx&&wx.daily, e.dataset.t));
       if(!w) return;
       e.innerHTML=`${w.emoji} ${w.temp}&#176;`;
       e.dataset.detail=wxDetailText(w);   // tap reads this; no refetch
