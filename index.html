@@ -129,6 +129,24 @@
     padding:11px; border-radius:10px; transition:.25s; cursor:pointer}
   .tabs button.on{background:var(--segon); color:var(--segontxt); box-shadow:0 2px 8px rgba(0,0,0,.22)}
 
+  /* ---- wander cards ---- */
+  .wcard{background:var(--card); border:1px solid var(--line); border-radius:16px;
+    padding:14px; margin-bottom:9px; animation:rise .3s ease backwards}
+  .wcard .whead{display:flex; align-items:center; gap:12px}
+  .wcard .wto{flex:1; min-width:0; font-weight:700; font-size:16px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .wcard .wride{flex:0 0 auto; font-weight:800; font-size:17px; font-variant-numeric:tabular-nums}
+  .wcard .wlegs{margin-top:8px; font-size:13px; color:var(--dim); line-height:1.6;
+    font-variant-numeric:tabular-nums}
+  .wcard .wlegs b{color:var(--txt)}
+  .wcard .wlast{margin-top:7px; font-size:12px; font-weight:700; color:var(--amber);
+    font-variant-numeric:tabular-nums}
+  .wcard .wwarn{display:inline-block; margin-top:6px; font-size:12px; color:var(--amber);
+    background:rgba(245,158,11,.12); padding:3px 9px; border-radius:8px}
+  .wcard .wunv{display:inline-block; margin-top:6px; font-size:12px; color:var(--redsoft);
+    background:rgba(235,0,0,.10); padding:3px 9px; border-radius:8px}
+  #wanBudget .chip.on{border-color:var(--blue); color:var(--txt); opacity:1}
+
   /* ---- search / inputs ---- */
   .field{position:relative; margin-bottom:10px}
   .field .ico{position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--faint); font-size:16px; pointer-events:none}
@@ -454,6 +472,7 @@
   <div class="tabs">
     <button id="tabDep" class="on" onclick="setTab('dep')">Departures</button>
     <button id="tabJrn" onclick="setTab('jrn')">Journey</button>
+    <button id="tabWan" onclick="setTab('wan')">Wander</button>
   </div>
 
   <!-- DEPARTURES -->
@@ -519,6 +538,28 @@
     </div>
     <div class="favs" id="modeChips"></div>
     <div id="jrnOut"><div class="hint">Enter two stations to plan a journey.</div></div>
+  </section>
+
+  <!-- WANDER : destination is the OUTPUT. "I have two hours -- where can a
+       train take me, and can I prove I get back?" -->
+  <section id="vWan" class="view">
+    <div class="field" id="fWan">
+      <span class="ico">&#9906;</span>
+      <input class="stn" id="iWan" placeholder="Start from&#8230;" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <button class="clr" type="button" aria-label="Clear start station" onclick="clearField('wan')">&#10005;</button>
+      <div class="ac" id="acWan"></div>
+    </div>
+    <div class="favs" id="wanBudget">
+      <button class="chip" type="button" onclick="setWanBudget(60,this)">1 h</button>
+      <button class="chip" type="button" onclick="setWanBudget(90,this)">1&#189; h</button>
+      <button class="chip" type="button" onclick="setWanBudget(120,this)">2 h</button>
+      <button class="chip" type="button" onclick="setWanBudget(180,this)">3 h</button>
+      <button class="chip" type="button" onclick="setWanBudget(240,this)">4 h</button>
+      <button class="chip" type="button" onclick="setWanBudget(360,this)">6 h</button>
+    </div>
+    <div id="wanOut"><div class="hint">Pick how much time you have. The app finds where a train
+      leaving soon can take you &#8212; and only shows places it can prove you get back from
+      in time, with the last way home printed on every card.</div></div>
   </section>
 </div>
 
@@ -662,8 +703,14 @@ function wireAC(inpId, acId, fieldId, onPick){
    Clearing the field means you are done with that station, so the board and
    its timers go with it. */
 function clearField(which){
-  const map={dep:["iDep","fDep"],from:["iFrom","fFrom"],to:["iTo","fTo"]};
+  const map={dep:["iDep","fDep"],from:["iFrom","fFrom"],to:["iTo","fTo"],wan:["iWan","fWan"]};
   const [i,f]=map[which]; $(i).value=""; $(f).classList.remove("has"); $(i).focus();
+  if(which==="wan"){
+    wanName="";
+    $("wanOut").innerHTML=`<div class="hint">Pick how much time you have. The app finds where a train
+      leaving soon can take you &#8212; and only shows places it can prove you get back from
+      in time, with the last way home printed on every card.</div>`;
+  }
   if(which==="dep"){
     stopBoardTimers();
     current=""; lastBoard=[]; openDep="";
@@ -2151,11 +2198,174 @@ function connCard(c,i){
   </div>`;
 }
 
+/* ---------- WANDER ---------- */
+/* The other two tabs answer "when does my train go" and "how do I get to B".
+   This one answers a question neither can hold: "I have two hours and no
+   destination -- where can I go, and can I get BACK?" The outbound side is
+   free: one stationboard response already lists every stop each departing
+   train reaches (passList), so candidates cost no extra requests. The return
+   side is the load-bearing half and is never assumed: riding out is a fact you
+   can see on the board, riding back is a claim -- unchecked, it strands you.
+   Every card shown carries a VERIFIED return within the budget plus the last
+   way home tonight, because "the last train already left" is the failure that
+   turns a nice afternoon into a hotel bill. */
+let wanName = "";
+let wanBudget = 0;                 // minutes; 0 = not chosen yet
+let wanRun = 0;                    // stale-response guard: only the newest search may paint
+const WAN_MIN_RIDE = 10;           // shorter than this is a tram hop, not an outing
+const WAN_MIN_DWELL = 15;          // arriving with no time to leave the platform is not "being there"
+const WAN_MAX_CAND = 5;            // 1 board + 2 requests each -- volunteer API, explicit action only
+
+function setWanBudget(min, el){
+  wanBudget = min;
+  document.querySelectorAll("#wanBudget .chip").forEach(c=>c.classList.toggle("on", c===el));
+  if(wanName) runWander();
+}
+/* The API speaks Swiss wall time; the device may be anywhere. Same discipline
+   as hhmm(), pointed the other way: format the instant IN Zurich's zone.
+   MEASURED 2026-07-26, not assumed: the combined `when=` form silently IGNORES
+   its value when isArrivalTime is set (12:00 and 22:00 anchors returned
+   byte-identical results); only the split date=&time= form honours the anchor.
+   A parameter the server drops without an error is exactly the kind of thing
+   that ships green and strands someone -- hence query-string, not ISO. */
+function swissQS(d){
+  const p=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Zurich",year:"numeric",month:"2-digit",
+    day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(d);
+  const g=t=>p.find(x=>x.type===t)?.value||"00";
+  return `&date=${g("year")}-${g("month")}-${g("day")}&time=${g("hour")}:${g("minute")}`;
+}
+function fmtDur(m){ return m>=60 ? Math.floor(m/60)+"&#8201;h"+(m%60?" "+String(m%60).padStart(2,"0")+"&#8242;":"") : m+"&#8242;"; }
+
+/* Outbound candidates: direct rides only, straight off the board's passLists.
+   A stop qualifies when there is still room, inside the budget, to dwell at
+   least WAN_MIN_DWELL and ride the same distance back. */
+function wanCandidates(board, now, deadline){
+  const best=new Map();                          // station -> earliest-arriving direct ride
+  for(const j of board||[]){
+    const dep=j.stop?.departure; if(!dep) continue;
+    const depT=new Date(dep).getTime();
+    if(isNaN(depT) || depT<now-60000) continue;
+    const pl=Array.isArray(j.passList)?j.passList.slice(1):[];
+    for(const p of pl){
+      const nm=p.station?.name, arr=p.arrival;
+      if(!nm||!arr||nm===wanName) continue;
+      const arrT=new Date(arr).getTime(); if(isNaN(arrT)) continue;
+      const ride=Math.round((arrT-depT)/60000);
+      if(ride<WAN_MIN_RIDE) continue;
+      if(arrT + (WAN_MIN_DWELL+ride)*60000 > deadline) continue;
+      const prev=best.get(nm);
+      if(!prev || arrT<prev.arrT)
+        best.set(nm,{name:nm, dep, arr, arrT, ride, cat:j.category,
+                     num:j.number||j.line, scenic:isScenic(j.category)});
+    }
+  }
+  // the ride is the point: scenic first, then the longest ride that still fits
+  return [...best.values()]
+    .sort((a,b)=>(b.scenic?1:0)-(a.scenic?1:0) || b.ride-a.ride)
+    .slice(0,WAN_MAX_CAND);
+}
+/* Return legs for one candidate. Two separate verdicts, never conflated:
+   ret     -- latest connection back that still lands inside the budget
+              (latest departure == most time there). null = none exists.
+   retOk   -- whether that query ANSWERED. A dead request is "unknown",
+              not "no return"; absence of data must never render as data.
+   last    -- last way home tonight (arriving by ~03:00), same ok/unknown split. */
+async function wanReturns(c, deadline){
+  const from=encodeURIComponent(c.name), to=encodeURIComponent(wanName);
+  /* Measured quirk (2026-07-26): the arrival-anchored window can end ~30' short
+     of the anchor, so the "latest return" found here may under-report the real
+     dwell a little. That bias is the SAFE direction -- a shown return always
+     exists and always fits the budget; it just may not be the very last that
+     would. Never trade this for a forward query that could overshoot. */
+  try{
+    const d=await api(`/connections?limit=6&from=${from}&to=${to}${swissQS(new Date(deadline))}&isArrivalTime=1`);
+    const ok=(d.connections||[]).filter(r=>{
+      const rd=new Date(r.from?.departure).getTime(), ra=new Date(r.to?.arrival).getTime();
+      return !isNaN(rd) && !isNaN(ra) && rd>=c.arrT+WAN_MIN_DWELL*60000 && ra<=deadline+60000;
+    }).sort((a,b)=>new Date(b.from.departure)-new Date(a.from.departure));
+    c.ret=ok[0]||null; c.retOk=true;
+  }catch(e){ c.ret=null; c.retOk=false; }
+  try{
+    const night=new Date(); night.setHours(27,0,0,0);          // rolls to 03:00 tomorrow
+    const d=await api(`/connections?limit=6&from=${from}&to=${to}${swissQS(night)}&isArrivalTime=1`);
+    const late=(d.connections||[])
+      .filter(r=>{ const rd=new Date(r.from?.departure).getTime(); return !isNaN(rd)&&rd>=c.arrT; })
+      .sort((a,b)=>new Date(b.from.departure)-new Date(a.from.departure));
+    c.last=late[0]?.from?.departure||null; c.lastOk=true;
+  }catch(e){ c.last=null; c.lastOk=false; }
+}
+function wanCard(c){
+  const b=badge(c.cat,c.num);
+  const dwell=c.ret ? Math.round((new Date(c.ret.from.departure)-c.arrT)/60000) : null;
+  const retDur=c.ret ? Math.round((new Date(c.ret.to.arrival)-new Date(c.ret.from.departure))/60000) : null;
+  const chg=c.ret ? Math.max(0,(c.ret.sections||[]).filter(s=>s.journey).length-1) : 0;
+  const legs = c.ret
+    ? `out <b>${hhmm(c.dep)} &#8594; ${hhmm(c.arr)}</b> (${fmtDur(c.ride)})<br>`
+      +`there <b>${fmtDur(dwell)}</b><br>`
+      +`back <b>${hhmm(c.ret.from.departure)} &#8594; ${hhmm(c.ret.to.arrival)}</b> (${fmtDur(retDur)}${chg?`, ${chg} change${chg>1?"s":""}`:""})`
+    : `out <b>${hhmm(c.dep)} &#8594; ${hhmm(c.arr)}</b> (${fmtDur(c.ride)})`;
+  // slow-return trap, named: the way back costs half again what the way out did
+  const warn = retDur && retDur>c.ride*1.5
+    ? `<span class="wwarn">&#9888; return takes ${fmtDur(retDur)} &#8212; ${Math.round((retDur/c.ride-1)*100)}% longer than the way out</span>` : "";
+  const unv = !c.retOk
+    ? `<span class="wunv">return UNVERIFIED &#8212; the timetable did not answer; do not board on this card alone</span>` : "";
+  /* "verified" is load-bearing: the arrival-window quirk above means a LATER
+     train home may exist unseen. The one printed is a train that EXISTS -- plan
+     around it and you cannot be stranded; claiming it is THE last would lie in
+     the dangerous direction on thin lines. */
+  const lastLine = c.lastOk
+    ? (c.last ? `<div class="wlast">last verified way home departs ${hhmm(c.last)}</div>`
+              : `<div class="wlast">&#9888; no later way home could be verified &#8212; treat the return above as your last safe one</div>`)
+    : `<div class="wlast">last-way-home check did not answer &#8212; verify before you linger</div>`;
+  return `<div class="wcard">
+    <div class="whead">
+      <div class="badge" style="background:${b.col}">${b.label}</div>
+      <div class="wto">${esc(c.name)}</div>
+      <div class="wride">${fmtDur(c.ride)}</div>
+    </div>
+    <div class="wlegs">${legs}</div>
+    ${warn}${unv}${lastLine}
+  </div>`;
+}
+async function runWander(){
+  if(!wanName||!wanBudget) return;
+  const run=++wanRun, out=$("wanOut");
+  out.innerHTML=skel(4);
+  const now=Date.now(), deadline=now+wanBudget*60000;
+  let board;
+  try{
+    const d=await api("/stationboard?limit=15&station="+encodeURIComponent(wanName));
+    board=d.stationboard||[];
+  }catch(e){
+    if(run!==wanRun) return;
+    out.innerHTML=`<div class="err">We could not reach the timetable, so we do not know what leaves from here.<br>This is not a &quot;no&quot; &#8212; check your connection and try again.</div>`;
+    return;
+  }
+  const cands=wanCandidates(board, now, deadline);
+  if(run!==wanRun) return;
+  if(!cands.length){
+    out.innerHTML=`<div class="empty"><div class="big">&#8987;</div>No round trip fits in ${fmtDur(wanBudget)} from ${esc(wanName)}.<br>Try a bigger budget &#8212; the shortest outing needs the ride out, ${WAN_MIN_DWELL}&#8242; there, and the ride back.</div>`;
+    return;
+  }
+  await Promise.all(cands.map(c=>wanReturns(c, deadline)));
+  if(run!==wanRun) return;
+  // a candidate with an ANSWERED query and no fitting return fails the premise -> drop.
+  // an UNANSWERED query is shown, loudly unverified -- unknown is not "no".
+  const show=cands.filter(c=>c.ret||!c.retOk);
+  if(!show.length){
+    out.innerHTML=`<div class="empty"><div class="big">&#8987;</div>Trains go out, but nothing gets you back inside ${fmtDur(wanBudget)}.<br>Try a bigger budget.</div>`;
+    return;
+  }
+  out.innerHTML=show.map(wanCard).join("");
+}
+
 /* ---------- tabs / clock / boot ---------- */
 function setTab(t){
-  const dep=t==="dep";
-  $("tabDep").classList.toggle("on",dep); $("tabJrn").classList.toggle("on",!dep);
-  $("vDep").classList.toggle("on",dep); $("vJrn").classList.toggle("on",!dep);
+  const m={dep:["tabDep","vDep"], jrn:["tabJrn","vJrn"], wan:["tabWan","vWan"]};
+  for(const k in m){
+    $(m[k][0]).classList.toggle("on", k===t);
+    $(m[k][1]).classList.toggle("on", k===t);
+  }
 }
 /* The logo was the one thing on screen with nothing to do. Now it answers the
    question the app quietly raises: most of what this does is a tap you would
@@ -2240,9 +2450,11 @@ function acEnter(inpId, acId, onPick){
 }
 acEnter("iFrom","acFrom", n=>{ fromName=n; $("fFrom").classList.add("has"); if(toName) planJourney(); });
 acEnter("iTo","acTo",     n=>{ toName=n;   $("fTo").classList.add("has");   if(fromName) planJourney(); });
+acEnter("iWan","acWan",   n=>{ wanName=n;  $("fWan").classList.add("has");  if(wanBudget) runWander(); });
 wireAC("iDep","acDep","fDep", showDepartures);
 wireAC("iFrom","acFrom","fFrom", n=>{ fromName=n; if(toName) planJourney(); });
 wireAC("iTo","acTo","fTo",     n=>{ toName=n;   if(fromName) planJourney(); });
+wireAC("iWan","acWan","fWan",  n=>{ wanName=n;  if(wanBudget) runWander(); });
 $("iDep").addEventListener("keydown",e=>{ if(e.key==="Enter"){e.target.blur(); showDepartures(e.target.value.trim());}});
 
 /* Anything that draws remembered state has to be called HERE, on load. Twice now
@@ -2254,6 +2466,9 @@ renderRoutes();
 renderBuild();
 tickClock(); setInterval(tickClock,1000); setInterval(tickSketches,15000);
 const last=load(LS.last,"");
+/* Wander starts where you last looked at departures -- one tap on a budget
+   chip and it runs; typing a start station stays possible but optional. */
+if(last){ $("iWan").value=last; wanName=last; $("fWan").classList.add("has"); }
 if(last) showDepartures(last);
 else $("depOut").innerHTML=`<div class="empty"><div class="big">&#128647;</div>Search a station to see live departures.</div>`;
 
