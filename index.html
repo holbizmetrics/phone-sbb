@@ -1263,6 +1263,16 @@ function renderBuild(){
    via the mode chips, which also re-plan mid-flight). One counter, bumped by
    every plan, checked after every await: only the newest search may paint. */
 let jrnGen = 0;
+/* api() throws Error("HTTP 429") etc., but the catch blocks used to discard it
+   and print the generic "check your connection" line -- the one situation where
+   that advice is wrong (the network is FINE, the service refused us). Rate-limit
+   and server errors need different advice than a dead connection. */
+function errBox(e){
+  const m=/^HTTP (\d+)/.exec((e&&e.message)||"");
+  if(m&&m[1]==="429") return `<div class="err">The timetable service is rate-limiting us &#8212; too many searches for now.<br>This is not a &quot;no&quot;, and not your connection: wait a minute, then search again.</div>`;
+  if(m) return `<div class="err">The timetable service answered with an error (HTTP ${m[1]}), so we do not know whether this journey runs.<br>This is not a &quot;no&quot; &#8212; try again in a moment.</div>`;
+  return `<div class="err">We could not reach the timetable, so we do not know whether this journey runs.<br>This is not a &quot;no&quot; &#8212; check your connection and tap Search again.</div>`;
+}
 function planJourney(){ return smart ? smartPlan() : plainPlan(); }
 
 async function plainPlan(){
@@ -1281,7 +1291,7 @@ async function plainPlan(){
     if(weather) fillWeather();
   }catch(e){
     if(gen!==jrnGen) return;                                       // superseded
-    $("jrnOut").innerHTML=`<div class="err">We could not reach the timetable, so we do not know whether this journey runs.<br>This is not a &quot;no&quot; &#8212; check your connection and tap Search again.</div>`;
+    $("jrnOut").innerHTML=errBox(e);
   }
 }
 
@@ -1667,7 +1677,7 @@ async function smartPlan(){
     renderSmart(base, wide.concat(hubResults), baseline, false, direct.failed && !direct.ok);
   }catch(e){
     if(gen!==jrnGen) return;                                       // superseded
-    $("jrnOut").innerHTML=`<div class="err">We could not reach the timetable, so we do not know whether this journey runs.<br>This is not a &quot;no&quot; &#8212; check your connection and tap Search again.</div>`;
+    $("jrnOut").innerHTML=errBox(e);
   }
 }
 

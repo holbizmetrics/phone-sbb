@@ -39,7 +39,7 @@ const ctx = {
   smartPlan: () => { throw new Error("smart path must not run in this test"); },
 };
 vm.createContext(ctx);
-new vm.Script(fnSrc + "\nthis.plainPlan = plainPlan; this.planJourney = planJourney;").runInContext(ctx);
+new vm.Script(fnSrc + "\nthis.plainPlan = plainPlan; this.planJourney = planJourney; this.errBox = errBox;").runInContext(ctx);
 
 const tick = () => new Promise(r => setTimeout(r, 0));
 
@@ -67,6 +67,18 @@ resC(Promise.reject(new Error("boom")));   // …then C fails late
 await pC.catch(() => {}); await tick();
 chk("planted positive: stale FAILURE cannot paint the error box",
   !jrnOut.innerHTML.includes("could not reach") && jrnOut.innerHTML.includes("CARD:D"), jrnOut.innerHTML);
+
+// errBox: the error's message decides the advice -- 429 must NOT blame the connection
+const eb = ctx.errBox;
+chk("errBox extracted with the planners", typeof eb === "function");
+chk("429 names the rate limit, not the connection",
+  eb(new Error("HTTP 429")).includes("rate-limiting") && !eb(new Error("HTTP 429")).includes("check your connection"));
+chk("other HTTP status is shown verbatim", eb(new Error("HTTP 503")).includes("HTTP 503"));
+chk("planted negative: a network TypeError still says check-connection",
+  eb(new TypeError("Failed to fetch")).includes("check your connection"));
+chk("planted negative: no raw catch body remains in either planner",
+  !/could not reach the timetable[\s\S]{0,200}?superseded/.test(fnSrc) &&
+  (src.match(/=errBox\(e\);/g) || []).length === 2);
 
 // null control: a single un-raced search still paints normally
 const pE = ctx.plainPlan();
