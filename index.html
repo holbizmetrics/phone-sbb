@@ -687,8 +687,8 @@ function isScenic(cat){ return /^(PE|GPX|GEX|BEX|VAE)/.test((cat||"").toUpperCas
 function badge(cat,num){ const sc=isScenic(cat); const l=((sc?"&#9968; ":"")+(cat||"")+(num?" "+num:"")).trim()||"&#183;"; return {label:l, col:catColor(cat), scenic:sc}; }
 
 /* ---------- API ---------- */
-async function api(path){
-  const r = await fetch(API+path);
+async function api(path, signal){
+  const r = await fetch(API+path, signal?{signal}:undefined);
   if(!r.ok) throw new Error("HTTP "+r.status);
   return r.json();
 }
@@ -1263,6 +1263,15 @@ function renderBuild(){
    via the mode chips, which also re-plan mid-flight). One counter, bumped by
    every plan, checked after every await: only the newest search may paint. */
 let jrnGen = 0;
+/* Barring a stale sweep from PAINTING was only half the fix. Its requests kept
+   running -- a bus-filtered wide query is a 1 MB, 14-second response, and a smart
+   sweep is ~13 of them -- so a few mode-chip taps stacked dozens of zombie fetches
+   on the browser's per-host connection pool. Every NEW search then queued behind
+   the corpses: the app looked permanently dead until the tab was closed, which is
+   exactly what closing the tab fixes (it kills the pool). Measured on device
+   2026-07-26 after ~40 operator repros across three sessions. A superseded sweep
+   is now ABORTED, not just silenced. */
+let jrnAbort = null;
 /* api() throws Error("HTTP 429") etc., but the catch blocks used to discard it
    and print the generic "check your connection" line -- the one situation where
    that advice is wrong (the network is FINE, the service refused us). Rate-limit
@@ -1278,9 +1287,12 @@ function planJourney(){ return smart ? smartPlan() : plainPlan(); }
 async function plainPlan(){
   if(!fromName||!toName) return;
   const gen=++jrnGen;
+  if(jrnAbort) jrnAbort.abort();
+  jrnAbort = new AbortController();
+  const sig = jrnAbort.signal;
   $("jrnOut").innerHTML = skel(4);
   try{
-    const d=await api(`/connections?limit=6&from=${encodeURIComponent(fromName)}&to=${encodeURIComponent(toName)}${whenQS()}${modeQS()}`);
+    const d=await api(`/connections?limit=6&from=${encodeURIComponent(fromName)}&to=${encodeURIComponent(toName)}${whenQS()}${modeQS()}`, sig);
     if(gen!==jrnGen) return;                                       // superseded
     const cs=d.connections||[];
     if(!cs.length){ $("jrnOut").innerHTML=`<div class="empty"><div class="big">&#9940;</div>No connections found.${sunWhyEmpty()}${modeWhyEmpty()}</div>`; return; }
@@ -1310,8 +1322,8 @@ async function plainPlan(){
    the timetable" just because its slower twin timed out. The wide query is the
    likeliest request in the app to fail -- bus-filtered, limit 16, it is a 1 MB
    14-second response -- so all-or-nothing was guaranteed to fire eventually. */
-async function tryConns(qs, note){
-  try{ const d=await api("/connections?"+qs); if(note) note.ok=true; return d.connections||[]; }
+async function tryConns(qs, note, signal){
+  try{ const d=await api("/connections?"+qs, signal); if(note) note.ok=true; return d.connections||[]; }
   catch(e){ if(note) note.failed=true; return []; }
 }
 function connSig(c){ return (c.from?.departure||"")+"|"+(c.to?.arrival||"")+"|"+(c.duration||""); }
@@ -1643,25 +1655,27 @@ function withTimeout(p, ms){ return Promise.race([p, new Promise(r=>setTimeout((
 /* A sweep takes up to five seconds. Refusing to start a new one while the old
    one runs meant a mode chip tapped in that window did NOTHING -- no result, no
    feedback -- and the only reading available to you is that the control is
-   broken. A tap is an instruction, so it supersedes: the older sweep keeps its
-   requests (they are already in flight) but is barred from painting over the
-   newer answer. That costs one extra sweep per impatient tap, which is a price
-   worth paying to never drop something you asked for. */
+   broken. A tap is an instruction, so it supersedes: the older sweep is ABORTED
+   (its zombie fetches used to jam the connection pool until the tab was closed)
+   and barred from painting over the newer answer. */
 async function smartPlan(){
   if(!fromName||!toName) return;
   const gen=++jrnGen;
+  if(jrnAbort) jrnAbort.abort();
+  jrnAbort = new AbortController();
+  const sig = jrnAbort.signal;
   $("jrnOut").innerHTML = skel(4);
   try{
     const f=encodeURIComponent(fromName), t=encodeURIComponent(toName);
     // Fire everything at once. The two direct queries (base + wide) are the fast core;
     // hub sweeps run in parallel, each capped so the slowest hub can't hold up first paint.
     const direct={failed:false, ok:false};   // only the two DIRECT queries decide whether "not found" is honest
-    const baseP = tryConns(`from=${f}&to=${t}&limit=6${whenQS()}${modeQS()}`, direct);
-    const wideP = tryConns(`from=${f}&to=${t}&limit=16${whenQS()}${modeQS()}`, direct);
+    const baseP = tryConns(`from=${f}&to=${t}&limit=6${whenQS()}${modeQS()}`, direct, sig);
+    const wideP = tryConns(`from=${f}&to=${t}&limit=16${whenQS()}${modeQS()}`, direct, sig);
     const hubList = [...HUBS, ...(preferScenic?SCENIC_HUBS:[])].filter(h=>h!==fromName&&h!==toName);
     const HUB_CAP=5000;  // tunable: bounds hub fill-in (hubs measured 3.3-9.3s); the base render fixes PERCEIVED latency regardless of this
     const hubJobs = hubList.map(h=>
-      withTimeout(tryConns(`from=${f}&to=${t}&via[]=${encodeURIComponent(h)}&limit=3${whenQS()}${modeQS()}`), HUB_CAP)
+      withTimeout(tryConns(`from=${f}&to=${t}&via[]=${encodeURIComponent(h)}&limit=3${whenQS()}${modeQS()}`, null, sig), HUB_CAP)
         .then(cs=>cs.map(c=>{c._via=h; return c;})).catch(()=>[]));
 
     // Phase 1 -- render the direct/wide results the moment they land (~base latency), hint that more is coming

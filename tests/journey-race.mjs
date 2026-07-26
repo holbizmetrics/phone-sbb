@@ -16,6 +16,10 @@ const chk = (n, c, d = "") => { if (c) { pass++; console.log("  ok   " + n); } e
 // -- static: ONE counter, bumped by BOTH planners, old name gone from code --
 chk("both planners bump the shared counter", (src.match(/const gen=\+\+jrnGen;/g) || []).length === 2);
 chk("planted negative: no guard still checks the old counter", !/gen!==smartGen/.test(src));
+chk("both planners ABORT the superseded sweep (zombie-fetch fix)",
+  (src.match(/if\(jrnAbort\) jrnAbort\.abort\(\);/g) || []).length === 2 &&
+  (src.match(/jrnAbort = new AbortController\(\);/g) || []).length === 2);
+chk("api() forwards the abort signal to fetch", /fetch\(API\+path, signal\?\{signal\}:undefined\)/.test(src));
 
 // -- extract plainPlan + the shared counter --
 const a = src.indexOf("let jrnGen = 0;");
@@ -27,7 +31,9 @@ chk("control: extracted block really is the guarded planner",
 
 const jrnOut = { innerHTML: "" };
 let pending = [];
+let aborts = 0;
 const ctx = {
+  AbortController: class { constructor(){ this.signal = {}; } abort(){ aborts++; } },
   fromName: "A", toName: "B", smart: false, weather: false, jrnConns: [],
   $: id => (id === "jrnOut" ? jrnOut : { innerHTML: "" }),
   api: () => new Promise(res => pending.push(res)),
@@ -48,6 +54,7 @@ const pA = ctx.plainPlan();            // request A in flight
 const resA = pending.shift();
 if (typeof resA !== "function") throw new Error("HARNESS FAILED -- plainPlan never reached api(); a dependency stub is missing");
 const pB = ctx.plainPlan();            // request B supersedes A
+chk("superseding search ABORTS the previous sweep's requests", aborts === 1, String(aborts));
 const resB = pending.shift();
 resB({ connections: [{ tag: "NEW", to: {} }] });
 await pB; await tick();

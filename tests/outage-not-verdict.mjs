@@ -112,10 +112,10 @@ chk("the outage branch still says it is not a 'no' when filtered",
   /could not reach the timetable/i.test(outageFiltered), outageFiltered);
 
 // --- WIRING: the flag has to be threaded, or this all ships green and never runs ---
-chk("the direct queries pass a note", (src.match(/tryConns\(`from=[^`]*`,\s*direct\)/g) || []).length === 2,
-  "expected both direct queries to report failure; found " +
-  (src.match(/tryConns\(`from=[^`]*`,\s*direct\)/g) || []).length);
-chk("hub sweeps deliberately pass no note", !/via\[\]=[^`]*`,\s*direct\)/.test(src),
+chk("the direct queries pass a note AND the abort signal", (src.match(/tryConns\(`from=[^`]*`,\s*direct,\s*sig\)/g) || []).length === 2,
+  "expected both direct queries to report failure and be abortable; found " +
+  (src.match(/tryConns\(`from=[^`]*`,\s*direct,\s*sig\)/g) || []).length);
+chk("hub sweeps deliberately pass no note (but still the signal)", !/via\[\]=[^`]*`,\s*direct[,)]/.test(src) && /via\[\]=[^`]*`,\s*null,\s*sig\)/.test(src),
   "a timed-out hub would be reported as the timetable being down");
 // Both phases must carry the flag. Counting `renderSmart(` calls and requiring
 // every one of them to end in `direct.failed)` is the check that stays true if a
