@@ -1255,13 +1255,23 @@ function renderBuild(){
    route that does not exist, and the six slots are small enough that a couple of
    typos evict the trips you actually take. A chip is an offer to repeat a
    journey, so it has to be a journey. */
+/* jrnGen is SHARED between the two planners. It used to live only in smartPlan
+   (as smartGen), which guarded smart-vs-smart races and nothing else -- so
+   flipping the smart toggle off MID-SEARCH let the old smart response sail
+   past its own stale-check and paint over the fresh plain results. Measured on
+   device 2026-07-26 (operator repro: toggle off while searching; same class
+   via the mode chips, which also re-plan mid-flight). One counter, bumped by
+   every plan, checked after every await: only the newest search may paint. */
+let jrnGen = 0;
 function planJourney(){ return smart ? smartPlan() : plainPlan(); }
 
 async function plainPlan(){
   if(!fromName||!toName) return;
+  const gen=++jrnGen;
   $("jrnOut").innerHTML = skel(4);
   try{
     const d=await api(`/connections?limit=6&from=${encodeURIComponent(fromName)}&to=${encodeURIComponent(toName)}${whenQS()}${modeQS()}`);
+    if(gen!==jrnGen) return;                                       // superseded
     const cs=d.connections||[];
     if(!cs.length){ $("jrnOut").innerHTML=`<div class="empty"><div class="big">&#9940;</div>No connections found.${sunWhyEmpty()}${modeWhyEmpty()}</div>`; return; }
     rememberRoute(fromName,toName);   // a real result -- now it is worth a chip
@@ -1270,6 +1280,7 @@ async function plainPlan(){
     $("jrnOut").innerHTML = cs.map((c,i)=>connCard(c,i)).join("") + wondersExpanderHTML(cs[0].to?.station);
     if(weather) fillWeather();
   }catch(e){
+    if(gen!==jrnGen) return;                                       // superseded
     $("jrnOut").innerHTML=`<div class="err">We could not reach the timetable, so we do not know whether this journey runs.<br>This is not a &quot;no&quot; &#8212; check your connection and tap Search again.</div>`;
   }
 }
@@ -1626,10 +1637,9 @@ function withTimeout(p, ms){ return Promise.race([p, new Promise(r=>setTimeout((
    requests (they are already in flight) but is barred from painting over the
    newer answer. That costs one extra sweep per impatient tap, which is a price
    worth paying to never drop something you asked for. */
-let smartGen=0;
 async function smartPlan(){
   if(!fromName||!toName) return;
-  const gen=++smartGen;
+  const gen=++jrnGen;
   $("jrnOut").innerHTML = skel(4);
   try{
     const f=encodeURIComponent(fromName), t=encodeURIComponent(toName);
@@ -1646,17 +1656,17 @@ async function smartPlan(){
 
     // Phase 1 -- render the direct/wide results the moment they land (~base latency), hint that more is coming
     const [base, wide] = await Promise.all([baseP, wideP]);
-    if(gen!==smartGen) return;                                     // superseded
+    if(gen!==jrnGen) return;                                       // superseded
     const baseline = base[0] ? annotate(base[0]) : null;
     if(base.length||wide.length) rememberRoute(fromName,toName);   // a real result -- now it is worth a chip
     renderSmart(base, wide.slice(), baseline, true, direct.failed && !direct.ok);
 
     // Phase 2 -- hub routes fill in when they arrive; any past the cap are dropped silently
     const hubResults = (await Promise.allSettled(hubJobs)).flatMap(r=>r.status==="fulfilled"?r.value:[]);
-    if(gen!==smartGen) return;                                     // superseded
+    if(gen!==jrnGen) return;                                       // superseded
     renderSmart(base, wide.concat(hubResults), baseline, false, direct.failed && !direct.ok);
   }catch(e){
-    if(gen!==smartGen) return;                                     // superseded
+    if(gen!==jrnGen) return;                                       // superseded
     $("jrnOut").innerHTML=`<div class="err">We could not reach the timetable, so we do not know whether this journey runs.<br>This is not a &quot;no&quot; &#8212; check your connection and tap Search again.</div>`;
   }
 }
