@@ -398,6 +398,19 @@
     padding:14px; border-radius:14px; text-align:center; font-size:14px}
   .hint{color:var(--faint); font-size:13px; text-align:center; padding:8px}
 
+  /* touch timetable -- the tile grid is the drag surface. touch-action:none on
+     the TILES only, so a drag that starts on a tile draws the line while a
+     swipe in the gaps still scrolls the page. */
+  .twrap{position:relative}
+  .tgrid{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+  .tile{height:72px; border-radius:14px; background:var(--card2); border:1px solid var(--line);
+    display:flex; align-items:flex-end; padding:10px 12px; font-weight:800; font-size:15px;
+    color:var(--txt); user-select:none; -webkit-user-select:none; touch-action:none;
+    overflow:hidden; transition:opacity .15s, border-color .15s, background .15s}
+  .tile.dim{opacity:.35}
+  .tile.sel{border-color:var(--red); background:rgba(235,0,0,.10)}
+  #tchSvg{position:absolute; inset:0; width:100%; height:100%; pointer-events:none; overflow:visible; z-index:3}
+
   @keyframes pop{from{opacity:0; transform:translateY(-6px)}to{opacity:1}}
   @keyframes rise{from{opacity:0; transform:translateY(8px)}to{opacity:1}}
   @keyframes sh{to{background-position:-200% 0}}
@@ -475,6 +488,7 @@
     <button id="tabDep" class="on" onclick="setTab('dep')">Departures</button>
     <button id="tabJrn" onclick="setTab('jrn')">Journey</button>
     <button id="tabWan" onclick="setTab('wan')">Wander</button>
+    <button id="tabTch" onclick="setTab('tch')">Touch</button>
   </div>
 
   <!-- DEPARTURES -->
@@ -562,6 +576,18 @@
     <div id="wanOut"><div class="hint">Pick how much time you have. The app finds where a train
       leaving soon can take you &#8212; and only shows places it can prove you get back from
       in time, with the last way home printed on every card.</div></div>
+  </section>
+
+  <!-- TOUCH : the timetable you drag. Tiles are the stations the app already
+       knows (stars + recent-route endpoints); pull a line from one tile to
+       another and that IS the journey query. Nothing to configure, nothing
+       new persisted. -->
+  <section id="vTch" class="view">
+    <div class="twrap" id="tchWrap">
+      <div class="tgrid" id="tchGrid"></div>
+      <svg id="tchSvg" aria-hidden="true"></svg>
+    </div>
+    <div class="hint" id="tchHint"></div>
   </section>
 </div>
 
@@ -2361,13 +2387,96 @@ async function runWander(){
   out.innerHTML=show.map(wanCard).join("");
 }
 
+/* ---------- touch timetable ---------- */
+/* Tiles come from data the app already holds -- starred stations first, then
+   recent-route endpoints, then the last board station. Deduped, capped at 12.
+   Rebuilt on every visit to the tab, so a new star shows up without a reload. */
+function tchStations(){
+  const seen=new Set(), out=[];
+  const add=n=>{ if(n && !seen.has(n)){ seen.add(n); out.push(n); } };
+  favs.forEach(add);
+  routeHist.forEach(r=>{ add(r.f); add(r.t); });
+  add(load(LS.last,""));
+  return out.slice(0,12);
+}
+/* Grid render */
+function renderTouch(){
+  const g=$("tchGrid"), h=$("tchHint"), st=tchStations();
+  if(st.length<2){
+    g.innerHTML="";
+    h.innerHTML="Star stations or plan a journey first &#8212; the places this app knows about become tiles here, and you drag a line between two of them to plan that trip.";
+    return;
+  }
+  h.innerHTML="Drag from one tile to another &#8212; the line is the journey.";
+  g.innerHTML=st.map(n=>`<div class="tile" data-n="${esc(n)}">${esc(shortStop(n))}</div>`).join("");
+}
+let tchFrom=null;
+function tchCenter(el){
+  const r=el.getBoundingClientRect(), w=$("tchWrap").getBoundingClientRect();
+  return [r.left-w.left+r.width/2, r.top-w.top+r.height/2];
+}
+function tchLine(x1,y1,x2,y2){
+  $("tchSvg").innerHTML =
+    `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--red)" stroke-width="3.5" stroke-linecap="round"/>`
+   +`<circle cx="${x1}" cy="${y1}" r="7" fill="var(--red)"/>`
+   +`<circle cx="${x2}" cy="${y2}" r="7" fill="var(--red)"/>`;
+}
+function tchTileAt(x,y){
+  const el=document.elementFromPoint(x,y);
+  return el && el.closest ? el.closest(".tile") : null;
+}
+function tchEnd(commit,x,y){
+  const g=$("tchGrid");
+  let target=null;
+  if(commit && tchFrom){
+    const t=tchTileAt(x,y);
+    if(t && t!==tchFrom) target=t;
+  }
+  if(target){
+    const from=tchFrom.dataset.n, to=target.dataset.n;
+    fromName=from; toName=to;
+    $("iFrom").value=from; $("iTo").value=to;
+    $("fFrom").classList.add("has"); $("fTo").classList.add("has");
+    setTab("jrn"); planJourney();
+  }
+  tchFrom=null; $("tchSvg").innerHTML="";
+  g.querySelectorAll(".tile").forEach(t=>t.classList.remove("sel","dim"));
+}
+(function(){
+  const g=$("tchGrid"); if(!g) return;
+  g.addEventListener("pointerdown", e=>{
+    const t=e.target.closest(".tile"); if(!t) return;
+    tchFrom=t; g.setPointerCapture(e.pointerId);
+    g.querySelectorAll(".tile").forEach(x=>x.classList.toggle("dim", x!==t));
+    t.classList.add("sel");
+    const [x,y]=tchCenter(t), w=$("tchWrap").getBoundingClientRect();
+    tchLine(x,y,e.clientX-w.left,e.clientY-w.top);
+  });
+  g.addEventListener("pointermove", e=>{
+    if(!tchFrom) return;
+    const w=$("tchWrap").getBoundingClientRect();
+    const [x1,y1]=tchCenter(tchFrom);
+    const hov=tchTileAt(e.clientX,e.clientY);
+    g.querySelectorAll(".tile").forEach(t=>{
+      const on = t===tchFrom || (hov===t && t!==tchFrom);
+      t.classList.toggle("sel", on);
+      t.classList.toggle("dim", !on);
+    });
+    if(hov && hov!==tchFrom){ const [x2,y2]=tchCenter(hov); tchLine(x1,y1,x2,y2); }
+    else tchLine(x1,y1,e.clientX-w.left,e.clientY-w.top);
+  });
+  g.addEventListener("pointerup", e=>tchEnd(true,e.clientX,e.clientY));
+  g.addEventListener("pointercancel", ()=>tchEnd(false));
+})();
+
 /* ---------- tabs / clock / boot ---------- */
 function setTab(t){
-  const m={dep:["tabDep","vDep"], jrn:["tabJrn","vJrn"], wan:["tabWan","vWan"]};
+  const m={dep:["tabDep","vDep"], jrn:["tabJrn","vJrn"], wan:["tabWan","vWan"], tch:["tabTch","vTch"]};
   for(const k in m){
     $(m[k][0]).classList.toggle("on", k===t);
     $(m[k][1]).classList.toggle("on", k===t);
   }
+  if(t==="tch") renderTouch();
 }
 /* The logo was the one thing on screen with nothing to do. Now it answers the
    question the app quietly raises: most of what this does is a tap you would
