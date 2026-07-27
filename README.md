@@ -111,6 +111,14 @@ Turn the toggle off any time for the plain, single-list view.
   anchoring is the whole point: a peak thirty kilometres away is scenery, but a
   waterfall a short walk from a stop is a plan. First and last stations are
   excluded — you are already going there.
+- **Which fare zones the leg crosses.** Open the stop list and a ribbon names
+  the Tarifverbunde it passes through, in travel order — *TNW → ZVV* tells you
+  a day pass for one city does not reach the other end. It names zones and
+  stops there: it never says a ticket is valid, because whether yours covers
+  this ride depends on tariff rules this app does not model, and a wrong yes
+  there is a fine. Stops it cannot place are **counted, not dropped** ("2 stops
+  outside any zone"), and a leg through Valais — which has no Tarifverbund at
+  all — says so plainly rather than guessing a neighbour.
 
 ## Telling you what it doesn't know
 
@@ -157,10 +165,12 @@ answer is worse than an absent one:
 
 ## What it deliberately isn't
 
-No tickets, no fares, no reservations, no disruption bulletins, no step-free
+No tickets, no prices, no reservations, no disruption bulletins, no step-free
 or accessibility routing, no offline timetable. The official SBB app owns all
 of that and this doesn't try to replace it — it's the thing you reach for in
-the ninety seconds before a train leaves.
+the ninety seconds before a train leaves. The zone ribbon is not an exception:
+naming the areas you cross is geography, and it stops one step short of the
+tariff question on purpose.
 
 ## Run it locally
 
@@ -185,6 +195,13 @@ Works identically on desktop and phone.
   | Open-Meteo elevation | terrain height along the route |
   | [Overpass](https://overpass-api.de/) / OpenStreetMap | peaks, glaciers, waterfalls, caves, viewpoints |
   | Wikipedia REST + geosearch | what that place is |
+  | [data.sbb.ch](https://data.sbb.ch/) tarifverbundkarte + haltestelle-haltekante | which Tarifverbund each stop sits in (precomputed offline, shipped inline) |
+
+- **The one precomputed table.** Fare-zone membership is the only thing the app
+  does not fetch live: the zone polygons are 4.4 MB, so `tools/build-verbund.py`
+  runs the point-in-polygon offline and pastes 17 KB of answers into
+  `index.html`. A maintainer reruns it when Verbund boundaries move
+  (`--check` fails if the file is stale). Users still get one HTML file.
 
 - **Endpoints:** `/stationboard`, `/connections` (with multi-`via[]` hub
   sweeps) and `/locations` on transport.opendata.ch; `/v1/forecast` and
@@ -206,6 +223,7 @@ node tests/summit.mjs           # is it worth going up — runs anywhere, no bro
 node tests/storage-full.mjs     # a full phone must not kill the app — runs anywhere
 node tests/board-refresh.mjs    # the 30s refresh keeps its rows — runs anywhere
 node tests/outage-not-verdict.mjs # an outage is not "no such journey" — runs anywhere
+node tests/verbund.mjs          # fare-zone lookup — the negatives are the point
 node tests/smoke.mjs            # Playwright end-to-end — CI only
 ```
 
