@@ -182,6 +182,10 @@
   .chip.mode{font-size:12px; padding:7px 11px; opacity:.62}
   .chip.mode.on{opacity:1; border-color:var(--blue); color:var(--txt)}
   .chip.mode.clear{opacity:.8; border-style:dashed}
+  .chip.mode.cat{font-size:11px; padding:6px 9px}
+  .catlabel{font-size:11px; color:var(--faint); align-self:center; margin-right:2px; letter-spacing:.03em}
+  .catnote{font-size:12px; color:var(--dim); line-height:1.5; margin:0 2px 12px;
+           padding:8px 10px; border-left:3px solid var(--blue); background:var(--card); border-radius:0 8px 8px 0}
   .chip.route{font-weight:600}
   .chip.route .ra{color:var(--faint); margin:0 2px}
 
@@ -565,6 +569,7 @@
               aria-label="Back to departures from now">&#10005;</button>
     </div>
     <div class="favs" id="modeChips"></div>
+    <div class="favs" id="catChips" role="group" aria-label="Train type"></div>
     <div id="jrnOut"><div class="hint">Enter two stations to plan a journey.</div></div>
   </section>
 
@@ -612,7 +617,7 @@
 const BUILD = "dev";  // BUILD-STAMP
 const API = "https://transport.opendata.ch/v1";
 const $ = id => document.getElementById(id);
-const LS = { favs:"rail.favs", last:"rail.last", modes:"rail.modes", routes:"rail.routes", theme:"rail.theme" };
+const LS = { favs:"rail.favs", last:"rail.last", modes:"rail.modes", cats:"rail.cats", routes:"rail.routes", theme:"rail.theme" };
 let favs = load(LS.favs, []);
 let current = "";        // current departures station
 let refreshTimer = null;
@@ -1230,6 +1235,7 @@ function renderModes(){
     + `aria-pressed="${modeSel.includes(m.k)}" title="${modeSel.includes(m.k)?"Only these modes":"Include every mode"}">`
     + `${m.ic} ${m.label}</button>`).join("")
     + (modeSel.length?`<button class="chip mode clear" type="button" onclick="clearModes()">&#10005; all modes</button>`:"");
+  renderCats();   // turning trains off/on changes whether the sub-row applies
 }
 function clearModes(){ modeSel=[]; save(LS.modes,modeSel); renderModes(); if(fromName&&toName) planJourney(); }
 /* The selection is remembered across sessions, so a boat filter set once for a
@@ -1255,6 +1261,107 @@ function modeWhyEmpty(){
   const list=names.length>1 ? names.slice(0,-1).join(", ")+" or "+names[names.length-1] : names[0];
   return `<div class="emptywhy">You are only showing journeys by ${esc(list)}. `
     + `<button type="button" class="linkish" onclick="clearModes()">Show every mode</button></div>`;
+}
+/* ---------- train sub-categories (ICE/TGV - EC/IC - IR/PE - RE - S/R) ----------
+   SBB's own Erweiterte Suche splits "Zug" into six boxes, and the commuter case
+   it was clearly built for is real: "IC only, I am not standing through eight
+   regional stops." We can answer it, but NOT the way the mode chips do. The API's
+   transportations[] parameter has no sub-train granularity -- checked, not
+   assumed -- so this is a POST-FILTER over results we already parse, and that
+   difference is what the rest of this block is about.
+
+   The category strings are the ones the live API actually returns (probed over a
+   dozen routes: IC IR S TGV RE TER B R EC BAT EV PE ICE NJ T). journey.categoryCode
+   and journey.subcategory exist as keys but came back null on every single
+   section, so they are deliberately unused -- keying off a field that is always
+   null is how you ship a filter that silently matches nothing.
+
+   Two rules keep this from lying:
+
+   1. UNRECOGNISED CATEGORIES PASS. A category we do not classify is not a reason
+      to delete someone's connection. The failure directions are not symmetric:
+      letting an unknown train through shows you one row too many and you can see
+      what it is, while judging it would vanish a real journey and tell you the
+      timetable is empty. Same reason walk / bus / boat / tram legs are never
+      judged here -- this filter is about which TRAIN you sit on, not about
+      re-deciding the mode chips above.
+   2. FILTERING IS SAID OUT LOUD. A post-filter over a page of six can leave two
+      rows, and two rows reads as "there is barely a service" when the truth is
+      "you asked for two of the six". So when the filter is on we fetch a wider
+      window to have material to filter, and whenever we drop anything we print
+      what we dropped and why. */
+const TRAIN_CLASSES=[
+  {k:"fast",  label:"ICE/TGV", ic:"\u{1F685}", cats:["ICE","TGV","RJ","RJX","EN","NJ","TE2","EST"]},
+  {k:"ic",    label:"EC/IC",   ic:"\u{1F684}", cats:["IC","EC","ICN"]},
+  {k:"ir",    label:"IR/PE",   ic:"\u{1F686}", cats:["IR","PE","IRE"]},
+  {k:"re",    label:"RE",      ic:"\u{1F683}", cats:["RE","TER","D","EXT"]},
+  {k:"local", label:"S/R",     ic:"\u{1F687}", cats:["S","SN","R","RB","RJET"]}
+];
+let catSel = load(LS.cats, []);
+function trainClassOf(cat){
+  const c=(cat||"").toUpperCase().trim();
+  if(!c) return null;
+  for(const t of TRAIN_CLASSES) if(t.cats.includes(c)) return t.k;
+  return null;                       // rule 1: unknown is NOT a train we judge
+}
+/* A connection survives when every leg we RECOGNISE as a train is a type you
+   kept. One unwanted train anywhere on the route is enough to drop it -- the
+   whole point of "IC only" is that the regional leg is the part you did not
+   want to sit on. */
+function connTrainOK(c){
+  if(!catSel.length) return true;
+  for(const s of (c&&c.sections)||[]){
+    const k = s&&s.journey ? trainClassOf(s.journey.category) : null;
+    if(k && !catSel.includes(k)) return false;
+  }
+  return true;
+}
+function catFilter(cs){ return (cs||[]).filter(connTrainOK); }
+function catNames(){
+  const names=TRAIN_CLASSES.filter(t=>catSel.includes(t.k)).map(t=>t.label);
+  return names.length>1 ? names.slice(0,-1).join(", ")+" or "+names[names.length-1] : (names[0]||"");
+}
+/* Trains only exist as an option when the mode chips allow them, so the sub-row
+   hides when they do not. A hidden selection is still harmless: with no train
+   legs in the results there is nothing for it to judge. */
+function catsRelevant(){ return !modeSel.length || modeSel.includes("train"); }
+function toggleCat(k){
+  catSel = catSel.includes(k) ? catSel.filter(x=>x!==k) : [...catSel,k];
+  save(LS.cats, catSel); renderCats();
+  if(fromName&&toName) planJourney();
+}
+function clearCats(){ catSel=[]; save(LS.cats,catSel); renderCats(); if(fromName&&toName) planJourney(); }
+function renderCats(){
+  const el=$("catChips"); if(!el) return;
+  if(!catsRelevant()){ el.innerHTML=""; return; }
+  el.innerHTML = `<span class="catlabel">Train type</span>` + TRAIN_CLASSES.map(t=>
+    `<button class="chip mode cat${catSel.includes(t.k)?" on":""}" type="button" onclick="toggleCat('${t.k}')" `
+    + `aria-pressed="${catSel.includes(t.k)}" title="${catSel.includes(t.k)?"Only these train types":"Include every train type"}">`
+    + `${t.ic} ${t.label}</button>`).join("")
+    + (catSel.length?`<button class="chip mode clear" type="button" onclick="clearCats()">&#10005; all train types</button>`:"");
+}
+/* Rule 2. Said on the way IN (we filtered a real list) and on the way OUT (we
+   filtered it to nothing) -- the second is the one that would otherwise read as
+   a broken search, so it names the filter and prints the way back out. */
+/* Worded around what was DROPPED, never around what was kept. The tempting
+   phrasing -- "3 of the next 10 options use EC/IC" -- is false the moment a
+   journey survives for a reason other than matching: on Luzern-Vitznau an
+   EC/IC filter keeps eight boat and replacement-bus options, because rule 1
+   never judges them. They are shown, and they do not use an IC. Counting the
+   hidden ones is true in every case, and it is also the number the reader
+   actually needs to know the list was cut. */
+function catFilterNote(kept, fetched){
+  const hid = fetched - kept;
+  if(!catSel.length || hid<=0 || !kept) return "";
+  return `<div class="catnote"><b>${hid}</b> of the next <b>${fetched}</b> `
+    + `option${fetched===1?"":"s"} ${hid===1?"is":"are"} hidden &#8212; ${hid===1?"it uses":"they use"} `
+    + `a train type you switched off. That is this filter, not a thin timetable. `
+    + `<button type="button" class="linkish" onclick="clearCats()">Show every train type</button></div>`;
+}
+function catWhyEmpty(){
+  if(!catSel.length) return "";
+  return `<div class="emptywhy">You are only showing journeys by ${esc(catNames())}. `
+    + `<button type="button" class="linkish" onclick="clearCats()">Show every train type</button></div>`;
 }
 /* ---------- route history ----------
    A commuter retypes the same two stations every day. The departures board has
@@ -1337,14 +1444,21 @@ async function plainPlan(){
   const sig = jrnAbort.signal;
   $("jrnOut").innerHTML = skel(4);
   try{
-    const d=await api(`/connections?limit=6&from=${encodeURIComponent(fromName)}&to=${encodeURIComponent(toName)}${whenQS()}${modeQS()}`, sig);
+    // A post-filter needs material to filter. Asking for the usual six and then
+    // throwing four away is how you turn a normal timetable into an empty screen,
+    // so a train-type filter widens the window instead of thinning the answer.
+    const lim = catSel.length ? 16 : 6;
+    const d=await api(`/connections?limit=${lim}&from=${encodeURIComponent(fromName)}&to=${encodeURIComponent(toName)}${whenQS()}${modeQS()}`, sig);
     if(gen!==jrnGen) return;                                       // superseded
-    const cs=d.connections||[];
-    if(!cs.length){ $("jrnOut").innerHTML=`<div class="empty"><div class="big">&#9940;</div>No connections found.${sunWhyEmpty()}${modeWhyEmpty()}</div>`; return; }
+    const raw=d.connections||[];
+    const kept=catFilter(raw);
+    if(!kept.length){ $("jrnOut").innerHTML=`<div class="empty"><div class="big">&#9940;</div>No connections found.${sunWhyEmpty()}${modeWhyEmpty()}${raw.length?catWhyEmpty():""}</div>`; return; }
     rememberRoute(fromName,toName);   // a real result -- now it is worth a chip
+    const cs=kept.slice(0,6);
     cs.forEach(annotate);
     jrnConns = cs;   // render order == the ci the leg buttons index back into
-    $("jrnOut").innerHTML = cs.map((c,i)=>connCard(c,i)).join("") + wondersExpanderHTML(cs[0].to?.station);
+    $("jrnOut").innerHTML = catFilterNote(kept.length, raw.length)
+      + cs.map((c,i)=>connCard(c,i)).join("") + wondersExpanderHTML(cs[0].to?.station);
     if(weather) fillWeather();
   }catch(e){
     if(gen!==jrnGen) return;                                       // superseded
@@ -1724,16 +1838,24 @@ async function smartPlan(){
         .then(cs=>cs.map(c=>{c._via=h; return c;})).catch(()=>[]));
 
     // Phase 1 -- render the direct/wide results the moment they land (~base latency), hint that more is coming
-    const [base, wide] = await Promise.all([baseP, wideP]);
+    const [rawBase, rawWide] = await Promise.all([baseP, wideP]);
     if(gen!==jrnGen) return;                                       // superseded
+    // Filter BEFORE the baseline is picked. The baseline is what every other
+    // option is scored against ("arrives earlier", "roomier change"), so leaving
+    // a filtered-out train as the yardstick would rank the list against a train
+    // you just said you did not want.
+    const base=catFilter(rawBase), wide=catFilter(rawWide);
+    const nRaw=rawBase.length+rawWide.length, nKept=base.length+wide.length;
     const baseline = base[0] ? annotate(base[0]) : null;
     if(base.length||wide.length) rememberRoute(fromName,toName);   // a real result -- now it is worth a chip
-    renderSmart(base, wide.slice(), baseline, true, direct.failed && !direct.ok);
+    renderSmart(base, wide.slice(), baseline, true, direct.failed && !direct.ok, nKept, nRaw);
 
     // Phase 2 -- hub routes fill in when they arrive; any past the cap are dropped silently
-    const hubResults = (await Promise.allSettled(hubJobs)).flatMap(r=>r.status==="fulfilled"?r.value:[]);
+    const rawHubs = (await Promise.allSettled(hubJobs)).flatMap(r=>r.status==="fulfilled"?r.value:[]);
     if(gen!==jrnGen) return;                                       // superseded
-    renderSmart(base, wide.concat(hubResults), baseline, false, direct.failed && !direct.ok);
+    const hubResults = catFilter(rawHubs);
+    renderSmart(base, wide.concat(hubResults), baseline, false, direct.failed && !direct.ok,
+                nKept+hubResults.length, nRaw+rawHubs.length);
   }catch(e){
     if(gen!==jrnGen) return;                                       // superseded
     $("jrnOut").innerHTML=errBox(e);
@@ -1741,7 +1863,7 @@ async function smartPlan(){
 }
 
 // score + pin + paint a candidate set; called twice (fast base-only, then full sweep)
-function renderSmart(base, swept, baseline, searching, reqFailed){
+function renderSmart(base, swept, baseline, searching, reqFailed, nKept, nRaw){
   const seen=new Set(), all=[];
   base.concat(swept).forEach(c=>{ const s=connSig(c); if(!seen.has(s)){ seen.add(s); all.push(annotate(c)); } });
   if(!all.length){
@@ -1755,8 +1877,8 @@ function renderSmart(base, swept, baseline, searching, reqFailed){
        filter is not. */
     if(!searching) $("jrnOut").innerHTML = reqFailed
       ? `<div class="err">We could not reach the timetable, so we do not know whether this journey runs.<br>`
-        + `This is not a &quot;no&quot; &#8212; check your connection and tap Search again.</div>${modeWhyEmpty()}`
-      : `<div class="empty"><div class="big">&#9940;</div>No connections found.${sunWhyEmpty()||"<br>Check the station names."}${modeWhyEmpty()}</div>`;
+        + `This is not a &quot;no&quot; &#8212; check your connection and tap Search again.</div>${modeWhyEmpty()}${nRaw?catWhyEmpty():""}`
+      : `<div class="empty"><div class="big">&#9940;</div>No connections found.${sunWhyEmpty()||"<br>Check the station names."}${modeWhyEmpty()}${nRaw?catWhyEmpty():""}</div>`;
     return;
   }
 
@@ -1797,6 +1919,7 @@ function renderSmart(base, swept, baseline, searching, reqFailed){
 
   jrnConns = top;   // render order == the ci the leg buttons index back into
   $("jrnOut").innerHTML = smartHead(baseline, nSafe, swN)
+    + catFilterNote(nKept, nRaw)
     + (searching?`<div class="shint">&#8987; searching wider routes&#8230;</div>`:"")
     + top.map((c,i)=>connCard(c,i)).join("")
     + (searching?"":wondersExpanderHTML((base[0]||swept[0])?.to?.station));   // expander only on the settled render
@@ -2797,6 +2920,7 @@ $("iDep").addEventListener("keydown",e=>{ if(e.key==="Enter"){e.target.blur(); s
    a side effect of starring a station -- green CI, invisible app. */
 renderFavs();
 renderModes();
+renderCats();     // renderModes() cascades into it, but a remembered filter must not depend on a cascade
 renderRoutes();
 renderBuild();
 tickClock(); setInterval(tickClock,1000); setInterval(tickSketches,15000);

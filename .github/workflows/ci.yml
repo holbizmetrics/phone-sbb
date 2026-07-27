@@ -41,6 +41,7 @@ jobs:
           node tests/verbund.mjs
           node tests/vehicle.mjs
           node tests/last-home.mjs
+          node tests/train-class.mjs
 
       - name: Install Playwright (Chromium)
         run: |

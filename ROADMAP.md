@@ -97,17 +97,27 @@ The gap is the sub-categories and the two toggles — and **two of those three c
 honestly on this API.** All three were checked against a live `/v1/connections` response on
 2026-07-27 rather than assumed.
 
-**T8. Train sub-categories (ICE/IC/IR/RE/S) — buildable, client-side.** *Verified:* every section
-carries `journey.category` (`"RE"`) plus `categoryCode` and `subcategory`; the probe returned
-`products: ["RE24", "IR 16"]`. The API's `transportations[]` parameter has no sub-train granularity,
-so this is **not** a query change — it is a post-filter over results we already parse (the vehicle
-ribs read `journey.category` today). Worth it for the commuter case the official app clearly built
-it for: "IC only, I am not standing through eight regional stops."
-- *Regression:* additive, but it is a **filter that can empty the result list**, so it must ship
-  with its `modeWhyEmpty()` sentence the way the existing mode chips did — a bare "no connections"
-  after ticking *IC only* would read as a broken search. Post-filtering also interacts with `limit`:
-  filtering client-side can leave one result out of a page of six, so the display must be honest
-  about having filtered rather than implying the timetable is that thin.
+**T8. Train sub-categories (ICE/TGV · EC/IC · IR/PE · RE · S/R) — SHIPPED 2026-07-27.**
+A second chip row under the mode chips, `tests/train-class.mjs` (66 checks, mutation-checked), CI-wired.
+- **Correction to this entry's own first draft:** it claimed sections carry `categoryCode` and
+  `subcategory`. Those keys exist but came back **null on every section** across a dozen probed
+  routes — only `journey.category` is real, and that is what the filter keys off. Keying off an
+  always-null field is how you ship a filter that silently matches nothing.
+- The API's `transportations[]` has no sub-train granularity, so this is a **post-filter**, not a
+  query change. Two rules keep it honest, both learned from the live data:
+  1. **Unrecognised categories pass.** The failure directions are not symmetric — letting an unknown
+     train through shows one row too many and you can see what it is; judging it would vanish a real
+     journey and blame the timetable. Walk / bus / boat / tram legs are never judged either: this
+     filter says which *train* you sit on, it does not re-decide the mode chips.
+  2. **The count printed is what was HIDDEN, never what was kept.** The natural wording — "3 of the
+     next 10 use EC/IC" — is false the moment something survives for a reason other than matching:
+     on Luzern–Vitznau an EC/IC filter keeps eight *boat and replacement-bus* options under rule 1,
+     and none of them is an IC. Caught by running the filter over live payloads, not by the unit tests.
+- *Regression, as predicted:* it **can** empty the result list — Genève→Brig returns 0 under *EC/IC*
+  and 9 under *EC/IC + IR/PE* — so it ships with its own why-empty sentence and clear-button. It also
+  interacts with `limit`, so a filtered search **widens the window to 16** rather than thinning a page
+  of six. The why-empty only blames the filter when the unfiltered response was non-empty; if the API
+  returned nothing at all, the filter provably was not the cause and does not take the credit.
 
 **T9. Velomitnahme (bike carriage) — NOT BUILDABLE. Do not fake it.** *Verified 2026-07-27:* the
 whole connection payload was scanned for `bike` / `velo` / `bicycle` — **zero hits**. Connection
@@ -165,7 +175,7 @@ and the reason not to ship it now sit together.
 | T1 cancellations | **Blocked upstream — the API carries no cancellation flag.** Do not infer one |
 | T2 offline / PWA | Installable half **done** (manifest shipped). The service worker is where the **real destroy-risk** lives (stale shell / stale-data-as-live / broken load) → network-first data, versioned shell, field-test before merge |
 | T11 webcams · T12 meet-in-the-middle | **Pure add**, but each carries one named trap: an unreachable camera must not render as bad weather; N×M queries must be bounded and on-request |
-| T8 train sub-categories | Additive post-filter, but it **can empty the result list** — ships with its own why-empty sentence, and must not imply a thin timetable |
+| T8 train sub-categories | **Shipped 2026-07-27.** Additive post-filter; it *can* empty the result list (Genève→Brig under *EC/IC*), so it ships a why-empty sentence, widens the fetch to 16, and counts what it HID rather than claiming what it kept |
 | T13 airport mode | Additive, but the check-in buffer is a **CLAIM** — user-set or labelled, never invented |
 | T9 bike carriage | **Blocked upstream — no bike field anywhere in the payload.** Do not infer from category |
 | T10 step-free routing | **Blocked upstream, and the OSM substitute is worse than silence** — a wrong "step-free" strands a wheelchair user |
@@ -181,8 +191,10 @@ earns its keep most on T2.
 - **T2 (service worker):** laptop (`a4a7aa69`) — device-independent; build on a branch,
   field-tested offline before merge. The manifest is already on master.
 - **T3 (accessibility):** either desktop session; pure-add, low-coordination.
-- **T8 (train sub-categories):** either desktop session — it is a post-filter over parsed results,
-  no device needed; the why-empty sentence is the part that needs care, not the filter.
+- **T8 (train sub-categories):** ~~either desktop session~~ **done** — built on the phone
+  2026-07-27. The prediction held: the filter itself was the easy half, the honest wording was not.
+  Still wants a real field-test (the chip row's fit on a narrow screen is unverified — no browser
+  on the build device).
 - **T11–T13:** unassigned, and deliberately below T1/T2 — each is a new panel, not a fix to a
   feature people already rely on.
 - **55ef3834** verifies; **operator** merges + real-commute-accepts.

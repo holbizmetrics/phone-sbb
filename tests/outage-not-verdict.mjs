@@ -118,18 +118,22 @@ chk("the direct queries pass a note AND the abort signal", (src.match(/tryConns\
 chk("hub sweeps deliberately pass no note (but still the signal)", !/via\[\]=[^`]*`,\s*direct[,)]/.test(src) && /via\[\]=[^`]*`,\s*null,\s*sig\)/.test(src),
   "a timed-out hub would be reported as the timetable being down");
 // Both phases must carry the flag. Counting `renderSmart(` calls and requiring
-// every one of them to end in `direct.failed)` is the check that stays true if a
-// third render phase is ever added -- matching on the argument list itself does
-// not survive a nested call like wide.concat(hubResults).
+// every one of them to mention `direct.failed && !direct.ok` is the check that
+// stays true if a third render phase is ever added -- matching on the argument
+// list itself does not survive a nested call like wide.concat(hubResults).
+// Deliberately NOT anchored to the end of the call: the train-type filter added
+// trailing count arguments, and an assertion that says "must be the LAST
+// argument" fails on a change that never touched what it is guarding.
 {
   const calls = [...src.matchAll(/renderSmart\(/g)]
     .map(m => src.slice(m.index, src.indexOf(";", m.index)))
     .filter(c => !c.startsWith("renderSmart(base, swept"));
   chk("both render phases carry the failure flag",
-    calls.length === 2 && calls.every(c => /direct\.failed && !direct\.ok\)$/.test(c)),
+    calls.length === 2 && calls.every(c => /direct\.failed && !direct\.ok/.test(c)),
     "found " + calls.length + " call(s): " + JSON.stringify(calls));
   chk("no render phase reports a bare direct.failed",
-    !calls.some(c => /[^!]direct\.failed\)$/.test(c)),
+    calls.every(c => (c.match(/direct\.failed/g) || []).length ===
+                     (c.match(/direct\.failed && !direct\.ok/g) || []).length),
     "one failed twin would override an answered query's definite verdict");
 }
 chk("no catch block blames the station names any more", !/Check the station names and try again/.test(src),

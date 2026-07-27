@@ -24,7 +24,7 @@ chk("control: that really is the boot block", boot.includes("tickClock()") && bo
 
 // Every painter of restored state. Adding a feature that remembers something
 // means adding it here too -- that is the point of the list.
-const PAINTERS = ["renderFavs", "renderModes", "renderRoutes", "renderBuild"];
+const PAINTERS = ["renderFavs", "renderModes", "renderCats", "renderRoutes", "renderBuild"];
 for (const fn of PAINTERS) {
   chk(`${fn} is defined`, src.includes(`function ${fn}(`), "no such function -- stale list?");
   chk(`${fn}() runs at boot`, new RegExp(`\\b${fn}\\(\\)`).test(boot),
@@ -44,16 +44,23 @@ const grab = (n) => {
   throw new Error("HARNESS FAILED -- unbalanced braces in " + n);
 };
 const el = () => ({ innerHTML: "" });
-for (const [fn, state] of [["renderFavs", "let favs=[];"], ["renderModes", "let modeSel=[];"],
-  ["renderRoutes", "let routeHist=[];"], ["renderBuild", 'const BUILD="dev";']]) {
+// `deps` names the OTHER functions a painter cascades into. renderModes calls
+// renderCats (turning trains off hides the sub-row), and a painter that crashes
+// on its cascade white-screens exactly the same as one that crashes on itself.
+for (const [fn, state, deps] of [["renderFavs", "let favs=[];", []],
+  ["renderModes", "let modeSel=[]; let catSel=[];", ["renderCats", "catsRelevant"]],
+  ["renderCats", "let catSel=[]; let modeSel=[];", ["catsRelevant"]],
+  ["renderRoutes", "let routeHist=[];", []], ["renderBuild", 'const BUILD="dev";', []]]) {
   let threw = null;
   try {
     new Function("EL", `
       const $ = () => EL();
       ${state}
       ${src.match(/const MODES=[\s\S]*?\];/) ? src.match(/const MODES=[\s\S]*?\];/)[0] : ""}
+      ${src.match(/const TRAIN_CLASSES=[\s\S]*?\];/) ? src.match(/const TRAIN_CLASSES=[\s\S]*?\];/)[0] : ""}
       ${grab("esc")}
       ${grab("shortStop")}
+      ${deps.map(grab).join("\n")}
       ${grab(fn)}
       ${fn}();
     `)(el);
