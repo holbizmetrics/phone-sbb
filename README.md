@@ -111,6 +111,17 @@ Turn the toggle off any time for the plain, single-list view.
   anchoring is the whole point: a peak thirty kilometres away is scenery, but a
   waterfall a short walk from a stop is a plan. First and last stations are
   excluded — you are already going there.
+- **"Your train is a bus today."** Ersatzverkehr is the single most annoying
+  thing a timetable can hide from you: the leg still looks like a train in the
+  results, but it leaves from a kerb, takes longer, and isn't where you expect
+  it. A replaced leg now carries a red rib naming exactly which stretch is the
+  bus — *Luzern, Bahnhof → Küssnacht am Rigi* — because "there's a bus somewhere
+  on this journey" is not something you can act on. A scheduled PostBus is
+  **not** flagged: it isn't a surprise, and a warning that fires on half the
+  network stops being a warning.
+- **What you'll actually board**, when it isn't a train — boat, ferry, cable
+  car, gondola, cog railway, funicular. `BAT 1` on a badge means nothing; *boat*
+  tells you to look for a pier.
 - **Which fare zones the leg crosses.** Open the stop list and a ribbon names
   the Tarifverbunde it passes through, in travel order — *TNW → ZVV* tells you
   a day pass for one city does not reach the other end. It names zones and
@@ -224,6 +235,7 @@ node tests/storage-full.mjs     # a full phone must not kill the app — runs an
 node tests/board-refresh.mjs    # the 30s refresh keeps its rows — runs anywhere
 node tests/outage-not-verdict.mjs # an outage is not "no such journey" — runs anywhere
 node tests/verbund.mjs          # fare-zone lookup — the negatives are the point
+node tests/vehicle.mjs          # boat / cog / replacement-bus signals — runs anywhere
 node tests/smoke.mjs            # Playwright end-to-end — CI only
 ```
 

@@ -386,6 +386,8 @@
   .rib.base{background:var(--chip); color:var(--dim)}
   .rib.tight{background:rgba(245,158,11,.16); color:var(--amber)}
   .rib.scenic{background:rgba(192,38,211,.16); color:var(--scenictxt)}
+  .rib.evbus{background:rgba(239,68,68,.18); color:#ff9b9b}
+  .rib.veh{background:var(--chip); color:var(--dim); text-transform:none; letter-spacing:0}
   .viatag{font-size:11px; color:var(--violet); font-weight:700}
 
   /* ---- states ---- */
@@ -688,6 +690,39 @@ function catColor(cat){
    Centovalli (PE72), Glacier Express (GEX), Bernina Express (BEX), Voralpen (VAE) */
 function isScenic(cat){ return /^(PE|GPX|GEX|BEX|VAE)/.test((cat||"").toUpperCase()); }
 function badge(cat,num){ const sc=isScenic(cat); const l=((sc?"&#9968; ":"")+(cat||"")+(num?" "+num:"")).trim()||"&#183;"; return {label:l, col:catColor(cat), scenic:sc}; }
+
+/* What you will actually BOARD. The two-letter category is timetable jargon --
+   "BAT 1" on a badge tells you nothing, "boat" tells you to expect a pier. Codes
+   checked against the live API, not guessed: the SGV Vierwaldstaettersee sailings
+   come back BAT, the Romanshorn-Friedrichshafen crossing FAE, and a real
+   Ersatzverkehr on Luzern-Vitznau came back category EV, operator SBB-EV.
+   Ordinary trains are deliberately absent: naming the unremarkable case would
+   make the remarkable one invisible. */
+const VEHICLE={BAT:"boat", FAE:"ferry", PB:"cable car", GB:"gondola",
+               CC:"cog railway", FUN:"funicular", EV:"replacement bus"};
+function vehicleOf(cat){ return VEHICLE[(cat||"").toUpperCase()]||null; }
+/* Ersatzverkehr gets its own loud rib and names the STRETCH it replaces, because
+   "there is a bus somewhere on this journey" is not actionable -- the bus leaves
+   from a kerb, not your platform, and that is a different walk. A replaced leg
+   whose endpoints are missing still gets the warning, unnamed: dropping the
+   warning because the detail is absent is the worse failure. Nothing here says
+   anything about your ticket. */
+function vehicleRibs(secs){
+  const ev=[], kinds=[];
+  for(const s of secs||[]){
+    const cat=((s&&s.journey&&s.journey.category)||"").toUpperCase();
+    if(!VEHICLE[cat]) continue;
+    if(cat==="EV"){
+      const a=s.departure&&s.departure.station&&s.departure.station.name;
+      const b=s.arrival&&s.arrival.station&&s.arrival.station.name;
+      ev.push(a&&b ? esc(a)+" &#8594; "+esc(b) : "");
+    } else if(!kinds.includes(VEHICLE[cat])) kinds.push(VEHICLE[cat]);
+  }
+  let h="";
+  for(const leg of ev) h+=`<span class="rib evbus">&#9888; replacement bus${leg?" &#183; "+leg:""}</span>`;
+  if(kinds.length) h+=`<span class="rib veh">${kinds.map(esc).join(" &#183; ")}</span>`;
+  return h;
+}
 
 /* ---------- API ---------- */
 async function api(path, signal){
@@ -2203,7 +2238,7 @@ async function fillSummit(panel,ci){
   if(!legs.length){ box.innerHTML=""; return; }            // not an excursion, say nothing
   const co=c.to?.station?.coordinate, arr=c.to?.arrival;
   if(!co||!arr){ box.innerHTML=""; return; }
-  const kinds=[...new Set(legs.map(s=>({PB:"cable car",GB:"gondola",CC:"cog railway",FUN:"funicular"}[(s.journey.category||"").toUpperCase()]||"mountain railway")))];
+  const kinds=[...new Set(legs.map(s=>vehicleOf(s.journey.category)||"mountain railway"))];
   /* Nothing is drawn until the altitude is known. Painting the title first and
      retracting it a second later, once the mountain turns out to be a 41-metre
      city funicular, is worse than the short wait. */
@@ -2293,6 +2328,8 @@ function connCard(c,i){
   }).join("")+`</div>` : "";
   const scenic = secs.some(s=>isScenic(s.journey.category));
   let ribs="";
+  /* Before scenic: a replaced leg changes whether you take this train at all. */
+  ribs+=vehicleRibs(secs);
   if(scenic) ribs+=`<span class="rib scenic">&#9968; scenic &#183; panoramic route</span>`;
   if(c._safePick) ribs+=`<span class="rib pick">&#9889; smart pick${c._why?" &#183; "+c._why:""}</span>`;
   else if(c._fasterTight) ribs+=`<span class="rib tight">&#9889; faster &#183; tight ${c._buf}&#8242; change</span>`;

@@ -68,6 +68,8 @@ function build({ elev = [3089], hourly = null, code = 0 } = {}) {
     ${grab("wxText")}
     ${grab("wxAt")}
     ${grab("sunFor")}
+    ${grabConst(/const VEHICLE=[\s\S]*?;\n/, "VEHICLE")}
+    ${grab("vehicleOf")}
     ${grabConst(/const MOUNTAIN_CATS=[^;]+;/, "MOUNTAIN_CATS")}
     ${grabConst(/const SUMMIT_MIN_M=[^;]+;/, "SUMMIT_MIN_M")}
     ${grab("mountainLegs")}
