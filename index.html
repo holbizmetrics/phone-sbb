@@ -175,6 +175,18 @@
   /* ---- favourites ---- */
   .favs{display:flex; gap:8px; overflow-x:auto; padding:2px 0 12px; scrollbar-width:none}
   .favs::-webkit-scrollbar{display:none}
+  /* The scrollbar is hidden, so an overflowing chip row gives no sign that more
+     chips exist -- at 360px the mode row and the train-type row both run about
+     80px past the edge. These masks fade the edge you can still scroll toward.
+     A mask, not a background gradient: the chips are opaque, so anything painted
+     BEHIND them would not fade them. Applied only from a measured scroll
+     position (fadeEdges) -- see the note there. */
+  .favs.fadeL{-webkit-mask-image:linear-gradient(to right,transparent,#000 24px);
+              mask-image:linear-gradient(to right,transparent,#000 24px)}
+  .favs.fadeR{-webkit-mask-image:linear-gradient(to left,transparent,#000 24px);
+              mask-image:linear-gradient(to left,transparent,#000 24px)}
+  .favs.fadeL.fadeR{-webkit-mask-image:linear-gradient(to right,transparent,#000 24px,#000 calc(100% - 24px),transparent);
+                    mask-image:linear-gradient(to right,transparent,#000 24px,#000 calc(100% - 24px),transparent)}
   .chip{flex:0 0 auto; background:var(--card); border:1px solid var(--line); color:var(--txt);
     padding:9px 14px; border-radius:999px; font:600 13px inherit; cursor:pointer; white-space:nowrap; transition:.2s}
   .chip:active{transform:scale(.94)}
@@ -1375,6 +1387,37 @@ function catWhyEmpty(){
   if(!catSel.length) return "";
   return `<div class="emptywhy">You are only showing journeys by ${esc(catNames())}. `
     + `<button type="button" class="linkish" onclick="clearCats()">Show every train type</button></div>`;
+}
+/* ---------- scroll-edge fades ----------
+   A faded edge is a CLAIM that there are more chips that way. So it is derived
+   from the measured scroll position and never applied statically: a row that
+   fits must not advertise chips it does not have, and a row scrolled to its end
+   must stop pointing further right. That is the same rule the rest of this file
+   follows about not dressing an absence up as data.
+   Both edges are computed, because "you have scrolled past something" is worth
+   as much as "there is more ahead" once the first chip is off-screen. */
+function fadeEdges(el){
+  if(!el || !el.classList) return;            // not a rendered element (harness/pre-mount)
+  const room = el.scrollWidth - el.clientWidth;
+  const x = el.scrollLeft;
+  const scrollable = room > 1;                // sub-pixel rounding is not overflow
+  el.classList.toggle("fadeL", scrollable && x > 1);
+  el.classList.toggle("fadeR", scrollable && x < room - 1);
+}
+/* Wired once, from the DOM rather than from each painter: the chip rows are
+   repainted by four different functions and a fifth is static markup, so hanging
+   this off the renderers would mean five call sites and a sixth one forgotten
+   later. Observing the elements themselves cannot be forgotten. */
+function wireFades(){
+  const rows = document.querySelectorAll(".favs");
+  rows.forEach(el=>{
+    const upd = () => fadeEdges(el);
+    upd();
+    el.addEventListener("scroll", upd, {passive:true});
+    if(window.ResizeObserver)   new ResizeObserver(upd).observe(el);
+    if(window.MutationObserver) new MutationObserver(upd).observe(el, {childList:true, subtree:true});
+  });
+  addEventListener("resize", () => rows.forEach(fadeEdges), {passive:true});
 }
 /* ---------- route history ----------
    A commuter retypes the same two stations every day. The departures board has
@@ -2941,6 +2984,7 @@ renderModes();
 renderCats();     // renderModes() cascades into it, but a remembered filter must not depend on a cascade
 renderRoutes();
 renderBuild();
+wireFades();      // after the painters: the rows must have their chips before anything measures them
 tickClock(); setInterval(tickClock,1000); setInterval(tickSketches,15000);
 const last=load(LS.last,"");
 /* Wander starts where you last looked at departures -- one tap on a budget
