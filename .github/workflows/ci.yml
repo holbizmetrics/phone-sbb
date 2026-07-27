@@ -40,6 +40,7 @@ jobs:
           node tests/outage-not-verdict.mjs
           node tests/verbund.mjs
           node tests/vehicle.mjs
+          node tests/last-home.mjs
 
       - name: Install Playwright (Chromium)
         run: |

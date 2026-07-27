@@ -111,6 +111,15 @@ Turn the toggle off any time for the plain, single-list view.
   anchoring is the whole point: a peak thirty kilometres away is scenery, but a
   waterfall a short walk from a stop is a plan. First and last stations are
   excluded — you are already going there.
+- **The last way back.** Open the route sketch and it tells you the last
+  service home *counted from the moment you arrive* — and how long that leaves
+  you there. The counting-from-your-arrival part is the whole feature: an
+  evening timetable is full of departures you cannot reach, and one of those
+  would say "you have four hours" to someone who has none. The window closes at
+  **03:00 the next morning, not midnight**, because the last two boats back from
+  Vitznau land at 00:01 and 00:24 and a midnight cutoff would hurry you off the
+  lake an hour early. When there really is no way back — arrive at Jungfraujoch
+  at 19:00 and there isn't one — it says so in as many words.
 - **"Your train is a bus today."** Ersatzverkehr is the single most annoying
   thing a timetable can hide from you: the leg still looks like a train in the
   results, but it leaves from a kerb, takes longer, and isn't where you expect
@@ -236,6 +245,7 @@ node tests/board-refresh.mjs    # the 30s refresh keeps its rows — runs anywhe
 node tests/outage-not-verdict.mjs # an outage is not "no such journey" — runs anywhere
 node tests/verbund.mjs          # fare-zone lookup — the negatives are the point
 node tests/vehicle.mjs          # boat / cog / replacement-bus signals — runs anywhere
+node tests/last-home.mjs        # the last way back — and an outage is not "no way back"
 node tests/smoke.mjs            # Playwright end-to-end — CI only
 ```
 

@@ -273,6 +273,13 @@
   .smv{margin-top:4px; font-size:13px; font-weight:700}
   .smv.good{color:var(--grn)}
   .smv.bad{color:var(--amber)}
+  .homebox:not(:empty){margin-top:12px; padding-top:10px; border-top:1px solid var(--line)}
+  .lhtitle{font-size:12px; font-weight:800; color:var(--dim); margin-bottom:4px}
+  .lhsearch{font-size:11px; color:var(--faint)}
+  .lhrow{font-size:13px; font-weight:700; color:var(--txt)}
+  .lhslack{font-weight:600; color:var(--dim); font-size:11px}
+  .lhrow.tight{color:var(--amber)}
+  .lhnone{font-size:13px; font-weight:700; color:var(--amber)}
   .enroutebox:not(:empty){margin-top:12px; padding-top:10px; border-top:1px solid var(--line)}
   .ertitle{font-size:12px; font-weight:800; color:var(--dim); margin-bottom:6px}
   .ersearch{font-size:11px; color:var(--faint)}
@@ -2263,12 +2270,87 @@ async function fillSummit(panel,ci){
       + (verdict?`<div class="smv ${verdict.good?"good":"bad"}">${esc(verdict.v)}</div>`:"");
   }catch(e){ box.innerHTML=""; }
 }
+/* ---------- last way back ----------
+   The question an excursion actually ends on. Two things make it non-obvious
+   enough to be worth asking for you: the last departure is often much earlier
+   than you would guess on a mountain (the last train down from Jungfraujoch
+   leaves at 18:15, checked live, not at some comfortable evening hour), and
+   "last" has to be counted from the moment YOU get there -- a service that left
+   before your train arrived is not a way home. */
+/* The window ends at 03:00 the NEXT morning, not at midnight. Checked against
+   the live API: the last two services back from Vitznau leave at 22:51 and
+   23:21 and arrive after midnight, so a midnight cutoff hides them and the app
+   would hurry you off the mountain an hour early. Being wrong in the safe
+   direction is still being wrong, and here it costs you the evening. */
+function homeCutoff(arriveISO){
+  const m=/^(\d{4})-(\d{2})-(\d{2})T/.exec(arriveISO||"");
+  if(!m) return null;
+  /* UTC purely as calendar arithmetic on a date-only value -- no instant is
+     being converted, so no zone or DST is involved. */
+  const d=new Date(Date.UTC(+m[1], +m[2]-1, +m[3]));
+  d.setUTCDate(d.getUTCDate()+1);
+  return d.toISOString().slice(0,10);
+}
+/* Picks the latest departure you could still catch. Sorted here rather than
+   trusting the response order: this is an ARRIVE-BY query, so ordering by
+   departure is the API's convention and not a promise, and reading the wrong
+   end of the list would say "you have four hours" to someone who has forty
+   minutes. Returns null when nothing qualifies -- the caller must not render
+   that as an absent feature. */
+function lastHome(conns, arriveISO){
+  const arr = arriveISO ? new Date(arriveISO).getTime() : NaN;
+  const cand=[];
+  for(const c of conns||[]){
+    const dep = c && c.from && c.from.departure;
+    const t = dep ? new Date(dep).getTime() : NaN;
+    if(!isFinite(t)) continue;
+    if(isFinite(arr) && t < arr) continue;          // it left before you got there
+    cand.push({dep, arr:(c.to && c.to.arrival) || null, t});
+  }
+  if(!cand.length) return null;
+  cand.sort((a,b)=>a.t-b.t);
+  const last=cand[cand.length-1];
+  return {dep:last.dep, arr:last.arr,
+          slack: isFinite(arr) ? Math.round((last.t-arr)/60000) : null};
+}
+async function fillLastHome(panel,ci){
+  const box=panel.querySelector(".homebox"); if(!box) return;
+  const c=jrnConns[ci]; if(!c) return;
+  const back=c.to?.station?.name, home=c.from?.station?.name, arr=c.to?.arrival;
+  const day=homeCutoff(arr);
+  if(!back||!home||!day){ box.innerHTML=""; return; }
+  box.innerHTML=`<div class="lhsearch">checking the last way back&#8230;</div>`;
+  let res;
+  try{
+    const d=await api(`/connections?from=${encodeURIComponent(back)}&to=${encodeURIComponent(home)}`
+      + `&date=${day}&time=03:00&isArrivalTime=1&limit=6`);
+    res=lastHome(d.connections, arr);
+  }catch(e){ res="unreachable"; }
+  if(panel.dataset.open!=="1") return;
+  /* Three outcomes, not two -- the same rule the en-route finder learned. A
+     timetable we could not reach and a genuine one-way trip are opposite facts,
+     and rendering both as blank turns an outage into a verdict. */
+  if(res==="unreachable"){
+    box.innerHTML=`<div class="lhsearch">Could not check the last way back, so do not read this as "there is none". Close and reopen to retry.</div>`;
+    return;
+  }
+  if(!res){
+    box.innerHTML=`<div class="lhtitle">Last way back</div>`
+      + `<div class="lhnone">&#9888; Nothing gets you home tonight after you arrive</div>`;
+    return;
+  }
+  const tight = res.slack!=null && res.slack < 60;
+  const stay = res.slack==null ? ""
+    : `<span class="lhslack">${res.slack<60 ? res.slack+"&#8242;" : Math.floor(res.slack/60)+"h "+(res.slack%60)+"&#8242;"} there</span>`;
+  box.innerHTML=`<div class="lhtitle">Last way back</div>`
+    + `<div class="lhrow${tight?" tight":""}">${hhmm(res.dep)}${res.arr?` &#8594; ${hhmm(res.arr)}`:""} ${stay}</div>`;
+}
 function toggleSketch(btn,ci){
   const card=btn.closest(".conn"), panel=card.querySelector(".sketch");
   const open = panel.dataset.open==="1";
   panel.dataset.open = open?"":"1";
-  panel.innerHTML = open?"":(sketchSVG(ci)+`<div class="elevbox"></div>`+`<div class="summitbox"></div>`+`<div class="enroutebox"></div>`+mapsLinks(ci));
-  if(!open){ fillElevation(panel,ci); fillSummit(panel,ci); fillEnroute(panel,ci); }
+  panel.innerHTML = open?"":(sketchSVG(ci)+`<div class="elevbox"></div>`+`<div class="summitbox"></div>`+`<div class="homebox"></div>`+`<div class="enroutebox"></div>`+mapsLinks(ci));
+  if(!open){ fillElevation(panel,ci); fillSummit(panel,ci); fillLastHome(panel,ci); fillEnroute(panel,ci); }
   btn.classList.toggle("on",!open);
   btn.setAttribute("aria-expanded", String(!open));
 }
