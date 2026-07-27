@@ -98,7 +98,7 @@ honestly on this API.** All three were checked against a live `/v1/connections` 
 2026-07-27 rather than assumed.
 
 **T8. Train sub-categories (ICE/TGV · EC/IC · IR/PE · RE · S/R) — SHIPPED 2026-07-27.**
-A second chip row under the mode chips, `tests/train-class.mjs` (66 checks, mutation-checked), CI-wired.
+A second chip row under the mode chips, `tests/train-class.mjs` (68 checks, mutation-checked), CI-wired.
 - **Correction to this entry's own first draft:** it claimed sections carry `categoryCode` and
   `subcategory`. Those keys exist but came back **null on every section** across a dozen probed
   routes — only `journey.category` is real, and that is what the filter keys off. Keying off an
@@ -118,6 +118,13 @@ A second chip row under the mode chips, `tests/train-class.mjs` (66 checks, muta
   interacts with `limit`, so a filtered search **widens the window to 16** rather than thinning a page
   of six. The why-empty only blames the filter when the unfiltered response was non-empty; if the API
   returned nothing at all, the filter provably was not the cause and does not take the credit.
+- **Second correction, 2026-07-27, from a peer session's live Bauma board:** the shipped table filed
+  `EXT` under **RE** — a guess about what "Extrazug" means, never probed, and absent from the fifteen
+  categories the original sweep returned. `EXT` is really heritage steam (DVZO), football shuttles and
+  Ersatzzüge in one bucket, so *turning RE off silently deleted a steam special* — precisely the
+  invisible failure direction rule 1 exists to prevent. Fixed by **removing** it rather than giving it
+  a class: unlisted means unjudged, so it is never dropped. No chip can be honestly labelled `EXT`,
+  because it is not a train type — it is the absence of one.
 
 **T9. Velomitnahme (bike carriage) — NOT BUILDABLE. Do not fake it.** *Verified 2026-07-27:* the
 whole connection payload was scanned for `bike` / `velo` / `bicycle` — **zero hits**. Connection
@@ -193,8 +200,21 @@ earns its keep most on T2.
 - **T3 (accessibility):** either desktop session; pure-add, low-coordination.
 - **T8 (train sub-categories):** ~~either desktop session~~ **done** — built on the phone
   2026-07-27. The prediction held: the filter itself was the easy half, the honest wording was not.
-  Still wants a real field-test (the chip row's fit on a narrow screen is unverified — no browser
-  on the build device).
+  **Field-tested 2026-07-27 22:53 on the operator's phone — and it corrected me twice.** Before the
+  screenshot I had estimated, by arithmetic over the CSS, that the five chips would run ~410px against
+  a 328px box and therefore scroll. **Wrong: all five fit on one line at 360px.** The estimate was too
+  generous on character advance widths, and the train-type chips are genuinely tighter than the mode
+  chips (11px/6-9px padding vs 12px/7-11px). The row that actually overflows is the **mode row above
+  it** — *Tram* is clipped mid-chip — so the scroll-edge fade added in `86f1355` earns its place on
+  that row and the favourites row, not on the one it was proposed for.
+  The screenshot also showed a defect the arithmetic could not have found: **the "Train type" caption
+  had collapsed to a two-line "Train / type"**. A bare `<span>` in a flex row is a shrinkable item, and
+  it was the one element in `.favs` with neither `flex:0 0 auto` nor `white-space:nowrap`. Fixed, with
+  the CSS contract asserted in `train-class.mjs` (70 checks) — a unit test cannot see a wrap, but it
+  can hold the two properties that prevent one.
+  **Still genuinely open:** whether the fade is *visible enough in dark mode*. It masks an opaque dark
+  chip toward a near-identical dark background, so the gradient may be close to invisible — the
+  screenshot is not conclusive either way. Needs a look, not a test.
 - **T11–T13:** unassigned, and deliberately below T1/T2 — each is a new panel, not a fix to a
   feature people already rely on.
 - **55ef3834** verifies; **operator** merges + real-commute-accepts.

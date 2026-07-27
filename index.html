@@ -195,7 +195,12 @@
   .chip.mode.on{opacity:1; border-color:var(--blue); color:var(--txt)}
   .chip.mode.clear{opacity:.8; border-style:dashed}
   .chip.mode.cat{font-size:11px; padding:6px 9px}
-  .catlabel{font-size:11px; color:var(--faint); align-self:center; margin-right:2px; letter-spacing:.03em}
+  /* flex:0 0 auto + nowrap for the same reason .chip has them: a bare span in a
+     flex row is a shrinkable item, so on a narrow screen this collapsed to a
+     two-line "Train / type" and pushed the row taller than the one above it.
+     Seen on a real phone at 360px; no unit test can catch a wrap. */
+  .catlabel{font-size:11px; color:var(--faint); align-self:center; margin-right:2px;
+            letter-spacing:.03em; flex:0 0 auto; white-space:nowrap}
   .catnote{font-size:12px; color:var(--dim); line-height:1.5; margin:0 2px 12px;
            padding:8px 10px; border-left:3px solid var(--blue); background:var(--card); border-radius:0 8px 8px 0}
   .chip.route{font-weight:600}

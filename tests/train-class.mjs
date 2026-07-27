@@ -151,5 +151,16 @@ chk("every listed category is uppercase (trainClassOf uppercases before matching
   A.TRAIN_CLASSES.every(t => t.cats.every(c => c === c.toUpperCase())));
 chk("every class has a label and an icon", A.TRAIN_CLASSES.every(t => t.k && t.label && t.ic));
 
+// The row lives inside .favs, a flex container, so anything in there that CAN
+// shrink will shrink on a narrow screen. The "Train type" caption is a bare span
+// and got neither guard, so on a real 360px phone it collapsed to a two-line
+// "Train / type" while every .chip beside it stayed on one line. A unit test
+// cannot see a wrap, so the CSS contract is asserted instead of the pixels.
+{
+  const rule = (src.match(/\.catlabel\{[^}]*\}/) || [""])[0].replace(/\s+/g, " ");
+  chk("the row caption cannot shrink", /flex:0 0 auto/.test(rule), rule || "no .catlabel rule");
+  chk("the row caption cannot wrap", /white-space:nowrap/.test(rule), rule || "no .catlabel rule");
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
