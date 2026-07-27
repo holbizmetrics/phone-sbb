@@ -17,6 +17,22 @@ about to leave is the worst possible moment to switch between them.
 
 This puts them on one screen.
 
+## The four tabs
+
+Everything below hangs off one of these. The last two answer a question the
+timetable is not shaped for — *you know when you are free, not where you want
+to go* — and they are easy to miss if you only read the planning sections.
+
+- **Departures** — the live board for one station. Real-time delays, platform
+  changes, and what each train does *after* you get off it.
+- **Journey** — A to B. The Smart change-finder (below) runs here by default.
+- **Wander** — no destination. You pick how much time you have (1–6 h) and it
+  finds where a train leaving soon can take you, showing only places it can
+  *prove* you get home from in time — the last way back is printed on every card.
+- **Touch** — planning without typing. The stations the app already knows about
+  (your stars, recent routes, last board) become tiles; you drag a line from one
+  to another and that line is the journey.
+
 ## The Smart change-finder
 
 The reason this exists. The official app shows you *one* default list of

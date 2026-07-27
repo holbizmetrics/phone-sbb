@@ -32,22 +32,18 @@ jobs:
           node-version: 20
       - name: Syntax-check the inline script
         run: node tests/syntax-check.mjs
+      # Glob, not a hand-written list -- see the same step in ci.yml for why.
+      # A deploy that runs fewer tests than CI is the worst version of this bug.
       - name: Offline unit tests (no browser -- these also run on the phone)
         run: |
-          node tests/boot-wiring.mjs
-          node tests/keyboard.mjs
-          node tests/mode-filter.mjs
-          node tests/route-history.mjs
-          node tests/golden-hour.mjs
-          node tests/enroute.mjs
-          node tests/summit.mjs
-          node tests/storage-full.mjs
-          node tests/board-refresh.mjs
-          node tests/outage-not-verdict.mjs
-          node tests/verbund.mjs
-          node tests/vehicle.mjs
-          node tests/last-home.mjs
-          node tests/train-class.mjs
+          fail=0
+          for t in tests/*.mjs; do
+            [ "$t" = "tests/smoke.mjs" ] && continue
+            echo "::group::$t"
+            node "$t" || fail=1
+            echo "::endgroup::"
+          done
+          exit $fail
 
       - name: Install Playwright (Chromium)
         run: |

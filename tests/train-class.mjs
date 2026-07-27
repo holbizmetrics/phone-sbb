@@ -73,6 +73,12 @@ for (const cat of ["B", "BAT", "EV", "T", "PB", "GB", "CC", "FUN", "FAE"])
 chk("an empty category is not a judged train type", A.trainClassOf("") === null);
 chk("a missing category is not a judged train type", A.trainClassOf(undefined) === null);
 chk("an UNKNOWN category is not judged (rule 1)", A.trainClassOf("ZZZ") === null, String(A.trainClassOf("ZZZ")));
+// EXT is the one category that IS a train and still must not be judged. Measured
+// live on the Bauma board (DVZO steam, 2026-09-06) it means heritage runs, football
+// shuttles and replacement services in one bucket -- it was briefly filed under RE,
+// which would have let an "RE off" filter silently delete a steam special.
+chk("EXT is a train but not a judged class", A.trainClassOf("EXT") === null, String(A.trainClassOf("EXT")));
+chk("an EXT leg never drops a journey", mk(["ic"]).connTrainOK(conn("IC", "EXT")) === true);
 chk("category matching is case- and space-insensitive", A.trainClassOf("  ic  ") === "ic");
 
 // ---- the filter must be able to come back NEGATIVE ----

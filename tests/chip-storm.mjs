@@ -90,6 +90,10 @@ async function storm({ honourAbort, slowMs = 14000, settleMs = 50 }) {
     skel: () => "SKEL", whenQS: () => "", modeQS: () => "",
     sunWhyEmpty: () => "", modeWhyEmpty: () => "",
     rememberRoute: () => {}, annotate: c => c, connSig: c => JSON.stringify(c),
+    // T8's sub-category filter runs inside both planners. This test measures
+    // request pressure, not filtering, so it passes everything through -- but an
+    // absent stub throws and the storm reads as an outage instead of a paint.
+    catSel: [], catFilter: cs => cs, catFilterNote: () => "", catWhyEmpty: () => "",
     connCard: c => "CARD", wondersExpanderHTML: () => "",
     renderSmart: () => { jrnOut.innerHTML = "PAINTED"; },
     withTimeout: (p) => p.catch(() => []),   // no cap in the harness: the pool is the constraint under test

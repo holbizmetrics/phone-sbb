@@ -41,6 +41,10 @@ const ctx = {
   whenQS: () => "", modeQS: () => "",
   sunWhyEmpty: () => "", modeWhyEmpty: () => "",
   rememberRoute: () => {}, annotate: c => c,
+  // T8's sub-category filter lives inside plainPlan. This test is about the race
+  // guard, not about filtering, so the stub passes everything through -- but it
+  // has to EXIST, or plainPlan throws before it ever reaches api().
+  catSel: [], catFilter: cs => cs, catFilterNote: () => "", catWhyEmpty: () => "",
   connCard: c => `CARD:${c.tag}`, wondersExpanderHTML: () => "",
   smartPlan: () => { throw new Error("smart path must not run in this test"); },
 };

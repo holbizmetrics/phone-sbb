@@ -914,7 +914,10 @@ function onwardStops(i){
   if(!Array.isArray(pl)) return null;
   // same filter as the journey-leg version: routing markers carry no time
   const rows=pl.filter(p=>p.station?.name && (p.arrival||p.departure));
-  // first entry is the station you are standing at -- the interesting part is onward
+  // first entry is the station you are standing at -- the interesting part is onward.
+  // It is also the malformed row described in legStops(): origin time, terminus id.
+  // Two independent guards drop it here (the name filter above, then this slice);
+  // that redundancy is deliberate, not leftover.
   return rows.length>1 ? rows.slice(1) : [];
 }
 function onwardHTML(rows){
@@ -1006,6 +1009,12 @@ function tickBoard(){
 }
 // stable identity for a departure = journey name + scheduled departure (immune to delay/platform churn)
 function depKey(j){ return (j.name||((j.category||"")+(j.number||j.line||"")))+"|"+(j.stop?.departure||""); }
+/* Read prognosis.DEPARTURE and prognosis.PLATFORM here and nothing else.
+   prognosis.arrival at an origin stop is poisoned upstream: on the Aarau board
+   (measured 2026-07-27) three different trains leaving 15:58 / 16:01 / 16:08 all
+   reported prognosis.arrival = 15:46:27 -- one identical PAST timestamp, at a stop
+   whose scheduled arrival is null. It is inert today because nothing reads it; the
+   moment someone adds "expected arrival" to this board it becomes a live lie. */
 // patch one existing row's mutable fields in place — no node recreation, so no flicker/re-animation
 function patchRow(row, j){
   const dep=j.stop?.departure, prog=j.stop?.prognosis?.departure;
@@ -1294,7 +1303,11 @@ const TRAIN_CLASSES=[
   {k:"fast",  label:"ICE/TGV", ic:"\u{1F685}", cats:["ICE","TGV","RJ","RJX","EN","NJ","TE2","EST"]},
   {k:"ic",    label:"EC/IC",   ic:"\u{1F684}", cats:["IC","EC","ICN"]},
   {k:"ir",    label:"IR/PE",   ic:"\u{1F686}", cats:["IR","PE","IRE"]},
-  {k:"re",    label:"RE",      ic:"\u{1F683}", cats:["RE","TER","D","EXT"]},
+  /* EXT is deliberately absent: measured on the live board it is a grab-bag of
+     heritage steam runs (DVZO, Bauma 2026-09-06), football shuttles and
+     Ersatzzuege -- not a class anyone means by "RE". Leaving it unlisted makes
+     rule 1 carry it: unjudged, so never dropped. */
+  {k:"re",    label:"RE",      ic:"\u{1F683}", cats:["RE","TER","D"]},
   {k:"local", label:"S/R",     ic:"\u{1F687}", cats:["S","SN","R","RB","RJET"]}
 ];
 let catSel = load(LS.cats, []);
@@ -2004,6 +2017,11 @@ function legStops(ci,si){
   if(!Array.isArray(pl)) return null;          // unavailable is NOT the same as non-stop
   // A passList also carries routing markers (e.g. "Bahn-2000-Strecke") which are
   // not stops: no arrival AND no departure. They appear mid-list, not only at the ends.
+  // The same filter is what saves us from a MEASURED upstream defect: passList[0]
+  // pairs the ORIGIN's departure time and platform with the TERMINUS's station id
+  // and name:null (Aarau board 2026-07-27 -- RE to Wettingen carried id 8503505).
+  // The name check kills that row. Do not "simplify" this predicate: dropping the
+  // name test starts emitting the wrong station id, silently and plausibly.
   return pl.filter(p=>p.station?.name && (p.arrival||p.departure));
 }
 /* The zone-ticket areas this leg passes through. Deliberately says WHICH ZONES
