@@ -1,0 +1,12 @@
+{
+  "comment": "The disposition ledger (pt.3, operator-confirmed): every non-SERVED, non-refusal finding gets a column -- built / refused / parked-with-reason / undecided. 'undecided' is legal forever; ABSENT is the only red (CI-enforced in passenger-sweep.mjs). Refusals live in refusals.json and are the 'refused' column of this same ledger, not duplicated here.",
+  "dispositions": {
+    "constraints/foreign-tz-time":       { "state": "undecided" },
+    "constraints/future-origin-not-here": { "state": "undecided" },
+    "constraints/relative-date-phrase":  { "state": "undecided" },
+    "purpose/meet-flight":               { "state": "undecided" },
+    "constraints/needs-food-en-route":   { "state": "parked-with-reason", "reason": "POI claim deferred on Overpass cost (reviewer triage 2026-07-28 13:12); gap mechanic already serves the slack half" },
+    "constraints/needs-toilet-en-route": { "state": "parked-with-reason", "reason": "same Overpass-cost parking as needs-food" },
+    "conditions/delay-50min":            { "state": "undecided", "note": "register-2.1 replan-from-here; Harold-late specimen is its evidence half" }
+  }
+}

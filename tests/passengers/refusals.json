@@ -1,0 +1,11 @@
+{
+  "comment": "The third colour. These are POLICY refusals, decided on the record -- the sweep must report them as REFUSED-ON-PURPOSE and may never rediscover them as defects. A refusal turning up as LEFT_BEHIND in sweep output is a bug in the instrument, not in the app.",
+  "refusals": [
+    { "id": "step-free",  "covers": ["constraints/step-free", "who/parent-pram", "who/wheelchair-user"],
+      "decided": "2026-W30", "why": "no data source the app can verify; a wrong 'accessible' strands someone at a staircase" },
+    { "id": "occupancy",  "covers": ["conditions/crowded"],
+      "decided": "2026-W30", "why": "occupancy forecasts are unverifiable marketing-grade data" },
+    { "id": "fares",      "covers": ["constraints/cheapest-fare"],
+      "decided": "2026-W30", "why": "prices unverifiable; zone NAMES shipped instead (checkable), validity claims refused" }
+  ]
+}

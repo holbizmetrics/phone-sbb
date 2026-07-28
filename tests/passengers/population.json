@@ -1,0 +1,7006 @@
+{
+ "seed": 20260728,
+ "n": 1000,
+ "scenarios": [
+  {
+   "who": "student",
+   "purpose": "hospital-appointment",
+   "constraints": "future-origin-not-here",
+   "conditions": "storm-weather",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "student",
+   "purpose": "concert",
+   "constraints": "future-origin-not-here",
+   "conditions": "midnight-crossing",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "meet-flight",
+   "constraints": "future-origin-not-here",
+   "conditions": "storm-weather",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "shopping",
+   "constraints": "foreign-tz-time",
+   "conditions": "delay-50min",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "hiker",
+   "purpose": "day-trip",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "normal",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "meet-flight",
+   "constraints": "step-free",
+   "conditions": "normal",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "concert",
+   "constraints": "relative-date-phrase",
+   "conditions": "crowded",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "shopping",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "storm-weather",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "hiker",
+   "purpose": "hospital-appointment",
+   "constraints": "relative-date-phrase",
+   "conditions": "crowded",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "student",
+   "purpose": "concert",
+   "constraints": "needs-food-en-route",
+   "conditions": "storm-weather",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "hiker",
+   "purpose": "international-connection",
+   "constraints": "cheapest-fare",
+   "conditions": "crowded",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "last-train-home",
+   "constraints": "bike-carriage",
+   "conditions": "weekend-schedule",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "meet-flight",
+   "constraints": "foreign-tz-time",
+   "conditions": "storm-weather",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "scenic-ride",
+   "constraints": "cheapest-fare",
+   "conditions": "api-outage",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "commuter",
+   "purpose": "hospital-appointment",
+   "constraints": "foreign-tz-time",
+   "conditions": "midnight-crossing",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "hiker",
+   "purpose": "last-train-home",
+   "constraints": "needs-food-en-route",
+   "conditions": "midnight-crossing",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "day-trip",
+   "constraints": "arrive-by-time",
+   "conditions": "normal",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "concert",
+   "constraints": "needs-food-en-route",
+   "conditions": "holiday-schedule",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "concert",
+   "constraints": "heavy-luggage",
+   "conditions": "storm-weather",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "international-connection",
+   "constraints": "relative-date-phrase",
+   "conditions": "holiday-schedule",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "concert",
+   "constraints": "bike-carriage",
+   "conditions": "holiday-schedule",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "commuter",
+   "purpose": "concert",
+   "constraints": "cheapest-fare",
+   "conditions": "replacement-bus",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "last-train-home",
+   "constraints": "needs-food-en-route",
+   "conditions": "delay-50min",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "teen",
+   "purpose": "meet-flight",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "normal",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "student",
+   "purpose": "international-connection",
+   "constraints": "future-origin-not-here",
+   "conditions": "replacement-bus",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "day-trip",
+   "constraints": "cheapest-fare",
+   "conditions": "holiday-schedule",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "teen",
+   "purpose": "last-train-home",
+   "constraints": "needs-food-en-route",
+   "conditions": "api-outage",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "student",
+   "purpose": "scenic-ride",
+   "constraints": "future-origin-not-here",
+   "conditions": "crowded",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "student",
+   "purpose": "meet-flight",
+   "constraints": "cheapest-fare",
+   "conditions": "crowded",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "work-commute",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "normal",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "student",
+   "purpose": "international-connection",
+   "constraints": "cheapest-fare",
+   "conditions": "delay-50min",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "teen",
+   "purpose": "concert",
+   "constraints": "needs-food-en-route",
+   "conditions": "weekend-schedule",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "student",
+   "purpose": "concert",
+   "constraints": "relative-date-phrase",
+   "conditions": "weekend-schedule",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "visiting-friend",
+   "constraints": "future-origin-not-here",
+   "conditions": "midnight-crossing",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "scenic-ride",
+   "constraints": "heavy-luggage",
+   "conditions": "api-outage",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "commuter",
+   "purpose": "shopping",
+   "constraints": "future-origin-not-here",
+   "conditions": "crowded",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "teen",
+   "purpose": "shopping",
+   "constraints": "heavy-luggage",
+   "conditions": "normal",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "work-commute",
+   "constraints": "needs-food-en-route",
+   "conditions": "api-outage",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "hiker",
+   "purpose": "shopping",
+   "constraints": "bike-carriage",
+   "conditions": "storm-weather",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "commuter",
+   "purpose": "visiting-friend",
+   "constraints": "future-origin-not-here",
+   "conditions": "holiday-schedule",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "international-connection",
+   "constraints": "needs-food-en-route",
+   "conditions": "storm-weather",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "teen",
+   "purpose": "day-trip",
+   "constraints": "arrive-by-time",
+   "conditions": "weekend-schedule",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "visiting-friend",
+   "constraints": "bike-carriage",
+   "conditions": "normal",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "international-connection",
+   "constraints": "relative-date-phrase",
+   "conditions": "api-outage",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "hiker",
+   "purpose": "last-train-home",
+   "constraints": "cheapest-fare",
+   "conditions": "crowded",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "scenic-ride",
+   "constraints": "foreign-tz-time",
+   "conditions": "replacement-bus",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "teen",
+   "purpose": "meet-flight",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "holiday-schedule",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "student",
+   "purpose": "day-trip",
+   "constraints": "arrive-by-time",
+   "conditions": "last-service-passed",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "student",
+   "purpose": "work-commute",
+   "constraints": "foreign-tz-time",
+   "conditions": "last-service-passed",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "meet-flight",
+   "constraints": "relative-date-phrase",
+   "conditions": "storm-weather",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "scenic-ride",
+   "constraints": "heavy-luggage",
+   "conditions": "storm-weather",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "hiker",
+   "purpose": "meet-flight",
+   "constraints": "arrive-by-time",
+   "conditions": "last-service-passed",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "last-train-home",
+   "constraints": "arrive-by-time",
+   "conditions": "midnight-crossing",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "teen",
+   "purpose": "visiting-friend",
+   "constraints": "cheapest-fare",
+   "conditions": "api-outage",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "work-commute",
+   "constraints": "bike-carriage",
+   "conditions": "delay-50min",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "visiting-friend",
+   "constraints": "foreign-tz-time",
+   "conditions": "weekend-schedule",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "work-commute",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "replacement-bus",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "student",
+   "purpose": "visiting-friend",
+   "constraints": "arrive-by-time",
+   "conditions": "api-outage",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "last-train-home",
+   "constraints": "step-free",
+   "conditions": "holiday-schedule",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "day-trip",
+   "constraints": "future-origin-not-here",
+   "conditions": "last-service-passed",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "work-commute",
+   "constraints": "step-free",
+   "conditions": "weekend-schedule",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "last-train-home",
+   "constraints": "relative-date-phrase",
+   "conditions": "weekend-schedule",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "concert",
+   "constraints": "heavy-luggage",
+   "conditions": "last-service-passed",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "last-train-home",
+   "constraints": "arrive-by-time",
+   "conditions": "normal",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "student",
+   "purpose": "scenic-ride",
+   "constraints": "cheapest-fare",
+   "conditions": "last-service-passed",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "scenic-ride",
+   "constraints": "foreign-tz-time",
+   "conditions": "replacement-bus",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "commuter",
+   "purpose": "day-trip",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "delay-50min",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "hiker",
+   "purpose": "day-trip",
+   "constraints": "heavy-luggage",
+   "conditions": "api-outage",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "student",
+   "purpose": "hospital-appointment",
+   "constraints": "cheapest-fare",
+   "conditions": "midnight-crossing",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "student",
+   "purpose": "work-commute",
+   "constraints": "bike-carriage",
+   "conditions": "delay-50min",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "day-trip",
+   "constraints": "bike-carriage",
+   "conditions": "midnight-crossing",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "shopping",
+   "constraints": "future-origin-not-here",
+   "conditions": "normal",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "shopping",
+   "constraints": "future-origin-not-here",
+   "conditions": "crowded",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "visiting-friend",
+   "constraints": "relative-date-phrase",
+   "conditions": "holiday-schedule",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "hiker",
+   "purpose": "work-commute",
+   "constraints": "needs-food-en-route",
+   "conditions": "weekend-schedule",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "work-commute",
+   "constraints": "foreign-tz-time",
+   "conditions": "weekend-schedule",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "visiting-friend",
+   "constraints": "needs-food-en-route",
+   "conditions": "midnight-crossing",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "visiting-friend",
+   "constraints": "cheapest-fare",
+   "conditions": "delay-50min",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "scenic-ride",
+   "constraints": "future-origin-not-here",
+   "conditions": "api-outage",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "meet-flight",
+   "constraints": "arrive-by-time",
+   "conditions": "holiday-schedule",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "hiker",
+   "purpose": "visiting-friend",
+   "constraints": "step-free",
+   "conditions": "midnight-crossing",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "commuter",
+   "purpose": "last-train-home",
+   "constraints": "needs-food-en-route",
+   "conditions": "midnight-crossing",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "hiker",
+   "purpose": "meet-flight",
+   "constraints": "step-free",
+   "conditions": "midnight-crossing",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "teen",
+   "purpose": "shopping",
+   "constraints": "relative-date-phrase",
+   "conditions": "delay-50min",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "hiker",
+   "purpose": "concert",
+   "constraints": "step-free",
+   "conditions": "crowded",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "shopping",
+   "constraints": "arrive-by-time",
+   "conditions": "delay-50min",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "commuter",
+   "purpose": "international-connection",
+   "constraints": "arrive-by-time",
+   "conditions": "delay-50min",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "visiting-friend",
+   "constraints": "heavy-luggage",
+   "conditions": "crowded",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "hiker",
+   "purpose": "international-connection",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "last-service-passed",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "visiting-friend",
+   "constraints": "foreign-tz-time",
+   "conditions": "replacement-bus",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "international-connection",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "api-outage",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "shopping",
+   "constraints": "cheapest-fare",
+   "conditions": "crowded",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "meet-flight",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "weekend-schedule",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "student",
+   "purpose": "hospital-appointment",
+   "constraints": "arrive-by-time",
+   "conditions": "weekend-schedule",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "shopping",
+   "constraints": "bike-carriage",
+   "conditions": "holiday-schedule",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "student",
+   "purpose": "hospital-appointment",
+   "constraints": "bike-carriage",
+   "conditions": "midnight-crossing",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "work-commute",
+   "constraints": "step-free",
+   "conditions": "api-outage",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "work-commute",
+   "constraints": "relative-date-phrase",
+   "conditions": "holiday-schedule",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "student",
+   "purpose": "hospital-appointment",
+   "constraints": "bike-carriage",
+   "conditions": "holiday-schedule",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "shopping",
+   "constraints": "step-free",
+   "conditions": "api-outage",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "student",
+   "purpose": "day-trip",
+   "constraints": "cheapest-fare",
+   "conditions": "crowded",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "scenic-ride",
+   "constraints": "arrive-by-time",
+   "conditions": "storm-weather",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "last-train-home",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "storm-weather",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "work-commute",
+   "constraints": "future-origin-not-here",
+   "conditions": "weekend-schedule",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "work-commute",
+   "constraints": "heavy-luggage",
+   "conditions": "delay-50min",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "day-trip",
+   "constraints": "arrive-by-time",
+   "conditions": "midnight-crossing",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "meet-flight",
+   "constraints": "future-origin-not-here",
+   "conditions": "api-outage",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "day-trip",
+   "constraints": "relative-date-phrase",
+   "conditions": "api-outage",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "teen",
+   "purpose": "work-commute",
+   "constraints": "relative-date-phrase",
+   "conditions": "api-outage",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "day-trip",
+   "constraints": "arrive-by-time",
+   "conditions": "holiday-schedule",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "teen",
+   "purpose": "scenic-ride",
+   "constraints": "bike-carriage",
+   "conditions": "crowded",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "day-trip",
+   "constraints": "foreign-tz-time",
+   "conditions": "storm-weather",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "student",
+   "purpose": "meet-flight",
+   "constraints": "bike-carriage",
+   "conditions": "last-service-passed",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "teen",
+   "purpose": "shopping",
+   "constraints": "arrive-by-time",
+   "conditions": "delay-50min",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "last-train-home",
+   "constraints": "future-origin-not-here",
+   "conditions": "holiday-schedule",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "scenic-ride",
+   "constraints": "foreign-tz-time",
+   "conditions": "holiday-schedule",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "hospital-appointment",
+   "constraints": "heavy-luggage",
+   "conditions": "storm-weather",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "hiker",
+   "purpose": "meet-flight",
+   "constraints": "foreign-tz-time",
+   "conditions": "midnight-crossing",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "student",
+   "purpose": "scenic-ride",
+   "constraints": "needs-food-en-route",
+   "conditions": "last-service-passed",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "last-train-home",
+   "constraints": "arrive-by-time",
+   "conditions": "crowded",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "scenic-ride",
+   "constraints": "cheapest-fare",
+   "conditions": "weekend-schedule",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "commuter",
+   "purpose": "work-commute",
+   "constraints": "step-free",
+   "conditions": "last-service-passed",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "concert",
+   "constraints": "needs-food-en-route",
+   "conditions": "last-service-passed",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "visiting-friend",
+   "constraints": "future-origin-not-here",
+   "conditions": "last-service-passed",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "work-commute",
+   "constraints": "foreign-tz-time",
+   "conditions": "delay-50min",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "last-train-home",
+   "constraints": "cheapest-fare",
+   "conditions": "weekend-schedule",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "meet-flight",
+   "constraints": "bike-carriage",
+   "conditions": "holiday-schedule",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "teen",
+   "purpose": "day-trip",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "midnight-crossing",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "teen",
+   "purpose": "meet-flight",
+   "constraints": "cheapest-fare",
+   "conditions": "replacement-bus",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "last-train-home",
+   "constraints": "needs-food-en-route",
+   "conditions": "delay-50min",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "hospital-appointment",
+   "constraints": "relative-date-phrase",
+   "conditions": "last-service-passed",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "meet-flight",
+   "constraints": "bike-carriage",
+   "conditions": "replacement-bus",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "scenic-ride",
+   "constraints": "arrive-by-time",
+   "conditions": "midnight-crossing",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "teen",
+   "purpose": "international-connection",
+   "constraints": "heavy-luggage",
+   "conditions": "weekend-schedule",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "work-commute",
+   "constraints": "future-origin-not-here",
+   "conditions": "holiday-schedule",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "hiker",
+   "purpose": "hospital-appointment",
+   "constraints": "arrive-by-time",
+   "conditions": "replacement-bus",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "international-connection",
+   "constraints": "cheapest-fare",
+   "conditions": "holiday-schedule",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "international-connection",
+   "constraints": "needs-food-en-route",
+   "conditions": "storm-weather",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "concert",
+   "constraints": "step-free",
+   "conditions": "holiday-schedule",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "work-commute",
+   "constraints": "foreign-tz-time",
+   "conditions": "midnight-crossing",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "visiting-friend",
+   "constraints": "relative-date-phrase",
+   "conditions": "api-outage",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "meet-flight",
+   "constraints": "future-origin-not-here",
+   "conditions": "midnight-crossing",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "hiker",
+   "purpose": "hospital-appointment",
+   "constraints": "arrive-by-time",
+   "conditions": "delay-50min",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "hiker",
+   "purpose": "visiting-friend",
+   "constraints": "future-origin-not-here",
+   "conditions": "crowded",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "hiker",
+   "purpose": "visiting-friend",
+   "constraints": "bike-carriage",
+   "conditions": "midnight-crossing",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "meet-flight",
+   "constraints": "cheapest-fare",
+   "conditions": "replacement-bus",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "student",
+   "purpose": "day-trip",
+   "constraints": "foreign-tz-time",
+   "conditions": "normal",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "visiting-friend",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "replacement-bus",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "hiker",
+   "purpose": "meet-flight",
+   "constraints": "arrive-by-time",
+   "conditions": "replacement-bus",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "teen",
+   "purpose": "shopping",
+   "constraints": "step-free",
+   "conditions": "api-outage",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "day-trip",
+   "constraints": "bike-carriage",
+   "conditions": "last-service-passed",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "scenic-ride",
+   "constraints": "relative-date-phrase",
+   "conditions": "crowded",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "visiting-friend",
+   "constraints": "foreign-tz-time",
+   "conditions": "crowded",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "teen",
+   "purpose": "scenic-ride",
+   "constraints": "heavy-luggage",
+   "conditions": "crowded",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "commuter",
+   "purpose": "international-connection",
+   "constraints": "cheapest-fare",
+   "conditions": "last-service-passed",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "hospital-appointment",
+   "constraints": "bike-carriage",
+   "conditions": "crowded",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "work-commute",
+   "constraints": "cheapest-fare",
+   "conditions": "midnight-crossing",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "visiting-friend",
+   "constraints": "bike-carriage",
+   "conditions": "replacement-bus",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "hiker",
+   "purpose": "concert",
+   "constraints": "needs-food-en-route",
+   "conditions": "midnight-crossing",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "student",
+   "purpose": "hospital-appointment",
+   "constraints": "cheapest-fare",
+   "conditions": "storm-weather",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "student",
+   "purpose": "day-trip",
+   "constraints": "needs-food-en-route",
+   "conditions": "replacement-bus",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "meet-flight",
+   "constraints": "relative-date-phrase",
+   "conditions": "api-outage",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "commuter",
+   "purpose": "day-trip",
+   "constraints": "bike-carriage",
+   "conditions": "midnight-crossing",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "international-connection",
+   "constraints": "relative-date-phrase",
+   "conditions": "storm-weather",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "concert",
+   "constraints": "foreign-tz-time",
+   "conditions": "replacement-bus",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "hiker",
+   "purpose": "shopping",
+   "constraints": "cheapest-fare",
+   "conditions": "replacement-bus",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "teen",
+   "purpose": "last-train-home",
+   "constraints": "heavy-luggage",
+   "conditions": "holiday-schedule",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "student",
+   "purpose": "last-train-home",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "normal",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "commuter",
+   "purpose": "hospital-appointment",
+   "constraints": "future-origin-not-here",
+   "conditions": "holiday-schedule",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "commuter",
+   "purpose": "day-trip",
+   "constraints": "heavy-luggage",
+   "conditions": "last-service-passed",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "hospital-appointment",
+   "constraints": "needs-food-en-route",
+   "conditions": "storm-weather",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "meet-flight",
+   "constraints": "heavy-luggage",
+   "conditions": "api-outage",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "last-train-home",
+   "constraints": "arrive-by-time",
+   "conditions": "weekend-schedule",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "meet-flight",
+   "constraints": "cheapest-fare",
+   "conditions": "weekend-schedule",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "commuter",
+   "purpose": "work-commute",
+   "constraints": "foreign-tz-time",
+   "conditions": "replacement-bus",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "hiker",
+   "purpose": "concert",
+   "constraints": "cheapest-fare",
+   "conditions": "midnight-crossing",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "hospital-appointment",
+   "constraints": "heavy-luggage",
+   "conditions": "api-outage",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "student",
+   "purpose": "meet-flight",
+   "constraints": "cheapest-fare",
+   "conditions": "last-service-passed",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "meet-flight",
+   "constraints": "foreign-tz-time",
+   "conditions": "replacement-bus",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "teen",
+   "purpose": "shopping",
+   "constraints": "step-free",
+   "conditions": "weekend-schedule",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "teen",
+   "purpose": "shopping",
+   "constraints": "step-free",
+   "conditions": "crowded",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "concert",
+   "constraints": "heavy-luggage",
+   "conditions": "last-service-passed",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "teen",
+   "purpose": "last-train-home",
+   "constraints": "needs-food-en-route",
+   "conditions": "weekend-schedule",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "commuter",
+   "purpose": "day-trip",
+   "constraints": "needs-food-en-route",
+   "conditions": "api-outage",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "last-train-home",
+   "constraints": "bike-carriage",
+   "conditions": "delay-50min",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "meet-flight",
+   "constraints": "step-free",
+   "conditions": "midnight-crossing",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "student",
+   "purpose": "day-trip",
+   "constraints": "future-origin-not-here",
+   "conditions": "replacement-bus",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "last-train-home",
+   "constraints": "needs-food-en-route",
+   "conditions": "normal",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "teen",
+   "purpose": "scenic-ride",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "weekend-schedule",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "scenic-ride",
+   "constraints": "step-free",
+   "conditions": "api-outage",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "teen",
+   "purpose": "visiting-friend",
+   "constraints": "bike-carriage",
+   "conditions": "storm-weather",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "commuter",
+   "purpose": "shopping",
+   "constraints": "arrive-by-time",
+   "conditions": "holiday-schedule",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "meet-flight",
+   "constraints": "step-free",
+   "conditions": "holiday-schedule",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "scenic-ride",
+   "constraints": "heavy-luggage",
+   "conditions": "normal",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "hiker",
+   "purpose": "hospital-appointment",
+   "constraints": "bike-carriage",
+   "conditions": "replacement-bus",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "student",
+   "purpose": "international-connection",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "weekend-schedule",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "day-trip",
+   "constraints": "cheapest-fare",
+   "conditions": "weekend-schedule",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "visiting-friend",
+   "constraints": "foreign-tz-time",
+   "conditions": "weekend-schedule",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "student",
+   "purpose": "work-commute",
+   "constraints": "step-free",
+   "conditions": "delay-50min",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "last-train-home",
+   "constraints": "bike-carriage",
+   "conditions": "holiday-schedule",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "student",
+   "purpose": "visiting-friend",
+   "constraints": "foreign-tz-time",
+   "conditions": "replacement-bus",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "teen",
+   "purpose": "scenic-ride",
+   "constraints": "step-free",
+   "conditions": "normal",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "hospital-appointment",
+   "constraints": "step-free",
+   "conditions": "holiday-schedule",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "meet-flight",
+   "constraints": "needs-food-en-route",
+   "conditions": "normal",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "meet-flight",
+   "constraints": "relative-date-phrase",
+   "conditions": "api-outage",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "meet-flight",
+   "constraints": "relative-date-phrase",
+   "conditions": "delay-50min",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "student",
+   "purpose": "last-train-home",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "replacement-bus",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "student",
+   "purpose": "concert",
+   "constraints": "foreign-tz-time",
+   "conditions": "normal",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "teen",
+   "purpose": "international-connection",
+   "constraints": "future-origin-not-here",
+   "conditions": "holiday-schedule",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "hospital-appointment",
+   "constraints": "future-origin-not-here",
+   "conditions": "weekend-schedule",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "commuter",
+   "purpose": "visiting-friend",
+   "constraints": "foreign-tz-time",
+   "conditions": "midnight-crossing",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "last-train-home",
+   "constraints": "foreign-tz-time",
+   "conditions": "weekend-schedule",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "shopping",
+   "constraints": "heavy-luggage",
+   "conditions": "storm-weather",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "visiting-friend",
+   "constraints": "arrive-by-time",
+   "conditions": "normal",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "work-commute",
+   "constraints": "bike-carriage",
+   "conditions": "delay-50min",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "international-connection",
+   "constraints": "heavy-luggage",
+   "conditions": "holiday-schedule",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "hospital-appointment",
+   "constraints": "relative-date-phrase",
+   "conditions": "holiday-schedule",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "hospital-appointment",
+   "constraints": "foreign-tz-time",
+   "conditions": "normal",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "concert",
+   "constraints": "needs-food-en-route",
+   "conditions": "last-service-passed",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "scenic-ride",
+   "constraints": "relative-date-phrase",
+   "conditions": "holiday-schedule",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "student",
+   "purpose": "concert",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "crowded",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "hospital-appointment",
+   "constraints": "heavy-luggage",
+   "conditions": "replacement-bus",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "concert",
+   "constraints": "relative-date-phrase",
+   "conditions": "crowded",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "hospital-appointment",
+   "constraints": "arrive-by-time",
+   "conditions": "storm-weather",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "day-trip",
+   "constraints": "needs-food-en-route",
+   "conditions": "api-outage",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "shopping",
+   "constraints": "foreign-tz-time",
+   "conditions": "storm-weather",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "hiker",
+   "purpose": "meet-flight",
+   "constraints": "step-free",
+   "conditions": "last-service-passed",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "hiker",
+   "purpose": "last-train-home",
+   "constraints": "foreign-tz-time",
+   "conditions": "api-outage",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "day-trip",
+   "constraints": "bike-carriage",
+   "conditions": "delay-50min",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "day-trip",
+   "constraints": "bike-carriage",
+   "conditions": "normal",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "commuter",
+   "purpose": "scenic-ride",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "crowded",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "hiker",
+   "purpose": "scenic-ride",
+   "constraints": "needs-food-en-route",
+   "conditions": "last-service-passed",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "hospital-appointment",
+   "constraints": "cheapest-fare",
+   "conditions": "last-service-passed",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "student",
+   "purpose": "work-commute",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "replacement-bus",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "commuter",
+   "purpose": "last-train-home",
+   "constraints": "step-free",
+   "conditions": "delay-50min",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "last-train-home",
+   "constraints": "foreign-tz-time",
+   "conditions": "api-outage",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "student",
+   "purpose": "shopping",
+   "constraints": "cheapest-fare",
+   "conditions": "storm-weather",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "day-trip",
+   "constraints": "bike-carriage",
+   "conditions": "normal",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "meet-flight",
+   "constraints": "future-origin-not-here",
+   "conditions": "holiday-schedule",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "visiting-friend",
+   "constraints": "step-free",
+   "conditions": "storm-weather",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "shopping",
+   "constraints": "foreign-tz-time",
+   "conditions": "api-outage",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "commuter",
+   "purpose": "hospital-appointment",
+   "constraints": "future-origin-not-here",
+   "conditions": "delay-50min",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "international-connection",
+   "constraints": "cheapest-fare",
+   "conditions": "weekend-schedule",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "international-connection",
+   "constraints": "heavy-luggage",
+   "conditions": "last-service-passed",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "concert",
+   "constraints": "future-origin-not-here",
+   "conditions": "holiday-schedule",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "work-commute",
+   "constraints": "heavy-luggage",
+   "conditions": "delay-50min",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "concert",
+   "constraints": "cheapest-fare",
+   "conditions": "midnight-crossing",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "visiting-friend",
+   "constraints": "future-origin-not-here",
+   "conditions": "crowded",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "day-trip",
+   "constraints": "foreign-tz-time",
+   "conditions": "weekend-schedule",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "work-commute",
+   "constraints": "bike-carriage",
+   "conditions": "holiday-schedule",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "international-connection",
+   "constraints": "arrive-by-time",
+   "conditions": "normal",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "scenic-ride",
+   "constraints": "relative-date-phrase",
+   "conditions": "api-outage",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "student",
+   "purpose": "international-connection",
+   "constraints": "bike-carriage",
+   "conditions": "last-service-passed",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "commuter",
+   "purpose": "concert",
+   "constraints": "foreign-tz-time",
+   "conditions": "delay-50min",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "work-commute",
+   "constraints": "arrive-by-time",
+   "conditions": "holiday-schedule",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "scenic-ride",
+   "constraints": "relative-date-phrase",
+   "conditions": "last-service-passed",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "work-commute",
+   "constraints": "bike-carriage",
+   "conditions": "delay-50min",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "student",
+   "purpose": "international-connection",
+   "constraints": "heavy-luggage",
+   "conditions": "replacement-bus",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "concert",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "crowded",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "work-commute",
+   "constraints": "bike-carriage",
+   "conditions": "replacement-bus",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "hiker",
+   "purpose": "concert",
+   "constraints": "cheapest-fare",
+   "conditions": "last-service-passed",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "teen",
+   "purpose": "international-connection",
+   "constraints": "future-origin-not-here",
+   "conditions": "api-outage",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "commuter",
+   "purpose": "scenic-ride",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "last-service-passed",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "hiker",
+   "purpose": "day-trip",
+   "constraints": "step-free",
+   "conditions": "replacement-bus",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "visiting-friend",
+   "constraints": "step-free",
+   "conditions": "weekend-schedule",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "international-connection",
+   "constraints": "step-free",
+   "conditions": "normal",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "hiker",
+   "purpose": "hospital-appointment",
+   "constraints": "heavy-luggage",
+   "conditions": "holiday-schedule",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "commuter",
+   "purpose": "shopping",
+   "constraints": "cheapest-fare",
+   "conditions": "replacement-bus",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "visiting-friend",
+   "constraints": "arrive-by-time",
+   "conditions": "delay-50min",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "commuter",
+   "purpose": "international-connection",
+   "constraints": "step-free",
+   "conditions": "delay-50min",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "hospital-appointment",
+   "constraints": "relative-date-phrase",
+   "conditions": "last-service-passed",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "teen",
+   "purpose": "scenic-ride",
+   "constraints": "relative-date-phrase",
+   "conditions": "api-outage",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "scenic-ride",
+   "constraints": "cheapest-fare",
+   "conditions": "normal",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "shopping",
+   "constraints": "bike-carriage",
+   "conditions": "api-outage",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "hiker",
+   "purpose": "work-commute",
+   "constraints": "heavy-luggage",
+   "conditions": "api-outage",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "student",
+   "purpose": "shopping",
+   "constraints": "arrive-by-time",
+   "conditions": "replacement-bus",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "work-commute",
+   "constraints": "step-free",
+   "conditions": "replacement-bus",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "last-train-home",
+   "constraints": "foreign-tz-time",
+   "conditions": "last-service-passed",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "teen",
+   "purpose": "last-train-home",
+   "constraints": "foreign-tz-time",
+   "conditions": "replacement-bus",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "commuter",
+   "purpose": "work-commute",
+   "constraints": "cheapest-fare",
+   "conditions": "holiday-schedule",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "last-train-home",
+   "constraints": "future-origin-not-here",
+   "conditions": "last-service-passed",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "teen",
+   "purpose": "hospital-appointment",
+   "constraints": "bike-carriage",
+   "conditions": "weekend-schedule",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "day-trip",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "last-service-passed",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "scenic-ride",
+   "constraints": "needs-food-en-route",
+   "conditions": "midnight-crossing",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "visiting-friend",
+   "constraints": "arrive-by-time",
+   "conditions": "delay-50min",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "shopping",
+   "constraints": "relative-date-phrase",
+   "conditions": "holiday-schedule",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "concert",
+   "constraints": "relative-date-phrase",
+   "conditions": "storm-weather",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "hospital-appointment",
+   "constraints": "arrive-by-time",
+   "conditions": "delay-50min",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "commuter",
+   "purpose": "work-commute",
+   "constraints": "heavy-luggage",
+   "conditions": "weekend-schedule",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "hiker",
+   "purpose": "concert",
+   "constraints": "needs-food-en-route",
+   "conditions": "delay-50min",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "last-train-home",
+   "constraints": "step-free",
+   "conditions": "api-outage",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "teen",
+   "purpose": "visiting-friend",
+   "constraints": "cheapest-fare",
+   "conditions": "replacement-bus",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "meet-flight",
+   "constraints": "relative-date-phrase",
+   "conditions": "last-service-passed",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "student",
+   "purpose": "meet-flight",
+   "constraints": "cheapest-fare",
+   "conditions": "delay-50min",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "work-commute",
+   "constraints": "foreign-tz-time",
+   "conditions": "normal",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "commuter",
+   "purpose": "day-trip",
+   "constraints": "step-free",
+   "conditions": "replacement-bus",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "meet-flight",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "normal",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "student",
+   "purpose": "last-train-home",
+   "constraints": "cheapest-fare",
+   "conditions": "delay-50min",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "teen",
+   "purpose": "day-trip",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "storm-weather",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "teen",
+   "purpose": "day-trip",
+   "constraints": "foreign-tz-time",
+   "conditions": "normal",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "teen",
+   "purpose": "work-commute",
+   "constraints": "relative-date-phrase",
+   "conditions": "crowded",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "concert",
+   "constraints": "relative-date-phrase",
+   "conditions": "storm-weather",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "hospital-appointment",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "delay-50min",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "hiker",
+   "purpose": "concert",
+   "constraints": "cheapest-fare",
+   "conditions": "api-outage",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "international-connection",
+   "constraints": "bike-carriage",
+   "conditions": "weekend-schedule",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "concert",
+   "constraints": "arrive-by-time",
+   "conditions": "last-service-passed",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "teen",
+   "purpose": "meet-flight",
+   "constraints": "foreign-tz-time",
+   "conditions": "replacement-bus",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "hospital-appointment",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "delay-50min",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "international-connection",
+   "constraints": "future-origin-not-here",
+   "conditions": "storm-weather",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "international-connection",
+   "constraints": "arrive-by-time",
+   "conditions": "storm-weather",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "scenic-ride",
+   "constraints": "future-origin-not-here",
+   "conditions": "midnight-crossing",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "meet-flight",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "storm-weather",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "hiker",
+   "purpose": "day-trip",
+   "constraints": "future-origin-not-here",
+   "conditions": "crowded",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "hospital-appointment",
+   "constraints": "bike-carriage",
+   "conditions": "midnight-crossing",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "teen",
+   "purpose": "international-connection",
+   "constraints": "future-origin-not-here",
+   "conditions": "delay-50min",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "commuter",
+   "purpose": "concert",
+   "constraints": "heavy-luggage",
+   "conditions": "replacement-bus",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "teen",
+   "purpose": "scenic-ride",
+   "constraints": "needs-food-en-route",
+   "conditions": "api-outage",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "student",
+   "purpose": "meet-flight",
+   "constraints": "heavy-luggage",
+   "conditions": "api-outage",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "international-connection",
+   "constraints": "cheapest-fare",
+   "conditions": "last-service-passed",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "scenic-ride",
+   "constraints": "step-free",
+   "conditions": "normal",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "teen",
+   "purpose": "shopping",
+   "constraints": "bike-carriage",
+   "conditions": "holiday-schedule",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "shopping",
+   "constraints": "needs-food-en-route",
+   "conditions": "normal",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "shopping",
+   "constraints": "bike-carriage",
+   "conditions": "midnight-crossing",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "day-trip",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "last-service-passed",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "teen",
+   "purpose": "shopping",
+   "constraints": "cheapest-fare",
+   "conditions": "storm-weather",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "international-connection",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "api-outage",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "work-commute",
+   "constraints": "relative-date-phrase",
+   "conditions": "api-outage",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "international-connection",
+   "constraints": "foreign-tz-time",
+   "conditions": "replacement-bus",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "teen",
+   "purpose": "hospital-appointment",
+   "constraints": "bike-carriage",
+   "conditions": "normal",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "last-train-home",
+   "constraints": "relative-date-phrase",
+   "conditions": "holiday-schedule",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "scenic-ride",
+   "constraints": "arrive-by-time",
+   "conditions": "delay-50min",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "visiting-friend",
+   "constraints": "bike-carriage",
+   "conditions": "storm-weather",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "hiker",
+   "purpose": "shopping",
+   "constraints": "step-free",
+   "conditions": "api-outage",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "teen",
+   "purpose": "visiting-friend",
+   "constraints": "heavy-luggage",
+   "conditions": "storm-weather",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "teen",
+   "purpose": "concert",
+   "constraints": "foreign-tz-time",
+   "conditions": "replacement-bus",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "visiting-friend",
+   "constraints": "relative-date-phrase",
+   "conditions": "holiday-schedule",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "hospital-appointment",
+   "constraints": "step-free",
+   "conditions": "midnight-crossing",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "concert",
+   "constraints": "foreign-tz-time",
+   "conditions": "last-service-passed",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "commuter",
+   "purpose": "meet-flight",
+   "constraints": "cheapest-fare",
+   "conditions": "crowded",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "scenic-ride",
+   "constraints": "arrive-by-time",
+   "conditions": "storm-weather",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "last-train-home",
+   "constraints": "foreign-tz-time",
+   "conditions": "storm-weather",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "work-commute",
+   "constraints": "foreign-tz-time",
+   "conditions": "midnight-crossing",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "work-commute",
+   "constraints": "needs-food-en-route",
+   "conditions": "delay-50min",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "shopping",
+   "constraints": "relative-date-phrase",
+   "conditions": "midnight-crossing",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "hospital-appointment",
+   "constraints": "arrive-by-time",
+   "conditions": "delay-50min",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "concert",
+   "constraints": "arrive-by-time",
+   "conditions": "delay-50min",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "teen",
+   "purpose": "shopping",
+   "constraints": "heavy-luggage",
+   "conditions": "midnight-crossing",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "concert",
+   "constraints": "step-free",
+   "conditions": "api-outage",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "shopping",
+   "constraints": "foreign-tz-time",
+   "conditions": "last-service-passed",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "commuter",
+   "purpose": "hospital-appointment",
+   "constraints": "future-origin-not-here",
+   "conditions": "delay-50min",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "teen",
+   "purpose": "meet-flight",
+   "constraints": "step-free",
+   "conditions": "delay-50min",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "commuter",
+   "purpose": "hospital-appointment",
+   "constraints": "relative-date-phrase",
+   "conditions": "weekend-schedule",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "scenic-ride",
+   "constraints": "step-free",
+   "conditions": "api-outage",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "commuter",
+   "purpose": "work-commute",
+   "constraints": "foreign-tz-time",
+   "conditions": "holiday-schedule",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "hiker",
+   "purpose": "day-trip",
+   "constraints": "arrive-by-time",
+   "conditions": "crowded",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "work-commute",
+   "constraints": "needs-food-en-route",
+   "conditions": "crowded",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "teen",
+   "purpose": "scenic-ride",
+   "constraints": "step-free",
+   "conditions": "api-outage",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "work-commute",
+   "constraints": "cheapest-fare",
+   "conditions": "delay-50min",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "student",
+   "purpose": "visiting-friend",
+   "constraints": "relative-date-phrase",
+   "conditions": "normal",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "visiting-friend",
+   "constraints": "bike-carriage",
+   "conditions": "midnight-crossing",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "teen",
+   "purpose": "work-commute",
+   "constraints": "foreign-tz-time",
+   "conditions": "last-service-passed",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "hiker",
+   "purpose": "international-connection",
+   "constraints": "needs-food-en-route",
+   "conditions": "midnight-crossing",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "shopping",
+   "constraints": "needs-food-en-route",
+   "conditions": "midnight-crossing",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "hospital-appointment",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "normal",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "hospital-appointment",
+   "constraints": "cheapest-fare",
+   "conditions": "weekend-schedule",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "day-trip",
+   "constraints": "foreign-tz-time",
+   "conditions": "normal",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "hiker",
+   "purpose": "shopping",
+   "constraints": "relative-date-phrase",
+   "conditions": "weekend-schedule",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "international-connection",
+   "constraints": "foreign-tz-time",
+   "conditions": "normal",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "meet-flight",
+   "constraints": "bike-carriage",
+   "conditions": "weekend-schedule",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "meet-flight",
+   "constraints": "arrive-by-time",
+   "conditions": "storm-weather",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "international-connection",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "storm-weather",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "teen",
+   "purpose": "shopping",
+   "constraints": "future-origin-not-here",
+   "conditions": "crowded",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "teen",
+   "purpose": "meet-flight",
+   "constraints": "relative-date-phrase",
+   "conditions": "weekend-schedule",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "day-trip",
+   "constraints": "foreign-tz-time",
+   "conditions": "normal",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "scenic-ride",
+   "constraints": "foreign-tz-time",
+   "conditions": "normal",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "last-train-home",
+   "constraints": "step-free",
+   "conditions": "storm-weather",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "international-connection",
+   "constraints": "needs-food-en-route",
+   "conditions": "last-service-passed",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "student",
+   "purpose": "hospital-appointment",
+   "constraints": "bike-carriage",
+   "conditions": "holiday-schedule",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "student",
+   "purpose": "day-trip",
+   "constraints": "relative-date-phrase",
+   "conditions": "last-service-passed",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "concert",
+   "constraints": "arrive-by-time",
+   "conditions": "midnight-crossing",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "day-trip",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "delay-50min",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "hiker",
+   "purpose": "last-train-home",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "crowded",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "teen",
+   "purpose": "scenic-ride",
+   "constraints": "bike-carriage",
+   "conditions": "holiday-schedule",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "teen",
+   "purpose": "hospital-appointment",
+   "constraints": "foreign-tz-time",
+   "conditions": "weekend-schedule",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "visiting-friend",
+   "constraints": "needs-food-en-route",
+   "conditions": "replacement-bus",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "meet-flight",
+   "constraints": "arrive-by-time",
+   "conditions": "midnight-crossing",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "international-connection",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "weekend-schedule",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "visiting-friend",
+   "constraints": "relative-date-phrase",
+   "conditions": "delay-50min",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "student",
+   "purpose": "scenic-ride",
+   "constraints": "foreign-tz-time",
+   "conditions": "replacement-bus",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "hiker",
+   "purpose": "hospital-appointment",
+   "constraints": "needs-food-en-route",
+   "conditions": "api-outage",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "visiting-friend",
+   "constraints": "relative-date-phrase",
+   "conditions": "replacement-bus",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "student",
+   "purpose": "visiting-friend",
+   "constraints": "heavy-luggage",
+   "conditions": "weekend-schedule",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "concert",
+   "constraints": "cheapest-fare",
+   "conditions": "delay-50min",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "commuter",
+   "purpose": "scenic-ride",
+   "constraints": "foreign-tz-time",
+   "conditions": "normal",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "student",
+   "purpose": "meet-flight",
+   "constraints": "foreign-tz-time",
+   "conditions": "crowded",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "last-train-home",
+   "constraints": "bike-carriage",
+   "conditions": "api-outage",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "meet-flight",
+   "constraints": "future-origin-not-here",
+   "conditions": "crowded",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "international-connection",
+   "constraints": "future-origin-not-here",
+   "conditions": "delay-50min",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "hospital-appointment",
+   "constraints": "cheapest-fare",
+   "conditions": "storm-weather",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "commuter",
+   "purpose": "work-commute",
+   "constraints": "relative-date-phrase",
+   "conditions": "api-outage",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "hiker",
+   "purpose": "last-train-home",
+   "constraints": "needs-food-en-route",
+   "conditions": "last-service-passed",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "hospital-appointment",
+   "constraints": "future-origin-not-here",
+   "conditions": "replacement-bus",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "scenic-ride",
+   "constraints": "cheapest-fare",
+   "conditions": "midnight-crossing",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "meet-flight",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "weekend-schedule",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "hospital-appointment",
+   "constraints": "arrive-by-time",
+   "conditions": "weekend-schedule",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "hiker",
+   "purpose": "visiting-friend",
+   "constraints": "arrive-by-time",
+   "conditions": "api-outage",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "commuter",
+   "purpose": "hospital-appointment",
+   "constraints": "arrive-by-time",
+   "conditions": "last-service-passed",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "meet-flight",
+   "constraints": "arrive-by-time",
+   "conditions": "holiday-schedule",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "visiting-friend",
+   "constraints": "arrive-by-time",
+   "conditions": "holiday-schedule",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "student",
+   "purpose": "international-connection",
+   "constraints": "heavy-luggage",
+   "conditions": "api-outage",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "shopping",
+   "constraints": "arrive-by-time",
+   "conditions": "replacement-bus",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "day-trip",
+   "constraints": "heavy-luggage",
+   "conditions": "normal",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "meet-flight",
+   "constraints": "arrive-by-time",
+   "conditions": "storm-weather",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "scenic-ride",
+   "constraints": "step-free",
+   "conditions": "crowded",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "meet-flight",
+   "constraints": "needs-food-en-route",
+   "conditions": "weekend-schedule",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "commuter",
+   "purpose": "work-commute",
+   "constraints": "relative-date-phrase",
+   "conditions": "delay-50min",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "hiker",
+   "purpose": "concert",
+   "constraints": "future-origin-not-here",
+   "conditions": "normal",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "international-connection",
+   "constraints": "cheapest-fare",
+   "conditions": "normal",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "meet-flight",
+   "constraints": "heavy-luggage",
+   "conditions": "api-outage",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "commuter",
+   "purpose": "day-trip",
+   "constraints": "cheapest-fare",
+   "conditions": "midnight-crossing",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "commuter",
+   "purpose": "day-trip",
+   "constraints": "relative-date-phrase",
+   "conditions": "crowded",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "hiker",
+   "purpose": "day-trip",
+   "constraints": "relative-date-phrase",
+   "conditions": "last-service-passed",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "meet-flight",
+   "constraints": "arrive-by-time",
+   "conditions": "normal",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "commuter",
+   "purpose": "shopping",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "api-outage",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "work-commute",
+   "constraints": "step-free",
+   "conditions": "replacement-bus",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "visiting-friend",
+   "constraints": "foreign-tz-time",
+   "conditions": "crowded",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "hospital-appointment",
+   "constraints": "bike-carriage",
+   "conditions": "storm-weather",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "hiker",
+   "purpose": "hospital-appointment",
+   "constraints": "foreign-tz-time",
+   "conditions": "api-outage",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "scenic-ride",
+   "constraints": "future-origin-not-here",
+   "conditions": "weekend-schedule",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "teen",
+   "purpose": "international-connection",
+   "constraints": "cheapest-fare",
+   "conditions": "delay-50min",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "hiker",
+   "purpose": "visiting-friend",
+   "constraints": "relative-date-phrase",
+   "conditions": "replacement-bus",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "meet-flight",
+   "constraints": "heavy-luggage",
+   "conditions": "api-outage",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "day-trip",
+   "constraints": "heavy-luggage",
+   "conditions": "weekend-schedule",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "hiker",
+   "purpose": "hospital-appointment",
+   "constraints": "step-free",
+   "conditions": "weekend-schedule",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "hiker",
+   "purpose": "day-trip",
+   "constraints": "future-origin-not-here",
+   "conditions": "holiday-schedule",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "meet-flight",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "delay-50min",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "last-train-home",
+   "constraints": "step-free",
+   "conditions": "delay-50min",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "hiker",
+   "purpose": "meet-flight",
+   "constraints": "bike-carriage",
+   "conditions": "last-service-passed",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "commuter",
+   "purpose": "last-train-home",
+   "constraints": "needs-food-en-route",
+   "conditions": "midnight-crossing",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "visiting-friend",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "normal",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "hiker",
+   "purpose": "work-commute",
+   "constraints": "arrive-by-time",
+   "conditions": "midnight-crossing",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "hiker",
+   "purpose": "day-trip",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "replacement-bus",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "international-connection",
+   "constraints": "relative-date-phrase",
+   "conditions": "last-service-passed",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "commuter",
+   "purpose": "day-trip",
+   "constraints": "step-free",
+   "conditions": "normal",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "commuter",
+   "purpose": "international-connection",
+   "constraints": "relative-date-phrase",
+   "conditions": "crowded",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "teen",
+   "purpose": "international-connection",
+   "constraints": "arrive-by-time",
+   "conditions": "replacement-bus",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "hiker",
+   "purpose": "shopping",
+   "constraints": "heavy-luggage",
+   "conditions": "midnight-crossing",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "concert",
+   "constraints": "relative-date-phrase",
+   "conditions": "storm-weather",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "work-commute",
+   "constraints": "relative-date-phrase",
+   "conditions": "crowded",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "visiting-friend",
+   "constraints": "arrive-by-time",
+   "conditions": "holiday-schedule",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "scenic-ride",
+   "constraints": "relative-date-phrase",
+   "conditions": "last-service-passed",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "commuter",
+   "purpose": "concert",
+   "constraints": "arrive-by-time",
+   "conditions": "holiday-schedule",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "day-trip",
+   "constraints": "arrive-by-time",
+   "conditions": "weekend-schedule",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "teen",
+   "purpose": "meet-flight",
+   "constraints": "relative-date-phrase",
+   "conditions": "last-service-passed",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "shopping",
+   "constraints": "arrive-by-time",
+   "conditions": "holiday-schedule",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "commuter",
+   "purpose": "international-connection",
+   "constraints": "bike-carriage",
+   "conditions": "delay-50min",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "teen",
+   "purpose": "international-connection",
+   "constraints": "arrive-by-time",
+   "conditions": "crowded",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "commuter",
+   "purpose": "scenic-ride",
+   "constraints": "needs-food-en-route",
+   "conditions": "delay-50min",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "hospital-appointment",
+   "constraints": "needs-food-en-route",
+   "conditions": "last-service-passed",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "day-trip",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "storm-weather",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "scenic-ride",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "weekend-schedule",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "hospital-appointment",
+   "constraints": "heavy-luggage",
+   "conditions": "normal",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "hospital-appointment",
+   "constraints": "bike-carriage",
+   "conditions": "replacement-bus",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "international-connection",
+   "constraints": "bike-carriage",
+   "conditions": "weekend-schedule",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "last-train-home",
+   "constraints": "arrive-by-time",
+   "conditions": "crowded",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "visiting-friend",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "replacement-bus",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "concert",
+   "constraints": "foreign-tz-time",
+   "conditions": "midnight-crossing",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "concert",
+   "constraints": "needs-food-en-route",
+   "conditions": "replacement-bus",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "teen",
+   "purpose": "scenic-ride",
+   "constraints": "heavy-luggage",
+   "conditions": "holiday-schedule",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "last-train-home",
+   "constraints": "future-origin-not-here",
+   "conditions": "replacement-bus",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "hiker",
+   "purpose": "hospital-appointment",
+   "constraints": "future-origin-not-here",
+   "conditions": "holiday-schedule",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "last-train-home",
+   "constraints": "heavy-luggage",
+   "conditions": "crowded",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "meet-flight",
+   "constraints": "heavy-luggage",
+   "conditions": "replacement-bus",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "student",
+   "purpose": "last-train-home",
+   "constraints": "bike-carriage",
+   "conditions": "weekend-schedule",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "commuter",
+   "purpose": "work-commute",
+   "constraints": "arrive-by-time",
+   "conditions": "api-outage",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "student",
+   "purpose": "international-connection",
+   "constraints": "foreign-tz-time",
+   "conditions": "delay-50min",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "international-connection",
+   "constraints": "heavy-luggage",
+   "conditions": "delay-50min",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "day-trip",
+   "constraints": "bike-carriage",
+   "conditions": "delay-50min",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "student",
+   "purpose": "work-commute",
+   "constraints": "foreign-tz-time",
+   "conditions": "holiday-schedule",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "meet-flight",
+   "constraints": "relative-date-phrase",
+   "conditions": "midnight-crossing",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "last-train-home",
+   "constraints": "arrive-by-time",
+   "conditions": "midnight-crossing",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "shopping",
+   "constraints": "step-free",
+   "conditions": "crowded",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "concert",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "weekend-schedule",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "day-trip",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "storm-weather",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "work-commute",
+   "constraints": "heavy-luggage",
+   "conditions": "normal",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "work-commute",
+   "constraints": "step-free",
+   "conditions": "midnight-crossing",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "shopping",
+   "constraints": "arrive-by-time",
+   "conditions": "holiday-schedule",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "commuter",
+   "purpose": "last-train-home",
+   "constraints": "step-free",
+   "conditions": "holiday-schedule",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "teen",
+   "purpose": "meet-flight",
+   "constraints": "cheapest-fare",
+   "conditions": "storm-weather",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "last-train-home",
+   "constraints": "foreign-tz-time",
+   "conditions": "midnight-crossing",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "scenic-ride",
+   "constraints": "foreign-tz-time",
+   "conditions": "holiday-schedule",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "commuter",
+   "purpose": "visiting-friend",
+   "constraints": "relative-date-phrase",
+   "conditions": "last-service-passed",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "day-trip",
+   "constraints": "relative-date-phrase",
+   "conditions": "api-outage",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "student",
+   "purpose": "concert",
+   "constraints": "arrive-by-time",
+   "conditions": "midnight-crossing",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "day-trip",
+   "constraints": "step-free",
+   "conditions": "midnight-crossing",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "day-trip",
+   "constraints": "cheapest-fare",
+   "conditions": "storm-weather",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "day-trip",
+   "constraints": "heavy-luggage",
+   "conditions": "weekend-schedule",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "meet-flight",
+   "constraints": "step-free",
+   "conditions": "delay-50min",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "scenic-ride",
+   "constraints": "needs-food-en-route",
+   "conditions": "delay-50min",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "international-connection",
+   "constraints": "arrive-by-time",
+   "conditions": "delay-50min",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "concert",
+   "constraints": "heavy-luggage",
+   "conditions": "weekend-schedule",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "commuter",
+   "purpose": "international-connection",
+   "constraints": "needs-food-en-route",
+   "conditions": "api-outage",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "student",
+   "purpose": "meet-flight",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "replacement-bus",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "hospital-appointment",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "weekend-schedule",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "teen",
+   "purpose": "meet-flight",
+   "constraints": "arrive-by-time",
+   "conditions": "last-service-passed",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "student",
+   "purpose": "hospital-appointment",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "weekend-schedule",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "scenic-ride",
+   "constraints": "future-origin-not-here",
+   "conditions": "normal",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "concert",
+   "constraints": "future-origin-not-here",
+   "conditions": "last-service-passed",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "hiker",
+   "purpose": "concert",
+   "constraints": "cheapest-fare",
+   "conditions": "weekend-schedule",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "concert",
+   "constraints": "bike-carriage",
+   "conditions": "last-service-passed",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "work-commute",
+   "constraints": "arrive-by-time",
+   "conditions": "weekend-schedule",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "meet-flight",
+   "constraints": "heavy-luggage",
+   "conditions": "delay-50min",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "hiker",
+   "purpose": "hospital-appointment",
+   "constraints": "step-free",
+   "conditions": "holiday-schedule",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "shopping",
+   "constraints": "cheapest-fare",
+   "conditions": "api-outage",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "hiker",
+   "purpose": "visiting-friend",
+   "constraints": "needs-food-en-route",
+   "conditions": "delay-50min",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "hospital-appointment",
+   "constraints": "future-origin-not-here",
+   "conditions": "replacement-bus",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "teen",
+   "purpose": "international-connection",
+   "constraints": "arrive-by-time",
+   "conditions": "api-outage",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "day-trip",
+   "constraints": "relative-date-phrase",
+   "conditions": "delay-50min",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "day-trip",
+   "constraints": "cheapest-fare",
+   "conditions": "midnight-crossing",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "scenic-ride",
+   "constraints": "arrive-by-time",
+   "conditions": "midnight-crossing",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "student",
+   "purpose": "international-connection",
+   "constraints": "cheapest-fare",
+   "conditions": "delay-50min",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "shopping",
+   "constraints": "relative-date-phrase",
+   "conditions": "crowded",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "meet-flight",
+   "constraints": "arrive-by-time",
+   "conditions": "normal",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "commuter",
+   "purpose": "day-trip",
+   "constraints": "foreign-tz-time",
+   "conditions": "replacement-bus",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "day-trip",
+   "constraints": "step-free",
+   "conditions": "replacement-bus",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "hiker",
+   "purpose": "meet-flight",
+   "constraints": "relative-date-phrase",
+   "conditions": "holiday-schedule",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "teen",
+   "purpose": "international-connection",
+   "constraints": "step-free",
+   "conditions": "normal",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "scenic-ride",
+   "constraints": "cheapest-fare",
+   "conditions": "midnight-crossing",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "hospital-appointment",
+   "constraints": "arrive-by-time",
+   "conditions": "last-service-passed",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "international-connection",
+   "constraints": "relative-date-phrase",
+   "conditions": "api-outage",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "hospital-appointment",
+   "constraints": "future-origin-not-here",
+   "conditions": "api-outage",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "student",
+   "purpose": "last-train-home",
+   "constraints": "cheapest-fare",
+   "conditions": "delay-50min",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "student",
+   "purpose": "scenic-ride",
+   "constraints": "needs-food-en-route",
+   "conditions": "crowded",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "teen",
+   "purpose": "visiting-friend",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "crowded",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "shopping",
+   "constraints": "heavy-luggage",
+   "conditions": "api-outage",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "hiker",
+   "purpose": "day-trip",
+   "constraints": "foreign-tz-time",
+   "conditions": "normal",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "scenic-ride",
+   "constraints": "future-origin-not-here",
+   "conditions": "normal",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "concert",
+   "constraints": "future-origin-not-here",
+   "conditions": "holiday-schedule",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "shopping",
+   "constraints": "future-origin-not-here",
+   "conditions": "weekend-schedule",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "commuter",
+   "purpose": "international-connection",
+   "constraints": "needs-food-en-route",
+   "conditions": "last-service-passed",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "shopping",
+   "constraints": "relative-date-phrase",
+   "conditions": "normal",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "teen",
+   "purpose": "meet-flight",
+   "constraints": "cheapest-fare",
+   "conditions": "weekend-schedule",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "student",
+   "purpose": "meet-flight",
+   "constraints": "foreign-tz-time",
+   "conditions": "replacement-bus",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "day-trip",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "crowded",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "concert",
+   "constraints": "step-free",
+   "conditions": "crowded",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "student",
+   "purpose": "meet-flight",
+   "constraints": "relative-date-phrase",
+   "conditions": "normal",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "teen",
+   "purpose": "visiting-friend",
+   "constraints": "heavy-luggage",
+   "conditions": "delay-50min",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "student",
+   "purpose": "scenic-ride",
+   "constraints": "bike-carriage",
+   "conditions": "midnight-crossing",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "day-trip",
+   "constraints": "future-origin-not-here",
+   "conditions": "crowded",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "student",
+   "purpose": "scenic-ride",
+   "constraints": "relative-date-phrase",
+   "conditions": "api-outage",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "scenic-ride",
+   "constraints": "needs-food-en-route",
+   "conditions": "storm-weather",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "concert",
+   "constraints": "step-free",
+   "conditions": "delay-50min",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "international-connection",
+   "constraints": "foreign-tz-time",
+   "conditions": "crowded",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "teen",
+   "purpose": "international-connection",
+   "constraints": "cheapest-fare",
+   "conditions": "normal",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "concert",
+   "constraints": "relative-date-phrase",
+   "conditions": "last-service-passed",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "teen",
+   "purpose": "hospital-appointment",
+   "constraints": "needs-food-en-route",
+   "conditions": "last-service-passed",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "hospital-appointment",
+   "constraints": "cheapest-fare",
+   "conditions": "holiday-schedule",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "shopping",
+   "constraints": "future-origin-not-here",
+   "conditions": "replacement-bus",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "work-commute",
+   "constraints": "relative-date-phrase",
+   "conditions": "replacement-bus",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "commuter",
+   "purpose": "last-train-home",
+   "constraints": "step-free",
+   "conditions": "replacement-bus",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "meet-flight",
+   "constraints": "foreign-tz-time",
+   "conditions": "replacement-bus",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "teen",
+   "purpose": "shopping",
+   "constraints": "future-origin-not-here",
+   "conditions": "weekend-schedule",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "student",
+   "purpose": "visiting-friend",
+   "constraints": "foreign-tz-time",
+   "conditions": "crowded",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "shopping",
+   "constraints": "relative-date-phrase",
+   "conditions": "api-outage",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "student",
+   "purpose": "scenic-ride",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "weekend-schedule",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "visiting-friend",
+   "constraints": "foreign-tz-time",
+   "conditions": "api-outage",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "international-connection",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "replacement-bus",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "hiker",
+   "purpose": "day-trip",
+   "constraints": "heavy-luggage",
+   "conditions": "last-service-passed",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "commuter",
+   "purpose": "hospital-appointment",
+   "constraints": "relative-date-phrase",
+   "conditions": "replacement-bus",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "meet-flight",
+   "constraints": "bike-carriage",
+   "conditions": "crowded",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "work-commute",
+   "constraints": "cheapest-fare",
+   "conditions": "holiday-schedule",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "commuter",
+   "purpose": "visiting-friend",
+   "constraints": "foreign-tz-time",
+   "conditions": "normal",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "concert",
+   "constraints": "heavy-luggage",
+   "conditions": "replacement-bus",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "teen",
+   "purpose": "last-train-home",
+   "constraints": "foreign-tz-time",
+   "conditions": "crowded",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "work-commute",
+   "constraints": "cheapest-fare",
+   "conditions": "holiday-schedule",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "last-train-home",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "midnight-crossing",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "last-train-home",
+   "constraints": "relative-date-phrase",
+   "conditions": "api-outage",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "commuter",
+   "purpose": "last-train-home",
+   "constraints": "heavy-luggage",
+   "conditions": "holiday-schedule",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "day-trip",
+   "constraints": "arrive-by-time",
+   "conditions": "replacement-bus",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "day-trip",
+   "constraints": "heavy-luggage",
+   "conditions": "midnight-crossing",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "international-connection",
+   "constraints": "future-origin-not-here",
+   "conditions": "weekend-schedule",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "international-connection",
+   "constraints": "step-free",
+   "conditions": "crowded",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "international-connection",
+   "constraints": "bike-carriage",
+   "conditions": "holiday-schedule",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "international-connection",
+   "constraints": "future-origin-not-here",
+   "conditions": "weekend-schedule",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "commuter",
+   "purpose": "work-commute",
+   "constraints": "heavy-luggage",
+   "conditions": "normal",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "hiker",
+   "purpose": "concert",
+   "constraints": "arrive-by-time",
+   "conditions": "normal",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "shopping",
+   "constraints": "needs-food-en-route",
+   "conditions": "weekend-schedule",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "hospital-appointment",
+   "constraints": "foreign-tz-time",
+   "conditions": "crowded",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "last-train-home",
+   "constraints": "cheapest-fare",
+   "conditions": "midnight-crossing",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "teen",
+   "purpose": "hospital-appointment",
+   "constraints": "step-free",
+   "conditions": "delay-50min",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "hospital-appointment",
+   "constraints": "heavy-luggage",
+   "conditions": "crowded",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "meet-flight",
+   "constraints": "needs-food-en-route",
+   "conditions": "api-outage",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "scenic-ride",
+   "constraints": "needs-food-en-route",
+   "conditions": "holiday-schedule",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "student",
+   "purpose": "last-train-home",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "delay-50min",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "commuter",
+   "purpose": "day-trip",
+   "constraints": "foreign-tz-time",
+   "conditions": "midnight-crossing",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "student",
+   "purpose": "last-train-home",
+   "constraints": "foreign-tz-time",
+   "conditions": "api-outage",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "last-train-home",
+   "constraints": "future-origin-not-here",
+   "conditions": "delay-50min",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "visiting-friend",
+   "constraints": "relative-date-phrase",
+   "conditions": "last-service-passed",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "visiting-friend",
+   "constraints": "step-free",
+   "conditions": "last-service-passed",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "hospital-appointment",
+   "constraints": "needs-food-en-route",
+   "conditions": "normal",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "last-train-home",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "crowded",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "meet-flight",
+   "constraints": "arrive-by-time",
+   "conditions": "delay-50min",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "last-train-home",
+   "constraints": "heavy-luggage",
+   "conditions": "last-service-passed",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "shopping",
+   "constraints": "bike-carriage",
+   "conditions": "holiday-schedule",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "meet-flight",
+   "constraints": "bike-carriage",
+   "conditions": "holiday-schedule",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "teen",
+   "purpose": "visiting-friend",
+   "constraints": "step-free",
+   "conditions": "midnight-crossing",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "student",
+   "purpose": "international-connection",
+   "constraints": "future-origin-not-here",
+   "conditions": "api-outage",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "hospital-appointment",
+   "constraints": "heavy-luggage",
+   "conditions": "normal",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "hiker",
+   "purpose": "concert",
+   "constraints": "bike-carriage",
+   "conditions": "last-service-passed",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "scenic-ride",
+   "constraints": "step-free",
+   "conditions": "api-outage",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "commuter",
+   "purpose": "day-trip",
+   "constraints": "needs-food-en-route",
+   "conditions": "crowded",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "commuter",
+   "purpose": "shopping",
+   "constraints": "needs-food-en-route",
+   "conditions": "last-service-passed",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "scenic-ride",
+   "constraints": "cheapest-fare",
+   "conditions": "api-outage",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "hiker",
+   "purpose": "work-commute",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "last-service-passed",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "international-connection",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "midnight-crossing",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "hospital-appointment",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "crowded",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "student",
+   "purpose": "hospital-appointment",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "last-service-passed",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "hiker",
+   "purpose": "shopping",
+   "constraints": "relative-date-phrase",
+   "conditions": "storm-weather",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "concert",
+   "constraints": "bike-carriage",
+   "conditions": "midnight-crossing",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "hospital-appointment",
+   "constraints": "future-origin-not-here",
+   "conditions": "crowded",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "hospital-appointment",
+   "constraints": "bike-carriage",
+   "conditions": "storm-weather",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "hiker",
+   "purpose": "last-train-home",
+   "constraints": "relative-date-phrase",
+   "conditions": "last-service-passed",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "last-train-home",
+   "constraints": "cheapest-fare",
+   "conditions": "replacement-bus",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "last-train-home",
+   "constraints": "relative-date-phrase",
+   "conditions": "last-service-passed",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "concert",
+   "constraints": "foreign-tz-time",
+   "conditions": "normal",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "meet-flight",
+   "constraints": "foreign-tz-time",
+   "conditions": "delay-50min",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "student",
+   "purpose": "international-connection",
+   "constraints": "bike-carriage",
+   "conditions": "weekend-schedule",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "work-commute",
+   "constraints": "heavy-luggage",
+   "conditions": "delay-50min",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "hiker",
+   "purpose": "concert",
+   "constraints": "cheapest-fare",
+   "conditions": "midnight-crossing",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "work-commute",
+   "constraints": "arrive-by-time",
+   "conditions": "api-outage",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "day-trip",
+   "constraints": "step-free",
+   "conditions": "holiday-schedule",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "visiting-friend",
+   "constraints": "cheapest-fare",
+   "conditions": "weekend-schedule",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "meet-flight",
+   "constraints": "bike-carriage",
+   "conditions": "holiday-schedule",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "international-connection",
+   "constraints": "needs-food-en-route",
+   "conditions": "weekend-schedule",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "student",
+   "purpose": "hospital-appointment",
+   "constraints": "future-origin-not-here",
+   "conditions": "last-service-passed",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "meet-flight",
+   "constraints": "heavy-luggage",
+   "conditions": "api-outage",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "meet-flight",
+   "constraints": "cheapest-fare",
+   "conditions": "storm-weather",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "concert",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "delay-50min",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "meet-flight",
+   "constraints": "foreign-tz-time",
+   "conditions": "crowded",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "hiker",
+   "purpose": "visiting-friend",
+   "constraints": "step-free",
+   "conditions": "api-outage",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "visiting-friend",
+   "constraints": "needs-food-en-route",
+   "conditions": "storm-weather",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "hospital-appointment",
+   "constraints": "future-origin-not-here",
+   "conditions": "last-service-passed",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "commuter",
+   "purpose": "concert",
+   "constraints": "relative-date-phrase",
+   "conditions": "normal",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "commuter",
+   "purpose": "day-trip",
+   "constraints": "future-origin-not-here",
+   "conditions": "midnight-crossing",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "meet-flight",
+   "constraints": "bike-carriage",
+   "conditions": "replacement-bus",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "international-connection",
+   "constraints": "cheapest-fare",
+   "conditions": "replacement-bus",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "last-train-home",
+   "constraints": "foreign-tz-time",
+   "conditions": "holiday-schedule",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "teen",
+   "purpose": "meet-flight",
+   "constraints": "arrive-by-time",
+   "conditions": "last-service-passed",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "scenic-ride",
+   "constraints": "arrive-by-time",
+   "conditions": "replacement-bus",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "hiker",
+   "purpose": "international-connection",
+   "constraints": "future-origin-not-here",
+   "conditions": "holiday-schedule",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "last-train-home",
+   "constraints": "heavy-luggage",
+   "conditions": "api-outage",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "student",
+   "purpose": "day-trip",
+   "constraints": "heavy-luggage",
+   "conditions": "delay-50min",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "scenic-ride",
+   "constraints": "relative-date-phrase",
+   "conditions": "replacement-bus",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "work-commute",
+   "constraints": "cheapest-fare",
+   "conditions": "normal",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "commuter",
+   "purpose": "international-connection",
+   "constraints": "cheapest-fare",
+   "conditions": "delay-50min",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "commuter",
+   "purpose": "meet-flight",
+   "constraints": "arrive-by-time",
+   "conditions": "holiday-schedule",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "work-commute",
+   "constraints": "step-free",
+   "conditions": "holiday-schedule",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "student",
+   "purpose": "work-commute",
+   "constraints": "arrive-by-time",
+   "conditions": "api-outage",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "last-train-home",
+   "constraints": "needs-food-en-route",
+   "conditions": "storm-weather",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "hiker",
+   "purpose": "visiting-friend",
+   "constraints": "needs-food-en-route",
+   "conditions": "normal",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "hiker",
+   "purpose": "hospital-appointment",
+   "constraints": "relative-date-phrase",
+   "conditions": "last-service-passed",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "international-connection",
+   "constraints": "step-free",
+   "conditions": "storm-weather",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "day-trip",
+   "constraints": "step-free",
+   "conditions": "replacement-bus",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "last-train-home",
+   "constraints": "cheapest-fare",
+   "conditions": "holiday-schedule",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "concert",
+   "constraints": "foreign-tz-time",
+   "conditions": "delay-50min",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "international-connection",
+   "constraints": "relative-date-phrase",
+   "conditions": "weekend-schedule",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "teen",
+   "purpose": "visiting-friend",
+   "constraints": "heavy-luggage",
+   "conditions": "storm-weather",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "international-connection",
+   "constraints": "arrive-by-time",
+   "conditions": "api-outage",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "teen",
+   "purpose": "concert",
+   "constraints": "step-free",
+   "conditions": "delay-50min",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "day-trip",
+   "constraints": "needs-food-en-route",
+   "conditions": "midnight-crossing",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "commuter",
+   "purpose": "shopping",
+   "constraints": "arrive-by-time",
+   "conditions": "api-outage",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "hiker",
+   "purpose": "hospital-appointment",
+   "constraints": "step-free",
+   "conditions": "replacement-bus",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "hiker",
+   "purpose": "shopping",
+   "constraints": "step-free",
+   "conditions": "normal",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "visiting-friend",
+   "constraints": "relative-date-phrase",
+   "conditions": "replacement-bus",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "meet-flight",
+   "constraints": "needs-food-en-route",
+   "conditions": "delay-50min",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "meet-flight",
+   "constraints": "needs-food-en-route",
+   "conditions": "holiday-schedule",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "student",
+   "purpose": "concert",
+   "constraints": "needs-food-en-route",
+   "conditions": "midnight-crossing",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "student",
+   "purpose": "last-train-home",
+   "constraints": "cheapest-fare",
+   "conditions": "holiday-schedule",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "work-commute",
+   "constraints": "relative-date-phrase",
+   "conditions": "api-outage",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "hiker",
+   "purpose": "international-connection",
+   "constraints": "future-origin-not-here",
+   "conditions": "delay-50min",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "meet-flight",
+   "constraints": "heavy-luggage",
+   "conditions": "normal",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "day-trip",
+   "constraints": "relative-date-phrase",
+   "conditions": "weekend-schedule",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "scenic-ride",
+   "constraints": "cheapest-fare",
+   "conditions": "weekend-schedule",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "hiker",
+   "purpose": "day-trip",
+   "constraints": "bike-carriage",
+   "conditions": "holiday-schedule",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "last-train-home",
+   "constraints": "relative-date-phrase",
+   "conditions": "delay-50min",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "international-connection",
+   "constraints": "bike-carriage",
+   "conditions": "storm-weather",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "visiting-friend",
+   "constraints": "relative-date-phrase",
+   "conditions": "replacement-bus",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "meet-flight",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "normal",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "hiker",
+   "purpose": "meet-flight",
+   "constraints": "step-free",
+   "conditions": "api-outage",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "work-commute",
+   "constraints": "bike-carriage",
+   "conditions": "replacement-bus",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "commuter",
+   "purpose": "day-trip",
+   "constraints": "heavy-luggage",
+   "conditions": "last-service-passed",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "work-commute",
+   "constraints": "step-free",
+   "conditions": "normal",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "last-train-home",
+   "constraints": "heavy-luggage",
+   "conditions": "last-service-passed",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "scenic-ride",
+   "constraints": "foreign-tz-time",
+   "conditions": "storm-weather",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "concert",
+   "constraints": "future-origin-not-here",
+   "conditions": "delay-50min",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "scenic-ride",
+   "constraints": "step-free",
+   "conditions": "storm-weather",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "shopping",
+   "constraints": "future-origin-not-here",
+   "conditions": "api-outage",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "student",
+   "purpose": "meet-flight",
+   "constraints": "cheapest-fare",
+   "conditions": "last-service-passed",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "work-commute",
+   "constraints": "arrive-by-time",
+   "conditions": "crowded",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "shopping",
+   "constraints": "future-origin-not-here",
+   "conditions": "weekend-schedule",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "hiker",
+   "purpose": "hospital-appointment",
+   "constraints": "bike-carriage",
+   "conditions": "last-service-passed",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "concert",
+   "constraints": "needs-food-en-route",
+   "conditions": "delay-50min",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "student",
+   "purpose": "day-trip",
+   "constraints": "future-origin-not-here",
+   "conditions": "crowded",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "student",
+   "purpose": "international-connection",
+   "constraints": "future-origin-not-here",
+   "conditions": "replacement-bus",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "day-trip",
+   "constraints": "needs-food-en-route",
+   "conditions": "replacement-bus",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "hiker",
+   "purpose": "day-trip",
+   "constraints": "heavy-luggage",
+   "conditions": "holiday-schedule",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "international-connection",
+   "constraints": "bike-carriage",
+   "conditions": "api-outage",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "hospital-appointment",
+   "constraints": "needs-food-en-route",
+   "conditions": "storm-weather",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "shopping",
+   "constraints": "needs-food-en-route",
+   "conditions": "storm-weather",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "student",
+   "purpose": "shopping",
+   "constraints": "step-free",
+   "conditions": "api-outage",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "last-train-home",
+   "constraints": "relative-date-phrase",
+   "conditions": "storm-weather",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "hospital-appointment",
+   "constraints": "arrive-by-time",
+   "conditions": "crowded",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "concert",
+   "constraints": "arrive-by-time",
+   "conditions": "storm-weather",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "student",
+   "purpose": "last-train-home",
+   "constraints": "bike-carriage",
+   "conditions": "midnight-crossing",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "hiker",
+   "purpose": "work-commute",
+   "constraints": "relative-date-phrase",
+   "conditions": "last-service-passed",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "scenic-ride",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "midnight-crossing",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "commuter",
+   "purpose": "last-train-home",
+   "constraints": "arrive-by-time",
+   "conditions": "replacement-bus",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "scenic-ride",
+   "constraints": "arrive-by-time",
+   "conditions": "crowded",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "meet-flight",
+   "constraints": "arrive-by-time",
+   "conditions": "crowded",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "visiting-friend",
+   "constraints": "future-origin-not-here",
+   "conditions": "weekend-schedule",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "day-trip",
+   "constraints": "relative-date-phrase",
+   "conditions": "last-service-passed",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "commuter",
+   "purpose": "scenic-ride",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "normal",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "concert",
+   "constraints": "future-origin-not-here",
+   "conditions": "replacement-bus",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "hospital-appointment",
+   "constraints": "needs-food-en-route",
+   "conditions": "delay-50min",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "last-train-home",
+   "constraints": "relative-date-phrase",
+   "conditions": "delay-50min",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "international-connection",
+   "constraints": "needs-food-en-route",
+   "conditions": "weekend-schedule",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "last-train-home",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "replacement-bus",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "last-train-home",
+   "constraints": "relative-date-phrase",
+   "conditions": "weekend-schedule",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "teen",
+   "purpose": "concert",
+   "constraints": "arrive-by-time",
+   "conditions": "storm-weather",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "teen",
+   "purpose": "concert",
+   "constraints": "future-origin-not-here",
+   "conditions": "holiday-schedule",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "visiting-friend",
+   "constraints": "foreign-tz-time",
+   "conditions": "api-outage",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "scenic-ride",
+   "constraints": "arrive-by-time",
+   "conditions": "storm-weather",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "student",
+   "purpose": "day-trip",
+   "constraints": "foreign-tz-time",
+   "conditions": "storm-weather",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "international-connection",
+   "constraints": "bike-carriage",
+   "conditions": "storm-weather",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "day-trip",
+   "constraints": "arrive-by-time",
+   "conditions": "storm-weather",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "student",
+   "purpose": "concert",
+   "constraints": "relative-date-phrase",
+   "conditions": "api-outage",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "international-connection",
+   "constraints": "heavy-luggage",
+   "conditions": "storm-weather",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "meet-flight",
+   "constraints": "step-free",
+   "conditions": "normal",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "international-connection",
+   "constraints": "relative-date-phrase",
+   "conditions": "crowded",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "shopping",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "weekend-schedule",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "last-train-home",
+   "constraints": "bike-carriage",
+   "conditions": "normal",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "hospital-appointment",
+   "constraints": "foreign-tz-time",
+   "conditions": "normal",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "day-trip",
+   "constraints": "relative-date-phrase",
+   "conditions": "replacement-bus",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "work-commute",
+   "constraints": "heavy-luggage",
+   "conditions": "normal",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "student",
+   "purpose": "visiting-friend",
+   "constraints": "relative-date-phrase",
+   "conditions": "api-outage",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "day-trip",
+   "constraints": "relative-date-phrase",
+   "conditions": "delay-50min",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "hiker",
+   "purpose": "last-train-home",
+   "constraints": "cheapest-fare",
+   "conditions": "last-service-passed",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "commuter",
+   "purpose": "meet-flight",
+   "constraints": "foreign-tz-time",
+   "conditions": "storm-weather",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "meet-flight",
+   "constraints": "step-free",
+   "conditions": "replacement-bus",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "visiting-friend",
+   "constraints": "cheapest-fare",
+   "conditions": "delay-50min",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "meet-flight",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "api-outage",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "shopping",
+   "constraints": "step-free",
+   "conditions": "holiday-schedule",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "concert",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "delay-50min",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "hiker",
+   "purpose": "scenic-ride",
+   "constraints": "arrive-by-time",
+   "conditions": "replacement-bus",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "hospital-appointment",
+   "constraints": "bike-carriage",
+   "conditions": "api-outage",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "international-connection",
+   "constraints": "cheapest-fare",
+   "conditions": "midnight-crossing",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "concert",
+   "constraints": "future-origin-not-here",
+   "conditions": "crowded",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "international-connection",
+   "constraints": "future-origin-not-here",
+   "conditions": "normal",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "commuter",
+   "purpose": "scenic-ride",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "storm-weather",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "concert",
+   "constraints": "future-origin-not-here",
+   "conditions": "crowded",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "hiker",
+   "purpose": "shopping",
+   "constraints": "bike-carriage",
+   "conditions": "holiday-schedule",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "scenic-ride",
+   "constraints": "step-free",
+   "conditions": "last-service-passed",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "visiting-friend",
+   "constraints": "cheapest-fare",
+   "conditions": "midnight-crossing",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "student",
+   "purpose": "scenic-ride",
+   "constraints": "future-origin-not-here",
+   "conditions": "normal",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "meet-flight",
+   "constraints": "arrive-by-time",
+   "conditions": "last-service-passed",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "last-train-home",
+   "constraints": "heavy-luggage",
+   "conditions": "replacement-bus",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "work-commute",
+   "constraints": "relative-date-phrase",
+   "conditions": "normal",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "hiker",
+   "purpose": "work-commute",
+   "constraints": "future-origin-not-here",
+   "conditions": "midnight-crossing",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "hiker",
+   "purpose": "concert",
+   "constraints": "foreign-tz-time",
+   "conditions": "replacement-bus",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "shopping",
+   "constraints": "future-origin-not-here",
+   "conditions": "crowded",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "teen",
+   "purpose": "meet-flight",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "holiday-schedule",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "meet-flight",
+   "constraints": "arrive-by-time",
+   "conditions": "midnight-crossing",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "hospital-appointment",
+   "constraints": "bike-carriage",
+   "conditions": "storm-weather",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "meet-flight",
+   "constraints": "step-free",
+   "conditions": "last-service-passed",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "hiker",
+   "purpose": "day-trip",
+   "constraints": "future-origin-not-here",
+   "conditions": "replacement-bus",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "last-train-home",
+   "constraints": "future-origin-not-here",
+   "conditions": "replacement-bus",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "shopping",
+   "constraints": "step-free",
+   "conditions": "midnight-crossing",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "teen",
+   "purpose": "hospital-appointment",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "weekend-schedule",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "day-trip",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "weekend-schedule",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "work-commute",
+   "constraints": "relative-date-phrase",
+   "conditions": "midnight-crossing",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "concert",
+   "constraints": "foreign-tz-time",
+   "conditions": "weekend-schedule",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "work-commute",
+   "constraints": "step-free",
+   "conditions": "delay-50min",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "visiting-friend",
+   "constraints": "arrive-by-time",
+   "conditions": "normal",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "student",
+   "purpose": "last-train-home",
+   "constraints": "needs-food-en-route",
+   "conditions": "crowded",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "concert",
+   "constraints": "cheapest-fare",
+   "conditions": "replacement-bus",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "hospital-appointment",
+   "constraints": "step-free",
+   "conditions": "crowded",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "teen",
+   "purpose": "work-commute",
+   "constraints": "future-origin-not-here",
+   "conditions": "storm-weather",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "commuter",
+   "purpose": "international-connection",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "midnight-crossing",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "visiting-friend",
+   "constraints": "needs-food-en-route",
+   "conditions": "replacement-bus",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "teen",
+   "purpose": "visiting-friend",
+   "constraints": "arrive-by-time",
+   "conditions": "replacement-bus",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "day-trip",
+   "constraints": "future-origin-not-here",
+   "conditions": "replacement-bus",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "international-connection",
+   "constraints": "foreign-tz-time",
+   "conditions": "last-service-passed",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "meet-flight",
+   "constraints": "future-origin-not-here",
+   "conditions": "delay-50min",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "day-trip",
+   "constraints": "bike-carriage",
+   "conditions": "delay-50min",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "commuter",
+   "purpose": "work-commute",
+   "constraints": "relative-date-phrase",
+   "conditions": "normal",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "student",
+   "purpose": "international-connection",
+   "constraints": "relative-date-phrase",
+   "conditions": "normal",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "student",
+   "purpose": "meet-flight",
+   "constraints": "bike-carriage",
+   "conditions": "holiday-schedule",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "scenic-ride",
+   "constraints": "cheapest-fare",
+   "conditions": "delay-50min",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "teen",
+   "purpose": "visiting-friend",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "delay-50min",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "hiker",
+   "purpose": "work-commute",
+   "constraints": "step-free",
+   "conditions": "storm-weather",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "hospital-appointment",
+   "constraints": "foreign-tz-time",
+   "conditions": "weekend-schedule",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "teen",
+   "purpose": "day-trip",
+   "constraints": "arrive-by-time",
+   "conditions": "replacement-bus",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "work-commute",
+   "constraints": "heavy-luggage",
+   "conditions": "delay-50min",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "hiker",
+   "purpose": "concert",
+   "constraints": "bike-carriage",
+   "conditions": "holiday-schedule",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "commuter",
+   "purpose": "day-trip",
+   "constraints": "future-origin-not-here",
+   "conditions": "last-service-passed",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "hospital-appointment",
+   "constraints": "relative-date-phrase",
+   "conditions": "storm-weather",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "last-train-home",
+   "constraints": "needs-food-en-route",
+   "conditions": "holiday-schedule",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "commuter",
+   "purpose": "meet-flight",
+   "constraints": "bike-carriage",
+   "conditions": "midnight-crossing",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "shopping",
+   "constraints": "future-origin-not-here",
+   "conditions": "storm-weather",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "meet-flight",
+   "constraints": "bike-carriage",
+   "conditions": "weekend-schedule",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "hospital-appointment",
+   "constraints": "arrive-by-time",
+   "conditions": "midnight-crossing",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "commuter",
+   "purpose": "work-commute",
+   "constraints": "foreign-tz-time",
+   "conditions": "storm-weather",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "day-trip",
+   "constraints": "arrive-by-time",
+   "conditions": "storm-weather",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "teen",
+   "purpose": "last-train-home",
+   "constraints": "step-free",
+   "conditions": "crowded",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "hospital-appointment",
+   "constraints": "needs-food-en-route",
+   "conditions": "storm-weather",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "student",
+   "purpose": "hospital-appointment",
+   "constraints": "relative-date-phrase",
+   "conditions": "normal",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "visiting-friend",
+   "constraints": "cheapest-fare",
+   "conditions": "holiday-schedule",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "student",
+   "purpose": "scenic-ride",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "api-outage",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "visiting-friend",
+   "constraints": "cheapest-fare",
+   "conditions": "normal",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "scenic-ride",
+   "constraints": "needs-food-en-route",
+   "conditions": "midnight-crossing",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "student",
+   "purpose": "meet-flight",
+   "constraints": "needs-food-en-route",
+   "conditions": "crowded",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "student",
+   "purpose": "shopping",
+   "constraints": "arrive-by-time",
+   "conditions": "crowded",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "visiting-friend",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "api-outage",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "meet-flight",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "storm-weather",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "day-trip",
+   "constraints": "foreign-tz-time",
+   "conditions": "api-outage",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "student",
+   "purpose": "visiting-friend",
+   "constraints": "heavy-luggage",
+   "conditions": "delay-50min",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "commuter",
+   "purpose": "day-trip",
+   "constraints": "cheapest-fare",
+   "conditions": "normal",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "meet-flight",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "holiday-schedule",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "international-connection",
+   "constraints": "foreign-tz-time",
+   "conditions": "replacement-bus",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "student",
+   "purpose": "scenic-ride",
+   "constraints": "heavy-luggage",
+   "conditions": "replacement-bus",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "teen",
+   "purpose": "work-commute",
+   "constraints": "future-origin-not-here",
+   "conditions": "api-outage",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "international-connection",
+   "constraints": "foreign-tz-time",
+   "conditions": "last-service-passed",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "work-commute",
+   "constraints": "bike-carriage",
+   "conditions": "holiday-schedule",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "hospital-appointment",
+   "constraints": "cheapest-fare",
+   "conditions": "delay-50min",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "student",
+   "purpose": "concert",
+   "constraints": "heavy-luggage",
+   "conditions": "delay-50min",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "last-train-home",
+   "constraints": "needs-food-en-route",
+   "conditions": "normal",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "shopping",
+   "constraints": "cheapest-fare",
+   "conditions": "storm-weather",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "hiker",
+   "purpose": "shopping",
+   "constraints": "step-free",
+   "conditions": "holiday-schedule",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "teen",
+   "purpose": "scenic-ride",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "crowded",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "student",
+   "purpose": "hospital-appointment",
+   "constraints": "cheapest-fare",
+   "conditions": "crowded",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "teen",
+   "purpose": "last-train-home",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "midnight-crossing",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "day-trip",
+   "constraints": "foreign-tz-time",
+   "conditions": "api-outage",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "hospital-appointment",
+   "constraints": "heavy-luggage",
+   "conditions": "holiday-schedule",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "shopping",
+   "constraints": "bike-carriage",
+   "conditions": "midnight-crossing",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "concert",
+   "constraints": "foreign-tz-time",
+   "conditions": "crowded",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "teen",
+   "purpose": "last-train-home",
+   "constraints": "bike-carriage",
+   "conditions": "crowded",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "meet-flight",
+   "constraints": "heavy-luggage",
+   "conditions": "weekend-schedule",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "shopping",
+   "constraints": "future-origin-not-here",
+   "conditions": "delay-50min",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "student",
+   "purpose": "day-trip",
+   "constraints": "needs-food-en-route",
+   "conditions": "holiday-schedule",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "work-commute",
+   "constraints": "arrive-by-time",
+   "conditions": "normal",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "hiker",
+   "purpose": "last-train-home",
+   "constraints": "relative-date-phrase",
+   "conditions": "api-outage",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "day-trip",
+   "constraints": "arrive-by-time",
+   "conditions": "weekend-schedule",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "last-train-home",
+   "constraints": "needs-food-en-route",
+   "conditions": "delay-50min",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "hiker",
+   "purpose": "concert",
+   "constraints": "step-free",
+   "conditions": "normal",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "shopping",
+   "constraints": "cheapest-fare",
+   "conditions": "replacement-bus",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "meet-flight",
+   "constraints": "step-free",
+   "conditions": "normal",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "student",
+   "purpose": "hospital-appointment",
+   "constraints": "foreign-tz-time",
+   "conditions": "crowded",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "meet-flight",
+   "constraints": "cheapest-fare",
+   "conditions": "replacement-bus",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "commuter",
+   "purpose": "hospital-appointment",
+   "constraints": "step-free",
+   "conditions": "normal",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "scenic-ride",
+   "constraints": "cheapest-fare",
+   "conditions": "replacement-bus",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "concert",
+   "constraints": "bike-carriage",
+   "conditions": "crowded",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "scenic-ride",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "last-service-passed",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "meet-flight",
+   "constraints": "foreign-tz-time",
+   "conditions": "storm-weather",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "hiker",
+   "purpose": "last-train-home",
+   "constraints": "foreign-tz-time",
+   "conditions": "holiday-schedule",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "last-train-home",
+   "constraints": "foreign-tz-time",
+   "conditions": "crowded",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "student",
+   "purpose": "scenic-ride",
+   "constraints": "heavy-luggage",
+   "conditions": "last-service-passed",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "work-commute",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "delay-50min",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "hiker",
+   "purpose": "concert",
+   "constraints": "needs-food-en-route",
+   "conditions": "holiday-schedule",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "day-trip",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "midnight-crossing",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "teen",
+   "purpose": "day-trip",
+   "constraints": "relative-date-phrase",
+   "conditions": "weekend-schedule",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "visiting-friend",
+   "constraints": "cheapest-fare",
+   "conditions": "storm-weather",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "work-commute",
+   "constraints": "arrive-by-time",
+   "conditions": "holiday-schedule",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "commuter",
+   "purpose": "shopping",
+   "constraints": "cheapest-fare",
+   "conditions": "holiday-schedule",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "student",
+   "purpose": "international-connection",
+   "constraints": "relative-date-phrase",
+   "conditions": "weekend-schedule",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "commuter",
+   "purpose": "shopping",
+   "constraints": "relative-date-phrase",
+   "conditions": "midnight-crossing",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "visiting-friend",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "weekend-schedule",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "hiker",
+   "purpose": "last-train-home",
+   "constraints": "arrive-by-time",
+   "conditions": "crowded",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "commuter",
+   "purpose": "hospital-appointment",
+   "constraints": "cheapest-fare",
+   "conditions": "api-outage",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "last-train-home",
+   "constraints": "bike-carriage",
+   "conditions": "midnight-crossing",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "international-connection",
+   "constraints": "step-free",
+   "conditions": "weekend-schedule",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "last-train-home",
+   "constraints": "arrive-by-time",
+   "conditions": "last-service-passed",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "work-commute",
+   "constraints": "foreign-tz-time",
+   "conditions": "storm-weather",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "hiker",
+   "purpose": "scenic-ride",
+   "constraints": "bike-carriage",
+   "conditions": "crowded",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "shopping",
+   "constraints": "step-free",
+   "conditions": "holiday-schedule",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "shopping",
+   "constraints": "foreign-tz-time",
+   "conditions": "api-outage",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "teen",
+   "purpose": "scenic-ride",
+   "constraints": "relative-date-phrase",
+   "conditions": "storm-weather",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "day-trip",
+   "constraints": "relative-date-phrase",
+   "conditions": "midnight-crossing",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "hiker",
+   "purpose": "shopping",
+   "constraints": "foreign-tz-time",
+   "conditions": "holiday-schedule",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "visiting-friend",
+   "constraints": "foreign-tz-time",
+   "conditions": "midnight-crossing",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "day-trip",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "replacement-bus",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "hospital-appointment",
+   "constraints": "relative-date-phrase",
+   "conditions": "delay-50min",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "commuter",
+   "purpose": "scenic-ride",
+   "constraints": "bike-carriage",
+   "conditions": "delay-50min",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "teen",
+   "purpose": "day-trip",
+   "constraints": "heavy-luggage",
+   "conditions": "delay-50min",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "hospital-appointment",
+   "constraints": "step-free",
+   "conditions": "holiday-schedule",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "shopping",
+   "constraints": "future-origin-not-here",
+   "conditions": "last-service-passed",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "concert",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "midnight-crossing",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "teen",
+   "purpose": "scenic-ride",
+   "constraints": "bike-carriage",
+   "conditions": "weekend-schedule",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "last-train-home",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "weekend-schedule",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "shopping",
+   "constraints": "cheapest-fare",
+   "conditions": "delay-50min",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "hiker",
+   "purpose": "meet-flight",
+   "constraints": "relative-date-phrase",
+   "conditions": "storm-weather",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "concert",
+   "constraints": "arrive-by-time",
+   "conditions": "delay-50min",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "work-commute",
+   "constraints": "bike-carriage",
+   "conditions": "delay-50min",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "work-commute",
+   "constraints": "relative-date-phrase",
+   "conditions": "weekend-schedule",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "meet-flight",
+   "constraints": "foreign-tz-time",
+   "conditions": "delay-50min",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "concert",
+   "constraints": "step-free",
+   "conditions": "normal",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "last-train-home",
+   "constraints": "step-free",
+   "conditions": "storm-weather",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "international-connection",
+   "constraints": "heavy-luggage",
+   "conditions": "replacement-bus",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "student",
+   "purpose": "concert",
+   "constraints": "heavy-luggage",
+   "conditions": "holiday-schedule",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "visiting-friend",
+   "constraints": "step-free",
+   "conditions": "crowded",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "teen",
+   "purpose": "concert",
+   "constraints": "heavy-luggage",
+   "conditions": "storm-weather",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "teen",
+   "purpose": "last-train-home",
+   "constraints": "bike-carriage",
+   "conditions": "api-outage",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "meet-flight",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "delay-50min",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "last-train-home",
+   "constraints": "heavy-luggage",
+   "conditions": "normal",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "scenic-ride",
+   "constraints": "arrive-by-time",
+   "conditions": "delay-50min",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "student",
+   "purpose": "day-trip",
+   "constraints": "relative-date-phrase",
+   "conditions": "delay-50min",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "student",
+   "purpose": "last-train-home",
+   "constraints": "cheapest-fare",
+   "conditions": "midnight-crossing",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "teen",
+   "purpose": "hospital-appointment",
+   "constraints": "heavy-luggage",
+   "conditions": "midnight-crossing",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "student",
+   "purpose": "day-trip",
+   "constraints": "future-origin-not-here",
+   "conditions": "api-outage",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "teen",
+   "purpose": "shopping",
+   "constraints": "foreign-tz-time",
+   "conditions": "api-outage",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "day-trip",
+   "constraints": "foreign-tz-time",
+   "conditions": "delay-50min",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "commuter",
+   "purpose": "day-trip",
+   "constraints": "heavy-luggage",
+   "conditions": "crowded",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "commuter",
+   "purpose": "meet-flight",
+   "constraints": "bike-carriage",
+   "conditions": "delay-50min",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "hiker",
+   "purpose": "shopping",
+   "constraints": "heavy-luggage",
+   "conditions": "holiday-schedule",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "work-commute",
+   "constraints": "bike-carriage",
+   "conditions": "api-outage",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "hospital-appointment",
+   "constraints": "future-origin-not-here",
+   "conditions": "crowded",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "scenic-ride",
+   "constraints": "heavy-luggage",
+   "conditions": "last-service-passed",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "teen",
+   "purpose": "shopping",
+   "constraints": "foreign-tz-time",
+   "conditions": "weekend-schedule",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "teen",
+   "purpose": "hospital-appointment",
+   "constraints": "relative-date-phrase",
+   "conditions": "holiday-schedule",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "work-commute",
+   "constraints": "needs-food-en-route",
+   "conditions": "replacement-bus",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "last-train-home",
+   "constraints": "arrive-by-time",
+   "conditions": "last-service-passed",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "scenic-ride",
+   "constraints": "arrive-by-time",
+   "conditions": "holiday-schedule",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "scenic-ride",
+   "constraints": "heavy-luggage",
+   "conditions": "api-outage",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "student",
+   "purpose": "meet-flight",
+   "constraints": "bike-carriage",
+   "conditions": "last-service-passed",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "meet-flight",
+   "constraints": "relative-date-phrase",
+   "conditions": "midnight-crossing",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "concert",
+   "constraints": "foreign-tz-time",
+   "conditions": "replacement-bus",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "hospital-appointment",
+   "constraints": "arrive-by-time",
+   "conditions": "crowded",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "student",
+   "purpose": "shopping",
+   "constraints": "relative-date-phrase",
+   "conditions": "last-service-passed",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "student",
+   "purpose": "hospital-appointment",
+   "constraints": "relative-date-phrase",
+   "conditions": "delay-50min",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "hiker",
+   "purpose": "international-connection",
+   "constraints": "cheapest-fare",
+   "conditions": "holiday-schedule",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "international-connection",
+   "constraints": "cheapest-fare",
+   "conditions": "last-service-passed",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "visiting-friend",
+   "constraints": "needs-food-en-route",
+   "conditions": "replacement-bus",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "shopping",
+   "constraints": "heavy-luggage",
+   "conditions": "normal",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "last-train-home",
+   "constraints": "foreign-tz-time",
+   "conditions": "replacement-bus",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "student",
+   "purpose": "meet-flight",
+   "constraints": "needs-food-en-route",
+   "conditions": "weekend-schedule",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "student",
+   "purpose": "shopping",
+   "constraints": "arrive-by-time",
+   "conditions": "api-outage",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "teen",
+   "purpose": "last-train-home",
+   "constraints": "heavy-luggage",
+   "conditions": "holiday-schedule",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "shopping",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "replacement-bus",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "teen",
+   "purpose": "meet-flight",
+   "constraints": "relative-date-phrase",
+   "conditions": "crowded",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "teen",
+   "purpose": "shopping",
+   "constraints": "future-origin-not-here",
+   "conditions": "last-service-passed",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "scenic-ride",
+   "constraints": "needs-food-en-route",
+   "conditions": "storm-weather",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "student",
+   "purpose": "scenic-ride",
+   "constraints": "heavy-luggage",
+   "conditions": "replacement-bus",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "hospital-appointment",
+   "constraints": "needs-food-en-route",
+   "conditions": "replacement-bus",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "hospital-appointment",
+   "constraints": "foreign-tz-time",
+   "conditions": "crowded",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "teen",
+   "purpose": "shopping",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "replacement-bus",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "day-trip",
+   "constraints": "cheapest-fare",
+   "conditions": "midnight-crossing",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "teen",
+   "purpose": "shopping",
+   "constraints": "step-free",
+   "conditions": "crowded",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "shopping",
+   "constraints": "cheapest-fare",
+   "conditions": "delay-50min",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "teen",
+   "purpose": "day-trip",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "api-outage",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "day-trip",
+   "constraints": "future-origin-not-here",
+   "conditions": "delay-50min",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "commuter",
+   "purpose": "concert",
+   "constraints": "heavy-luggage",
+   "conditions": "normal",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "student",
+   "purpose": "scenic-ride",
+   "constraints": "future-origin-not-here",
+   "conditions": "storm-weather",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "hospital-appointment",
+   "constraints": "relative-date-phrase",
+   "conditions": "storm-weather",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "hospital-appointment",
+   "constraints": "arrive-by-time",
+   "conditions": "holiday-schedule",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "work-commute",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "holiday-schedule",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "work-commute",
+   "constraints": "foreign-tz-time",
+   "conditions": "replacement-bus",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "teen",
+   "purpose": "day-trip",
+   "constraints": "cheapest-fare",
+   "conditions": "crowded",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "shopping",
+   "constraints": "bike-carriage",
+   "conditions": "last-service-passed",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "teen",
+   "purpose": "hospital-appointment",
+   "constraints": "future-origin-not-here",
+   "conditions": "replacement-bus",
+   "phrasing": "ambiguous-city"
+  },
+  {
+   "who": "student",
+   "purpose": "hospital-appointment",
+   "constraints": "bike-carriage",
+   "conditions": "storm-weather",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "work-commute",
+   "constraints": "foreign-tz-time",
+   "conditions": "normal",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "last-train-home",
+   "constraints": "step-free",
+   "conditions": "delay-50min",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "scenic-ride",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "api-outage",
+   "phrasing": "colloquial-place"
+  },
+  {
+   "who": "teen",
+   "purpose": "work-commute",
+   "constraints": "arrive-by-time",
+   "conditions": "normal",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "shopping",
+   "constraints": "bike-carriage",
+   "conditions": "storm-weather",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "international-connection",
+   "constraints": "bike-carriage",
+   "conditions": "delay-50min",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "student",
+   "purpose": "work-commute",
+   "constraints": "bike-carriage",
+   "conditions": "api-outage",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "commuter",
+   "purpose": "last-train-home",
+   "constraints": "step-free",
+   "conditions": "replacement-bus",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "hospital-appointment",
+   "constraints": "future-origin-not-here",
+   "conditions": "midnight-crossing",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "night-shift-worker",
+   "purpose": "meet-flight",
+   "constraints": "arrive-by-time",
+   "conditions": "weekend-schedule",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "parent-pram",
+   "purpose": "scenic-ride",
+   "constraints": "arrive-by-time",
+   "conditions": "delay-50min",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "teen",
+   "purpose": "last-train-home",
+   "constraints": "needs-food-en-route",
+   "conditions": "normal",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "retiree-halbtax",
+   "purpose": "scenic-ride",
+   "constraints": "needs-food-en-route",
+   "conditions": "crowded",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "work-commute",
+   "constraints": "arrive-by-time",
+   "conditions": "storm-weather",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "hospital-appointment",
+   "constraints": "step-free",
+   "conditions": "midnight-crossing",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "teen",
+   "purpose": "scenic-ride",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "weekend-schedule",
+   "phrasing": "zip-code"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "concert",
+   "constraints": "needs-food-en-route",
+   "conditions": "delay-50min",
+   "phrasing": "hb-airport-conflation"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "day-trip",
+   "constraints": "foreign-tz-time",
+   "conditions": "last-service-passed",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "teen",
+   "purpose": "meet-flight",
+   "constraints": "heavy-luggage",
+   "conditions": "api-outage",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "teen",
+   "purpose": "international-connection",
+   "constraints": "needs-toilet-en-route",
+   "conditions": "midnight-crossing",
+   "phrasing": "misspelled-station"
+  },
+  {
+   "who": "teen",
+   "purpose": "hospital-appointment",
+   "constraints": "foreign-tz-time",
+   "conditions": "last-service-passed",
+   "phrasing": "gps-here"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "last-train-home",
+   "constraints": "future-origin-not-here",
+   "conditions": "last-service-passed",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "wheelchair-user",
+   "purpose": "international-connection",
+   "constraints": "relative-date-phrase",
+   "conditions": "weekend-schedule",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "hiker",
+   "purpose": "international-connection",
+   "constraints": "foreign-tz-time",
+   "conditions": "api-outage",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "day-trip",
+   "constraints": "step-free",
+   "conditions": "holiday-schedule",
+   "phrasing": "exact-station-names"
+  },
+  {
+   "who": "commuter",
+   "purpose": "day-trip",
+   "constraints": "future-origin-not-here",
+   "conditions": "storm-weather",
+   "phrasing": "landmark-not-station"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "shopping",
+   "constraints": "heavy-luggage",
+   "conditions": "midnight-crossing",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "tourist-foreign",
+   "purpose": "concert",
+   "constraints": "step-free",
+   "conditions": "last-service-passed",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "student",
+   "purpose": "concert",
+   "constraints": "heavy-luggage",
+   "conditions": "normal",
+   "phrasing": "abbreviation"
+  },
+  {
+   "who": "teen",
+   "purpose": "scenic-ride",
+   "constraints": "relative-date-phrase",
+   "conditions": "weekend-schedule",
+   "phrasing": "foreign-language"
+  },
+  {
+   "who": "business-traveller",
+   "purpose": "work-commute",
+   "constraints": "step-free",
+   "conditions": "delay-50min",
+   "phrasing": "abbreviation"
+  }
+ ]
+}
