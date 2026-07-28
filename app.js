@@ -803,15 +803,31 @@ function wireFades(){
    "save route" button to remember -- most recent first, and DIRECTION-DISTINCT,
    because the morning and the evening trip are not the same trip. Reuses the
    favourites chip pattern from the departures board rather than inventing a new
-   control: same visual language, nothing new to learn. localStorage only. */
+   control: same visual language, nothing new to learn. localStorage only.
+
+   Seed chips (first real-user feedback, Pamela 2026-07-28: "I would have some
+   default options to choose from on top of the search bar"): a first-time
+   passenger has no history, so this row rendered EMPTY exactly for the person
+   who most needed a worked example. With no history we now show example routes
+   -- visually dimmed, never written to storage -- and the first real search
+   replaces them with the passenger's own. Offers to try the app, not claims
+   about the passenger's life, which is why they vanish instead of mixing in. */
+const SEED_ROUTES = [
+  {f:"Z\u00fcrich HB", t:"Bern"},
+  {f:"Z\u00fcrich HB", t:"Z\u00fcrich Flughafen"},
+  {f:"Basel SBB", t:"Luzern"},
+  {f:"Gen\u00e8ve", t:"Lausanne"},
+  {f:"Bern", t:"Interlaken Ost"},
+];
 let routeHist = load(LS.routes, []);
+function shownRoutes(){ return routeHist.length ? routeHist : SEED_ROUTES; }
 function rememberRoute(from,to){
   if(!from||!to||from===to) return;
   routeHist = [{f:from,t:to}, ...routeHist.filter(r=>!(r.f===from&&r.t===to))].slice(0,6);
   save(LS.routes, routeHist); renderRoutes();
 }
 function useRoute(i){
-  const r=routeHist[i]; if(!r) return;
+  const r=shownRoutes()[i]; if(!r) return;   // read at tap time, seeds included
   fromName=r.f; toName=r.t;
   $("iFrom").value=r.f; $("iTo").value=r.t;
   $("fFrom").classList.add("has"); $("fTo").classList.add("has");
@@ -819,10 +835,11 @@ function useRoute(i){
 }
 function renderRoutes(){
   const el=$("routeChips"); if(!el) return;
-  if(!routeHist.length){ el.innerHTML=""; return; }
-  el.innerHTML = routeHist.map((r,i)=>
-    `<button class="chip route" type="button" onclick="useRoute(${i})" `
-    + `title="${esc(r.f)} to ${esc(r.t)}">${esc(shortStop(r.f))} <span class="ra">&#8594;</span> ${esc(shortStop(r.t))}</button>`
+  const seed = !routeHist.length;
+  el.innerHTML = shownRoutes().map((r,i)=>
+    `<button class="chip route${seed?" seed":""}" type="button" onclick="useRoute(${i})" `
+    + `title="${esc(r.f)} to ${esc(r.t)}${seed?" — an example to try; your own searches replace these":""}">`
+    + `${esc(shortStop(r.f))} <span class="ra">&#8594;</span> ${esc(shortStop(r.t))}</button>`
   ).join("");
 }
 /* Which build you are actually looking at, at the foot of this help sheet. It

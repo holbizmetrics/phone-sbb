@@ -199,6 +199,9 @@
            padding:8px 10px; border-left:3px solid var(--blue); background:var(--card); border-radius:0 8px 8px 0}
   .chip.route{font-weight:600}
   .chip.route .ra{color:var(--faint); margin:0 2px}
+  /* seed = example route for an empty history: dimmer + dashed, so a suggestion
+     never masquerades as something the passenger actually searched */
+  .chip.route.seed{font-weight:400; opacity:.62; border-style:dashed}
 
   /* ---- board ---- */
   .boardhead{display:flex; align-items:baseline; gap:8px; margin:6px 2px 12px}

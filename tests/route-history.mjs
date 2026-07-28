@@ -19,18 +19,25 @@ const chk = (n, c, d = "") => { if (c) { pass++; console.log("  ok   " + n); } e
 function build(start = []) {
   const el = { innerHTML: "" };
   const saved = [];
-  const m = new Function("EL", "SAVED", "START", `
+  const calls = { planned: 0, fields: {} };
+  const m = new Function("EL", "SAVED", "START", "CALLS", `
     let routeHist = START;
+    let fromName = "", toName = "";
     ${(src.match(/^const LS = \{[^}]+\};/m) || [])[0] || (() => { throw new Error("HARNESS FAILED -- const LS not found"); })()}
-    const $ = () => EL;
+    ${(src.match(/^const SEED_ROUTES = \[[\s\S]*?\];/m) || [])[0] || (() => { throw new Error("HARNESS FAILED -- const SEED_ROUTES not found"); })()}
+    const $ = (id) => id === "routeChips" ? EL
+      : { set value(v){ CALLS.fields[id] = v; }, classList: { add: () => {} } };
     const save = (k, v) => SAVED.push(JSON.parse(JSON.stringify(v)));
+    const planJourney = () => { CALLS.planned++; CALLS.from = fromName; CALLS.to = toName; };
     ${grab("esc")}
     ${grab("shortStop")}
+    ${grab("shownRoutes")}
     ${grab("renderRoutes")}
     ${grab("rememberRoute")}
-    return { rememberRoute, renderRoutes, hist: () => routeHist };
-  `)(el, saved, start);
-  return { ...m, el, saved };
+    ${grab("useRoute")}
+    return { rememberRoute, renderRoutes, useRoute, hist: () => routeHist };
+  `)(el, saved, start, calls);
+  return { ...m, el, saved, calls };
 }
 
 // control: the extraction produced something that actually records
@@ -89,11 +96,34 @@ function build(start = []) {
   chk("control: the dangerous name really was recorded", t.hist()[0].f.includes("alert(1)"));
 }
 
-// empty history paints nothing at all -- not an empty box with padding
+// Pamela's ask (2026-07-28, the first real passenger): an empty history must
+// OFFER something, not render a blank row for exactly the person who has never
+// searched. Seeds are examples -- dimmed, never saved, gone after one real search.
 {
   const t = build();
   t.renderRoutes();
-  chk("no history -> no chips", t.el.innerHTML === "", JSON.stringify(t.el.innerHTML));
+  chk("empty history renders seed chips, not a blank row",
+    (t.el.innerHTML.match(/class="chip route seed"/g) || []).length >= 3, t.el.innerHTML.slice(0, 160));
+  chk("seeds are never written to storage just by rendering", t.saved.length === 0);
+  t.useRoute(0);
+  chk("tapping a seed plans that journey",
+    t.calls.planned === 1 && t.calls.from === "Zürich HB" && t.calls.to === "Bern",
+    JSON.stringify(t.calls));
+  chk("tapping a seed fills the visible fields too",
+    t.calls.fields.iFrom === "Zürich HB" && t.calls.fields.iTo === "Bern",
+    JSON.stringify(t.calls.fields));
+  chk("even a tapped seed is not saved -- only a real search earns a chip", t.saved.length === 0);
+}
+{
+  const t = build();
+  t.rememberRoute("Luzern", "Brig");
+  chk("one real search replaces ALL seeds", !/seed/.test(t.el.innerHTML) && /Brig/.test(t.el.innerHTML),
+    t.el.innerHTML);
+}
+{
+  const css = fs.readFileSync(new URL("../app.css", import.meta.url), "utf8");
+  chk("seed chips are styled as suggestions (dimmed)", /\.chip\.route\.seed\{[^}]*opacity/.test(css),
+    "unstyled seed class = examples indistinguishable from the passenger's own routes");
 }
 
 // the chip has to be tappable back to the right entry

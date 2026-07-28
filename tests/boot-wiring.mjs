@@ -49,7 +49,7 @@ const el = () => ({ innerHTML: "" });
 for (const [fn, state, deps] of [["renderFavs", "let favs=[];", []],
   ["renderModes", "let modeSel=[]; let catSel=[];", ["renderCats", "catsRelevant"]],
   ["renderCats", "let catSel=[]; let modeSel=[];", ["catsRelevant"]],
-  ["renderRoutes", "let routeHist=[];", []], ["renderBuild", 'const BUILD="dev";', []]]) {
+  ["renderRoutes", "let routeHist=[];", ["shownRoutes"]], ["renderBuild", 'const BUILD="dev";', []]]) {
   let threw = null;
   try {
     new Function("EL", `
@@ -57,6 +57,7 @@ for (const [fn, state, deps] of [["renderFavs", "let favs=[];", []],
       ${state}
       ${src.match(/const MODES=[\s\S]*?\];/) ? src.match(/const MODES=[\s\S]*?\];/)[0] : ""}
       ${src.match(/const TRAIN_CLASSES=[\s\S]*?\];/) ? src.match(/const TRAIN_CLASSES=[\s\S]*?\];/)[0] : ""}
+      ${src.match(/const SEED_ROUTES = \[[\s\S]*?\];/) ? src.match(/const SEED_ROUTES = \[[\s\S]*?\];/)[0] : ""}
       ${grab("esc")}
       ${grab("shortStop")}
       ${deps.map(grab).join("\n")}
