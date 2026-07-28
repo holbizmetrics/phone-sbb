@@ -94,6 +94,7 @@ async function storm({ honourAbort, slowMs = 14000, settleMs = 50 }) {
     // absent stub throws and the storm reads as an outage instead of a paint.
     catSel: [], catFilter: cs => cs, catFilterNote: () => "", catWhyEmpty: () => "",
     connCard: c => "CARD", wondersExpanderHTML: () => "",
+    connZoneRib: () => "", fillJourneyLastHome: () => {},
     renderSmart: () => { jrnOut.innerHTML = "PAINTED"; },
     withTimeout: (p) => p.catch(() => []),   // no cap in the harness: the pool is the constraint under test
     setTimeout, clearTimeout,

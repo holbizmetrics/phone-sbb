@@ -1289,6 +1289,7 @@ async function smartPlan(){
     const hubResults = catFilter(rawHubs);
     renderSmart(base, wide.concat(hubResults), baseline, false, direct.failed && !direct.ok,
                 nKept+hubResults.length, nRaw+rawHubs.length);
+    fillJourneyLastHome(gen);   // after the settled render: the slot exists now, and gen bars a stale paint
   }catch(e){
     if(gen!==jrnGen) return;                                       // superseded
     $("jrnOut").innerHTML=errBox(e);
@@ -1353,7 +1354,8 @@ function renderSmart(base, swept, baseline, searching, reqFailed, nKept, nRaw){
   jrnConns = top;   // render order == the ci the leg buttons index back into
   $("jrnOut").innerHTML = smartHead(baseline, nSafe, swN)
     + catFilterNote(nKept, nRaw)
-    + (searching?`<div class="shint">&#8987; searching wider routes&#8230;</div>`:"")
+    + (searching?`<div class="shint">&#8987; searching wider routes&#8230;</div>`
+                :`<div id="jlh"></div>`)   // last-way-home slot, settled render only (one request per search, not per phase)
     + top.map((c,i)=>connCard(c,i)).join("")
     + (searching?"":wondersExpanderHTML((base[0]||swept[0])?.to?.station));   // expander only on the settled render
   if(weather) fillWeather();
@@ -1457,6 +1459,34 @@ function verbundHTML(rows){
   const rest=s.unknown
     ? `<span class="vbq">+${s.unknown} stop${s.unknown>1?"s":""} in none</span>` : "";
   return `<div class="svb"><span class="vbq">Zones</span>${chips}${rest}</div>`;
+}
+/* The zone question, at DECISION time. verbundHTML above names the zones of a
+   leg you already expanded -- but "does a zone ticket cover this trip?" is a
+   pre-purchase question, decided before any leg is tapped (UNSOLVED-GAPS.md
+   para 3). Same honesty rule as verbundHTML: name zones as facts, NEVER say
+   "your ticket is valid" -- validity depends on tariff rules this app does not
+   model, and a wrong yes costs a fine.
+   "all the way" is therefore only claimed when every leg has a stop list and
+   every stop resolved to that one Verbund; a single unknown stop demotes the
+   card to silence rather than to a rounded-up claim. Multiple zones are safe
+   to print regardless: "touches A and B" stays true however many stops are
+   unresolved. */
+function connZoneRib(ci){
+  const c=jrnConns[ci]; if(!c) return "";
+  const legs=(c.sections||[]).filter(x=>x.journey);
+  if(!legs.length) return "";
+  const zones=[]; let unknown=0, missing=false;
+  legs.forEach((_,si)=>{
+    const rows=legStops(ci,si);
+    if(rows===null){ missing=true; return; }
+    const s=verbundSpan(rows);
+    for(const z of s.zones) if(!zones.includes(z)) zones.push(z);
+    unknown+=s.unknown;
+  });
+  if(!zones.length) return "";
+  if(zones.length===1)
+    return (unknown||missing) ? "" : `<span class="rib vb">&#127903; ${esc(zones[0])} all the way</span>`;
+  return `<span class="rib vb">&#127903; ${zones.map(esc).join(" &#183; ")}</span>`;
 }
 function stopsHTML(rows){
   if(rows===null) return `<div class="snone">Stop list unavailable for this leg.</div>`;
@@ -1906,6 +1936,44 @@ async function fillLastHome(panel,ci){
   box.innerHTML=`<div class="lhtitle">Last way back</div>`
     + `<div class="lhrow${tight?" tight":""}">${hhmm(res.dep)}${res.arr?` &#8594; ${hhmm(res.arr)}`:""} ${stay}</div>`;
 }
+
+/* ---------- last way home ON THE RESULTS LIST ----------
+   The per-card version above answers "how long can I stay?" for a connection
+   you already opened -- two taps deep. But "is there a way home at all?" is a
+   criterion for CHOOSING a connection, not a detail of the chosen one: whoever
+   is stranded at 19:00 picked their train long before the app mentioned it.
+   Wander prints the last way home on every card at decision time; Journey never
+   inherited the pattern (UNSOLVED-GAPS.md para 3). This is that migration.
+   One request per settled search -- the fact is route-level, identical for
+   every displayed card, so it renders once above them, not seven times. */
+function jlhRowHTML(res, dest){
+  /* Three outcomes, not two -- same rule as fillLastHome above. An outage and
+     a genuine one-way trip are opposite facts; both rendered blank turns the
+     outage into a verdict. */
+  if(res==="unreachable")
+    return `<div class="jlh unk">Could not check the last way home &#8212; an outage, not a &quot;no&quot;.</div>`;
+  if(!res)
+    return `<div class="jlh none">&#9888; Nothing comes back from <b>${esc(dest)}</b> tonight &#8212; one way, unless you stay over.</div>`;
+  return `<div class="jlh ok">&#127769; Last way home from <b>${esc(dest)}</b>: <b>${hhmm(res.dep)}</b>${res.arr?` &#8594; ${hhmm(res.arr)}`:""}</div>`;
+}
+async function fillJourneyLastHome(gen){
+  const box=$("jlh"); if(!box) return;
+  const first=jrnConns.reduce((a,x)=>(!a || x._arr<a._arr)?x:a, null);
+  const back=first?.to?.station?.name, home=first?.from?.station?.name;
+  const day=homeCutoff(first?.to?.arrival);
+  if(!back||!home||back===home||!day) return;   // nothing to say; the box stays empty, claiming nothing
+  let res;
+  try{
+    const d=await api(`/connections?from=${encodeURIComponent(back)}&to=${encodeURIComponent(home)}`
+      + `&date=${day}&time=03:00&isArrivalTime=1&limit=6`, jrnAbort && jrnAbort.signal);
+    /* Counted from the EARLIEST displayed arrival: a service that leaves before
+       you could possibly be there is not a way home for any of these options. */
+    res=lastHome(d.connections, first.to.arrival);
+  }catch(e){ res="unreachable"; }
+  if(gen!==jrnGen) return;      // superseded -- a stale answer must not paint over a new route
+  box.innerHTML=jlhRowHTML(res, back);
+}
+
 function toggleSketch(btn,ci){
   const card=btn.closest(".conn"), panel=card.querySelector(".sketch");
   const open = panel.dataset.open==="1";
@@ -1978,6 +2046,7 @@ function connCard(c,i){
   else if(c._fasterTight) ribs+=`<span class="rib tight">&#9889; faster &#183; tight ${c._buf}&#8242; change</span>`;
   else if(c._isBase) ribs+=`<span class="rib base">SBB default</span>`;
   if(c._tight && !c._fasterTight) ribs+=`<span class="rib tight">&#9888; tight change</span>`;
+  ribs+=connZoneRib(i);   // zone facts are a pre-purchase criterion, so they ride the card, not the stop list
   if(c._via) ribs+=`<span class="viatag">via ${esc(c._via)}</span>`;
   const dm=minsUntil(dep);
   /* The platform is the one thing you need while standing IN the station, and it
