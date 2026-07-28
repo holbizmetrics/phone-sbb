@@ -27,8 +27,10 @@ const mkStops = (conns) => new Function(`
   const ISO_LOCAL=/^\\d{4}-\\d{2}-\\d{2}T(\\d{2}:\\d{2})/;
   ${grab("esc")}
   ${grab("hhmm")}
+  ${grab("shortStop")}
   const verbundHTML=()=> "";
   const jrnConns=${JSON.stringify(conns)};
+  ${grab("rightTrainHTML")}
   ${grab("stopsHTML")}
   return stopsHTML;
 `)();

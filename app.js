@@ -1528,14 +1528,50 @@ function jrnZoneFact(){
   if(!seen || zone===null) return "";
   return `<div class="jzf">&#127903; ${esc(zone)} all the way &#8212; every option shown</div>`;
 }
+/* ---------- am I on the right train? (cross-vendor finding #2) ----------
+   Reassurance at the platform edge, from facts the passenger can physically
+   check against the train in front of them: the line label, the departure time,
+   the platform, and above all the DESTINATION SIGN -- journey.to is what the
+   train's front display actually reads, and it is usually a city BEYOND your
+   exit stop. That mismatch ("my plan says Sargans, the train says Chur") is the
+   classic reason people let their own train leave. Plus the one check that
+   works AFTER boarding: the first stop's name -- hear a different one announced
+   and you are on the wrong train while it still costs one stop, not a canton.
+   The honesty line is load-bearing (UNSOLVED-GAPS para 4: an absence must not
+   read as an assurance): this API says NOTHING about train portions, and a
+   split train's wrong portion is the one wrong train this check cannot catch. */
+function rightTrainHTML(rows,ci,si){
+  const s=(jrnConns[ci]?.sections||[]).filter(x=>x.journey)[si];
+  if(!s||!s.journey) return "";
+  const j=s.journey;
+  const sign=j.to||"";
+  const lbl=((j.category||"")+(j.number?" "+j.number:"")).trim();
+  const dep=s.departure||{};
+  const t=dep.prognosis?.departure||dep.departure;
+  const pf=dep.prognosis?.platform||dep.platform;
+  const exit=s.arrival?.station?.name||"";
+  const first=rows&&rows.length>1&&rows[1] ? rows[1] : null;
+  let h=`<div class="rtc"><span class="rtt">Right train?</span> `
+    + (lbl?`<b>${esc(lbl)}</b>`:"")
+    + (sign?` &#8594; sign reads &#8220;<b>${esc(shortStop(sign))}</b>&#8221;`:"")
+    + (t?` &#183; dep ${hhmm(t)}`:"")
+    + (pf?` &#183; Pl.&#8201;${esc(pf)}`:"");
+  if(sign&&exit&&sign!==exit)
+    h+=`<span class="rtx">You get off earlier, at ${esc(shortStop(exit))} &#8212; the &#8220;${esc(shortStop(sign))}&#8221; sign is still your train.</span>`;
+  if(first)
+    h+=`<span class="rtf">First stop after boarding: <b>${esc(first.station.name)}</b> ${hhmm(first.arrival||first.departure)} &#8212; a different name announced means the wrong train, one stop early.</span>`;
+  h+=`<span class="rtcav">Train portions (splitting trains) are not in this data &#8212; check the carriage display too.</span>`;
+  return h+`</div>`;
+}
 function stopsHTML(rows,ci,si){
-  if(rows===null) return `<div class="snone">Stop list unavailable for this leg.</div>`;
-  if(rows.length<=2) return `<div class="snone">Non-stop &#8212; no intermediate stops.</div>`;
+  const rt = Number.isInteger(ci) ? rightTrainHTML(rows,ci,si) : "";
+  if(rows===null) return rt+`<div class="snone">Stop list unavailable for this leg.</div>`;
+  if(rows.length<=2) return rt+`<div class="snone">Non-stop &#8212; no intermediate stops.</div>`;
   /* replan affordance (UNSOLVED-GAPS 2.1): only when the caller names which
      connection these stops belong to, and never on the journey's own
      destination -- "replan from where you already are going" is a null query. */
   const dest = Number.isInteger(ci) ? jrnConns[ci]?.to?.station?.name : null;
-  return verbundHTML(rows) + rows.map((p,k)=>{
+  return rt + verbundHTML(rows) + rows.map((p,k)=>{
     const end = k===0 || k===rows.length-1;
     const t = k===0 ? (p.departure||p.arrival) : (p.arrival||p.departure);
     const rp = dest && p.station.name!==dest
