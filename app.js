@@ -1511,19 +1511,46 @@ function jrnZoneFact(){
   if(!seen || zone===null) return "";
   return `<div class="jzf">&#127903; ${esc(zone)} all the way &#8212; every option shown</div>`;
 }
-function stopsHTML(rows){
+function stopsHTML(rows,ci,si){
   if(rows===null) return `<div class="snone">Stop list unavailable for this leg.</div>`;
   if(rows.length<=2) return `<div class="snone">Non-stop &#8212; no intermediate stops.</div>`;
+  /* replan affordance (UNSOLVED-GAPS 2.1): only when the caller names which
+     connection these stops belong to, and never on the journey's own
+     destination -- "replan from where you already are going" is a null query. */
+  const dest = Number.isInteger(ci) ? jrnConns[ci]?.to?.station?.name : null;
   return verbundHTML(rows) + rows.map((p,k)=>{
     const end = k===0 || k===rows.length-1;
     const t = k===0 ? (p.departure||p.arrival) : (p.arrival||p.departure);
+    const rp = dest && p.station.name!==dest
+      ? `<button class="srp" type="button" onclick="replanFromStop(event,${ci},${si},${k})"
+           aria-label="Replan from ${esc(p.station.name)}, leaving now"
+           title="Replan from here, leaving now">&#8635;</button>` : "";
     return `<div class="sline ${end?"end":""}">`
       + `<span class="st">${hhmm(t)}</span><span class="sdot"></span>`
       + `<span class="sname">${esc(p.station.name)}</span>`
       + (p.delay?`<span class="sdly">+${p.delay}&#8242;</span>`:"")
       + (p.platform?`<span class="splt">Pl.&#8201;${esc(p.platform)}</span>`:"")
+      + rp
       + `</div>`;
   }).join("");
+}
+/* ---------- replan from here (UNSOLVED-GAPS 2.1, cross-vendor finding #1) ----------
+   The expensive moment is minute 40, when the 3-minute delay becomes 9 and the
+   plan is dead. The app has no GPS by design, so "here" is the stop the
+   passenger taps in the route they are already looking at: one tap sets that
+   stop as origin, keeps the destination, and re-runs the search LEAVING NOW --
+   a fresh answer from the broken moment, not a patched-up old one. The stop is
+   read off legStops at tap time, never baked into the handler (planFromBoard
+   lesson: frozen values point at whichever data later takes that slot). */
+function replanFromStop(ev,ci,si,k){
+  ev.stopPropagation();
+  const rows=legStops(ci,si), p=rows&&rows[k];
+  if(!p || !p.station?.name || !toName) return;
+  if(p.station.name===toName) return;
+  fromName=p.station.name;
+  const f=$("iFrom"); if(f){ f.value=fromName; $("fFrom")?.classList.add("has"); }
+  setWhen("now");                    // replans as its last act -- "from here" means NOW
+  scrollTo({top:0,behavior:"smooth"});
 }
 function toggleLeg(btn,ci,si){
   const card=btn.closest(".conn"), panel=card.querySelector(".stops");
@@ -1531,7 +1558,7 @@ function toggleLeg(btn,ci,si){
   card.querySelectorAll(".legs .b2").forEach(b=>b.classList.remove("on"));
   if(wasOpen){ panel.dataset.open=""; panel.innerHTML=""; return; }   // :empty collapses it
   panel.dataset.open=String(si); btn.classList.add("on");
-  panel.innerHTML = stopsHTML(legStops(ci,si));
+  panel.innerHTML = stopsHTML(legStops(ci,si),ci,si);
 }
 
 /* ---------- route sketch (SVG, no map tiles, no dependency) ----------
