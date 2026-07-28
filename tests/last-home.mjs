@@ -15,9 +15,8 @@
 // the last two services back from Vitznau leave 22:51 and 23:21 and arrive
 // after midnight. A midnight cutoff silently deletes them.
 import fs from "fs";
-const APP = process.env.APP_HTML || new URL("../index.html", import.meta.url).pathname;
+import { src, APP } from "./_src.mjs";
 console.log("reading " + APP);
-const src = fs.readFileSync(APP, "utf8");
 
 const grab = (n) => {
   const i = src.search(new RegExp("(async )?function " + n + "\\("));

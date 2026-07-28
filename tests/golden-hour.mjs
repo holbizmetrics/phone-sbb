@@ -7,9 +7,8 @@
 // always has to roll to tomorrow), and a shared function makes it cheap to prove
 // the rare branch of one is the normal branch of the other.
 import fs from "fs";
-const APP = process.env.APP_HTML || new URL("../index.html", import.meta.url).pathname;
+import { src, APP } from "./_src.mjs";
 console.log("reading " + APP);
-const src = fs.readFileSync(APP, "utf8");
 
 // keeps a leading `async ` -- dropping it turns `await` into a SyntaxError
 const grab = (n) => {

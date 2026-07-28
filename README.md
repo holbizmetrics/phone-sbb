@@ -1,8 +1,8 @@
 # Rail — live Swiss departures & smart journey planner
 
-A fast, single-file departure board and journey planner for the Swiss rail
-network. No build step, no dependencies, no API key — one HTML file you can
-open anywhere.
+A fast, static departure board and journey planner for the Swiss rail
+network. No build step, no dependencies, no API key — three plain files
+(`index.html` + `app.css` + `app.js`) you can open anywhere, straight from disk.
 
 **Live:** https://holbizmetrics.github.io/phone-sbb/
 
@@ -221,7 +221,10 @@ Works identically on desktop and phone.
 
 ## How it's built
 
-- **One file.** Vanilla HTML/CSS/JS, no framework, no bundler, no build step.
+- **Three plain files.** `index.html` (markup), `app.css`, `app.js` — vanilla,
+  no framework, no bundler, no build step. It began as one file and was split
+  2026-07-28 when that file passed 3000 lines; `app.js` is a plain script
+  (not a module), so opening `index.html` straight from disk still works.
 - **Data:**
 
   | Source | Used for |
@@ -265,12 +268,26 @@ node tests/last-home.mjs        # the last way back — and an outage is not "no
 node tests/smoke.mjs            # Playwright end-to-end — CI only
 ```
 
-Everything but the last one lifts the real functions straight out of `index.html` and runs
+Everything but the last one lifts the real functions straight out of the app
+(`tests/_src.mjs` assembles `index.html` with `app.css` and `app.js` inlined,
+the way the browser sees the page) and runs
 them in Node against a stub DOM (and, where it matters, a frozen clock), so the
 logic stays testable on a phone where
 Playwright can't be installed. Each one carries a control that fails if the
 harness itself stopped working — a check that silently doesn't run reads as a
 pass, which is worse than no check at all.
+
+### Preview on the phone without deploying
+
+```sh
+cd ~/phone-sbb && python -m http.server 8080
+```
+
+then open `http://localhost:8080` in the phone's browser — the same device the
+app is for, with uncommitted changes visible instantly. The push → CI → Pages →
+reload loop (~2 min) is only needed for the final verify; every visual defect so
+far (the wrapping caption, the chopped fade) was found by looking, not by tests,
+so shortening this loop is worth more than another assertion.
 
 CI runs the full smoke suite on every branch and pull request; `master`
 deploys only on green. The suite covers the change-buffer maths, prognosis

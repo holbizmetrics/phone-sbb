@@ -1,0 +1,446 @@
+  :root{
+    --bg:#0a0a0c; --bg2:#141418; --card:#17171c; --card2:#1e1e24;
+    --line:#26262e; --txt:#f4f4f6; --dim:#9a9aa6; --faint:#5a5a66;
+    --red:#eb0000; --redsoft:#ff3b3b; --grn:#22c55e; --amber:#f59e0b;
+    --blue:#3b82f6; --violet:#8b5cf6; --teal:#14b8a6;
+    --radius:18px; --shadow:0 8px 30px rgba(0,0,0,.45);
+    --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
+  }
+  /* Light theme: respect the OS/browser preference automatically -- no toggle,
+     no extra UI. Dark stays the default; this only fires when the user has
+     already chosen light at system level. Outdoor readability in bright sun,
+     and light-on-dark is genuinely harder to read with astigmatism. */
+  /* Two explicit themes, selected by data-theme on <html>. DARK IS THE DEFAULT
+     FOR EVERYONE -- see the note below; the OS preference is deliberately not
+     consulted. Every widget reads --chip/--track/--knob/--segon so a theme is a
+     variable swap, never a pile of per-element patches. */
+  :root[data-theme="light"]{
+    --bg:#f6f6f8; --bg2:#ececf0; --card:#ffffff; --card2:#f2f2f6;
+    --line:#d9d9e0; --txt:#16161a; --dim:#5c5c68; --faint:#7a7a86;
+    --chip:#e8e8ee; --knob:#ffffff; --track:#c8c8d2; --segon:#16161a; --segontxt:#ffffff; --shadow:0 6px 20px rgba(20,20,30,.10);
+    --errtxt:#a51212; --warntxt:#8a5800; --tighttxt:#b00000; --scenictxt:#8b1fa8;
+  }
+  :root[data-theme="dark"]{
+    --bg:#0a0a0c; --bg2:#141418; --card:#17171c; --card2:#1e1e24;
+    --line:#26262e; --txt:#f4f4f6; --dim:#9a9aa6; --faint:#5a5a66;
+    --chip:#22222a; --knob:#6a6a76; --track:#2a2a33; --segon:linear-gradient(145deg,#2a2a33,#202027); --segontxt:#ffffff; --shadow:0 8px 30px rgba(0,0,0,.45);
+    --errtxt:#ffb3b3; --warntxt:#ffe0a3; --tighttxt:#ff8f8f; --scenictxt:#e9a3f2;
+  }
+  :root{ --chip:#22222a; --knob:#6a6a76; --track:#2a2a33; --segon:linear-gradient(145deg,#2a2a33,#202027); --segontxt:#fff; --errtxt:#ffb3b3; --warntxt:#ffe0a3; --tighttxt:#ff8f8f; --scenictxt:#e9a3f2; }   /* dark defaults */
+
+  /* DEFAULT IS DARK FOR EVERYONE. The dark canvas IS the product's look, so it
+     is not left to the OS to guess -- prefers-color-scheme is deliberately NOT
+     consulted for the default. Light is opt-IN via the theme button, and that
+     choice persists. (This reverses an earlier auto-only design: the operator
+     runs a light desktop but wants the app dark, which is exactly the case an
+     OS-follows-you default gets wrong.) */
+  /* the washed-out header gradient only suits the dark canvas */
+  :root[data-theme="light"] body{ background:var(--bg) }
+  :root[data-theme="dark"] body{
+    background:
+      radial-gradient(1200px 600px at 50% -10%, #1b1220 0%, transparent 55%),
+      radial-gradient(900px 500px at 100% 0%, #101822 0%, transparent 50%),
+      var(--bg);
+    background-repeat:no-repeat; background-attachment:fixed;
+  }
+  .themebtn{background:none; border:0; color:var(--dim); font-size:17px; cursor:pointer;
+    padding:4px 6px; border-radius:8px; line-height:1}
+  .themebtn:active{background:var(--chip)}
+
+  /* Honour "reduce motion": the app is a utility, not a show. Users who asked
+     the OS for less animation get none -- the SBB app's refusal to make its
+     animations optional is a documented complaint; this is the opt-out, free. */
+  @media (prefers-reduced-motion: reduce){
+    *, *::before, *::after{
+      animation-duration:.001ms !important; animation-iteration-count:1 !important;
+      transition-duration:.001ms !important; scroll-behavior:auto !important;
+    }
+  }
+
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%}
+  body{
+    background:
+      radial-gradient(1200px 600px at 50% -10%, #1b1220 0%, transparent 55%),
+      radial-gradient(900px 500px at 100% 0%, #101822 0%, transparent 50%),
+      var(--bg);
+    color:var(--txt);
+    font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;
+    /* backgrounds REPEAT by default: body is height:100% (one viewport) while the
+       page scrolls far past it, so the radial gradients tiled and produced a hard
+       horizontal seam with dark wedges. Pin them: no-repeat + fixed to the viewport. */
+    background-repeat:no-repeat; background-attachment:fixed;
+    -webkit-font-smoothing:antialiased; overscroll-behavior-y:contain;
+    display:flex; flex-direction:column; min-height:100%;
+  }
+  .wrap{max-width:640px; width:100%; margin:0 auto; flex:1; display:flex; flex-direction:column;
+    padding:calc(var(--safe-t) + 14px) 16px calc(var(--safe-b) + 96px)}
+
+  /* ---- header ---- */
+  header{display:flex; align-items:center; gap:12px; margin-bottom:14px}
+  .brand{display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:-.02em; font-size:20px}
+  .mark{width:34px; height:34px; border-radius:10px; display:grid; place-items:center;
+    background:linear-gradient(145deg,var(--red),#a30000); box-shadow:0 4px 14px rgba(235,0,0,.4);
+    font-size:19px; color:#fff; border:0; padding:0; font-family:inherit; cursor:pointer;
+    transition:transform .15s}
+  .mark:active{transform:scale(.92)}
+  .mark[aria-expanded="true"]{box-shadow:0 0 0 3px var(--bg), 0 0 0 5px var(--red)}
+  /* help sheet */
+  .hscrim{position:fixed; inset:0; background:rgba(0,0,0,.62); z-index:60; display:none;
+    overflow-y:auto; padding:22px 14px; -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px)}
+  .hscrim.on{display:block}
+  .hsheet{max-width:560px; margin:0 auto; background:var(--card); border:1px solid var(--line);
+    border-radius:18px; padding:18px 18px 22px; box-shadow:var(--shadow)}
+  .hsheet h2{margin:0; font-size:19px; letter-spacing:-.02em}
+  .hsheet .hsub{color:var(--dim); font-size:12px; margin-top:3px}
+  .hclose{margin-left:auto; background:var(--chip); border:1px solid var(--line); color:var(--dim);
+    font-size:15px; line-height:1; border-radius:9px; padding:7px 10px; cursor:pointer; font-family:inherit}
+  .hhead{display:flex; align-items:flex-start; gap:12px}
+  .hsheet h3{margin:18px 0 7px; font-size:12px; letter-spacing:.07em; text-transform:uppercase;
+    color:var(--dim); font-weight:800}
+  .hrow{display:flex; gap:10px; align-items:baseline; padding:5px 0; font-size:14px; line-height:1.45}
+  .hrow .k{flex:0 0 auto; min-width:74px; font-weight:700; color:var(--txt)}
+  .hrow .v{color:var(--dim); min-width:0}
+  .hnote{margin-top:16px; padding-top:13px; border-top:1px dashed var(--line);
+    font-size:12px; color:var(--faint); line-height:1.5}
+  .hbuild{margin-top:10px; font-size:11px; color:var(--faint);
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace; user-select:all}
+  .brand small{display:block; font-weight:500; font-size:11px; color:var(--dim); letter-spacing:.06em; text-transform:uppercase}
+  .clock{margin-left:auto; text-align:right; font-variant-numeric:tabular-nums}
+  .clock b{font-size:22px; font-weight:700; letter-spacing:-.02em}
+  .clock span{display:block; font-size:11px; color:var(--faint)}
+
+  /* ---- tabs ---- */
+  .tabs{display:flex; background:var(--bg2); border:1px solid var(--line); border-radius:14px; padding:4px; margin-bottom:14px}
+  .tabs button{flex:1; border:0; background:transparent; color:var(--dim); font:600 14px/1 inherit;
+    padding:11px; border-radius:10px; transition:.25s; cursor:pointer}
+  .tabs button.on{background:var(--segon); color:var(--segontxt); box-shadow:0 2px 8px rgba(0,0,0,.22)}
+
+  /* ---- wander cards ---- */
+  .wcard{background:var(--card); border:1px solid var(--line); border-radius:16px;
+    padding:14px; margin-bottom:9px; animation:rise .3s ease backwards}
+  .wcard .whead{display:flex; align-items:center; gap:12px}
+  .wcard .wto{flex:1; min-width:0; font-weight:700; font-size:16px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .wcard .wride{flex:0 0 auto; font-weight:800; font-size:17px; font-variant-numeric:tabular-nums}
+  .wcard .wlegs{margin-top:8px; font-size:13px; color:var(--dim); line-height:1.6;
+    font-variant-numeric:tabular-nums}
+  .wcard .wlegs b{color:var(--txt)}
+  .wcard .wlast{margin-top:7px; font-size:12px; font-weight:700; color:var(--amber);
+    font-variant-numeric:tabular-nums}
+  .wcard .wwarn{display:inline-block; margin-top:6px; font-size:12px; color:var(--amber);
+    background:rgba(245,158,11,.12); padding:3px 9px; border-radius:8px}
+  .wcard .wunv{display:inline-block; margin-top:6px; font-size:12px; color:var(--redsoft);
+    background:rgba(235,0,0,.10); padding:3px 9px; border-radius:8px}
+  #wanBudget .chip.on{border-color:var(--blue); color:var(--txt); opacity:1}
+
+  /* ---- search / inputs ---- */
+  .field{position:relative; margin-bottom:10px}
+  .field .ico{position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--faint); font-size:16px; pointer-events:none}
+  input.stn{width:100%; background:var(--card); border:1px solid var(--line); color:var(--txt);
+    font:500 16px inherit; padding:15px 44px 15px 42px; border-radius:14px; outline:none; transition:.2s}
+  input.stn:focus{border-color:#3a3a46; background:var(--card2)}
+  .field .clr{position:absolute; right:10px; top:50%; transform:translateY(-50%); width:26px; height:26px;
+    border:0; border-radius:50%; background:var(--chip); color:var(--dim); font-size:14px; display:none; place-items:center; cursor:pointer}
+  .field.has .clr{display:grid}
+
+  .ac{position:absolute; z-index:40; left:0; right:0; top:calc(100% + 6px); background:var(--card2);
+    border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; display:none}
+  .ac.show{display:block; animation:pop .16s ease}
+  .ac div{padding:13px 16px; border-bottom:1px solid var(--line); cursor:pointer; display:flex; align-items:center; gap:10px}
+  .ac div:last-child{border-bottom:0}
+  .ac div:active,.ac div.sel{background:var(--bg2)}
+  .ac div .t{color:var(--faint); font-size:14px}
+
+  .swap{display:flex; justify-content:center; margin:0 0 10px; position:relative; z-index:5}
+  .swap button{width:38px; height:38px; border-radius:50%; border:1px solid var(--line); background:var(--card);
+    color:var(--dim); font-size:17px; cursor:pointer; transition:.25s; box-shadow:var(--shadow)}
+  .swap button:active{transform:rotate(180deg) scale(.9); color:#fff}
+
+  /* ---- favourites ---- */
+  .favs{display:flex; gap:8px; overflow-x:auto; padding:2px 0 12px; scrollbar-width:none}
+  .favs::-webkit-scrollbar{display:none}
+  /* The scrollbar is hidden, so an overflowing chip row gives no sign that more
+     chips exist -- at 360px the mode row runs past the edge and clips Tram.
+     These masks fade the edge you can still scroll toward.
+     A mask, not a background gradient: the chips are opaque, so anything painted
+     BEHIND them would not fade them. Applied only from a measured scroll
+     position (fadeEdges) -- see the note there.
+
+     Distance is 64px, not the 24px this shipped with. At 24px the ramp only
+     covered the last third of a ~67px chip, so most of the chip stayed at full
+     opacity and the eye still landed on the hard vertical cut at the container
+     edge -- reported from a real dark-mode phone as "it just looks chopped".
+     The stops are also front-loaded rather than linear: a straight ramp spends
+     most of its length near full opacity, which is exactly the part that reads
+     as solid. Dark-on-dark has little luminance to work with, so the dissolve
+     has to be long and start early or it is not a dissolve at all. */
+  .favs.fadeL{-webkit-mask-image:linear-gradient(to right,transparent,rgba(0,0,0,.35) 18px,rgba(0,0,0,.75) 38px,#000 64px);
+              mask-image:linear-gradient(to right,transparent,rgba(0,0,0,.35) 18px,rgba(0,0,0,.75) 38px,#000 64px)}
+  .favs.fadeR{-webkit-mask-image:linear-gradient(to left,transparent,rgba(0,0,0,.35) 18px,rgba(0,0,0,.75) 38px,#000 64px);
+              mask-image:linear-gradient(to left,transparent,rgba(0,0,0,.35) 18px,rgba(0,0,0,.75) 38px,#000 64px)}
+  .favs.fadeL.fadeR{-webkit-mask-image:linear-gradient(to right,transparent,rgba(0,0,0,.35) 18px,rgba(0,0,0,.75) 38px,#000 64px,#000 calc(100% - 64px),rgba(0,0,0,.75) calc(100% - 38px),rgba(0,0,0,.35) calc(100% - 18px),transparent);
+                    mask-image:linear-gradient(to right,transparent,rgba(0,0,0,.35) 18px,rgba(0,0,0,.75) 38px,#000 64px,#000 calc(100% - 64px),rgba(0,0,0,.75) calc(100% - 38px),rgba(0,0,0,.35) calc(100% - 18px),transparent)}
+  .chip{flex:0 0 auto; background:var(--card); border:1px solid var(--line); color:var(--txt);
+    padding:9px 14px; border-radius:999px; font:600 13px inherit; cursor:pointer; white-space:nowrap; transition:.2s}
+  .chip:active{transform:scale(.94)}
+  .chip.star{color:var(--amber)}
+  .chip.mode{font-size:12px; padding:7px 11px; opacity:.62}
+  .chip.mode.on{opacity:1; border-color:var(--blue); color:var(--txt)}
+  .chip.mode.clear{opacity:.8; border-style:dashed}
+  .chip.mode.cat{font-size:11px; padding:6px 9px}
+  /* flex:0 0 auto + nowrap for the same reason .chip has them: a bare span in a
+     flex row is a shrinkable item, so on a narrow screen this collapsed to a
+     two-line "Train / type" and pushed the row taller than the one above it.
+     Seen on a real phone at 360px; no unit test can catch a wrap. */
+  .catlabel{font-size:11px; color:var(--faint); align-self:center; margin-right:2px;
+            letter-spacing:.03em; flex:0 0 auto; white-space:nowrap}
+  .catnote{font-size:12px; color:var(--dim); line-height:1.5; margin:0 2px 12px;
+           padding:8px 10px; border-left:3px solid var(--blue); background:var(--card); border-radius:0 8px 8px 0}
+  .chip.route{font-weight:600}
+  .chip.route .ra{color:var(--faint); margin:0 2px}
+
+  /* ---- board ---- */
+  .boardhead{display:flex; align-items:baseline; gap:8px; margin:6px 2px 12px}
+  .boardhead h2{margin:0; font-size:20px; font-weight:800; letter-spacing:-.02em}
+  .boardhead .star{margin-left:auto; background:none; border:0; font-size:22px; color:var(--faint); cursor:pointer; transition:.2s}
+  .boardhead .star.on{color:var(--amber); text-shadow:0 0 14px rgba(245,158,11,.5)}
+  .boardhead .rf{background:none;border:0;color:var(--dim);font-size:18px;cursor:pointer;padding:4px}
+  .boardhead .rf.spin{animation:spin .8s linear infinite}
+
+  .dep{display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--line);
+    padding:14px; border-radius:16px; margin-bottom:9px; animation:rise .3s ease backwards}
+  .badge{flex:0 0 auto; min-width:50px; height:38px; padding:0 10px; border-radius:10px; display:grid; place-items:center;
+    font-weight:800; font-size:14px; letter-spacing:.01em; color:#fff; text-align:center}
+  .dep .mid{flex:1; min-width:0}
+  .dep .to{font-weight:700; font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .dep .via{font-size:12px; color:var(--faint); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .dep .rt{flex:0 0 auto; text-align:right; min-width:66px}
+  .dep .min{font-weight:800; font-size:19px; font-variant-numeric:tabular-nums; letter-spacing:-.02em}
+  .dep .min.now{color:var(--grn)}
+  .dep .at{font-size:12px; color:var(--dim); font-variant-numeric:tabular-nums}
+  .dep .at .late{color:var(--redsoft); font-weight:700}
+  .plat{display:inline-block; margin-top:3px; font-size:11px; color:var(--dim); background:var(--chip); padding:2px 7px; border-radius:6px}
+  .pfrow{display:flex; gap:9px; align-items:baseline; flex-wrap:wrap; margin-top:9px}
+  .pf{font-size:14px; font-weight:700; color:var(--txt); background:var(--chip);
+    padding:3px 10px; border-radius:8px; font-variant-numeric:tabular-nums}
+  .pf.chg{color:var(--amber)}
+  .pfa{font-size:11px; color:var(--dim)}
+  .cxpf{color:var(--dim); font-weight:700}
+  .plat.chg{color:var(--amber); background:rgba(245,158,11,.12)}
+
+  /* tappable departure row: the affordance people were already reaching for */
+  .dep{cursor:pointer; flex-wrap:wrap}
+  .dep:active{transform:scale(.995)}
+  .dep.open{border-color:var(--faint)}
+  .dep .togo{background:none; border:0; padding:0; margin:0; font:inherit; color:inherit;
+    text-align:left; cursor:pointer; border-bottom:1px dotted var(--faint)}
+  .dep .togo:active{opacity:.6}
+  .dstops:not(:empty){flex-basis:100%; margin-top:11px; padding-top:11px; border-top:1px solid var(--line)}
+  .dstops .sline{display:flex; gap:9px; align-items:baseline; padding:3px 0; font-size:13px; font-variant-numeric:tabular-nums}
+  .dstops .st{color:var(--dim); min-width:42px}
+  .dstops .sdot{width:7px; height:7px; border-radius:50%; border:2px solid var(--faint); flex:0 0 auto}
+  .dstops .sline.end .sdot{background:var(--txt); border-color:var(--txt)}
+  .dstops .sname{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--dim)}
+  .dstops .sline.end .sname{color:var(--txt); font-weight:700}
+  .dstops .splt{font-size:11px; color:var(--faint)}
+  .dstops .snone{font-size:12px; color:var(--faint); padding:2px 0}
+
+  /* ---- connections ---- */
+  .conn{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:15px; margin-bottom:11px; animation:rise .3s ease backwards}
+  .conn .top{display:flex; align-items:center; gap:10px; font-variant-numeric:tabular-nums}
+  .conn .tt{font-size:22px; font-weight:800; letter-spacing:-.02em}
+  .conn .arr{color:var(--faint); font-size:16px}
+  .conn .wx{font-size:14px; font-weight:700; color:var(--dim); white-space:nowrap; display:inline-flex; align-items:center; gap:3px}
+  .conn .wx.tappable{cursor:pointer; border-bottom:1px dotted var(--faint); padding-bottom:1px}
+  .conn .wx.tappable:active{opacity:.6}
+  .wxpop{position:absolute; z-index:60; max-width:min(320px,calc(100vw - 16px));
+    background:var(--card2); border:1px solid var(--line); border-radius:12px;
+    box-shadow:var(--shadow); padding:10px 13px; font-size:13px; color:var(--txt);
+    line-height:1.45; animation:pop .14s ease}
+  /* ---- route sketch ---- */
+  .skbtn{margin-left:auto; border:1px solid var(--line); background:var(--chip); color:var(--dim);
+    font-size:13px; line-height:1; padding:5px 8px; border-radius:9px; cursor:pointer; transition:.2s}
+  .skbtn.on{background:var(--segon); color:var(--segontxt); border-color:transparent}
+  .sketch:not(:empty){margin-top:12px; padding-top:12px; border-top:1px solid var(--line)}
+  .sk{width:100%; height:auto; display:block; overflow:visible}
+  .sktrain{fill:var(--txt); stroke:var(--card); stroke-width:2}
+  .sktrain-halo{fill:var(--grn); opacity:.28; animation:skpulse 2.2s ease-in-out infinite}
+  @keyframes skpulse{0%,100%{r:8; opacity:.30} 50%{r:13; opacity:.10}}
+  .sklbl{fill:var(--txt); font-size:11px; font-weight:700; paint-order:stroke;
+    stroke:var(--card); stroke-width:3.5px; stroke-linejoin:round;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif}
+  .sklbl.chg{fill:var(--dim); font-weight:600}
+  .elevbox:not(:empty){margin-top:10px}
+  .elev{width:100%; height:auto; display:block}
+  .elev-fill{fill:var(--grn); opacity:.16}
+  .elev-line{stroke:var(--grn); stroke-width:2; stroke-linejoin:round}
+  .elev-ax{fill:var(--faint); font-size:9px; font-weight:700}
+  .elev-peak{fill:var(--txt)}
+  .elev-peaklbl{fill:var(--dim); font-size:10px; font-weight:700}
+  .elev-sum{font-size:12px; color:var(--dim); margin-top:4px}
+  .elev-src{display:block; font-size:10px; color:var(--faint); margin-top:2px}
+  .elev-sum b{color:var(--txt)}
+  .elev-src{color:var(--faint); cursor:help}
+  .summitbox:not(:empty){margin-top:12px; padding-top:10px; border-top:1px solid var(--line)}
+  .smtitle{font-size:13px; font-weight:800; color:var(--txt)}
+  .smbits{font-weight:600; color:var(--dim); font-size:11px; white-space:nowrap}
+  .smv{margin-top:4px; font-size:13px; font-weight:700}
+  .smv.good{color:var(--grn)}
+  .smv.bad{color:var(--amber)}
+  .homebox:not(:empty){margin-top:12px; padding-top:10px; border-top:1px solid var(--line)}
+  .lhtitle{font-size:12px; font-weight:800; color:var(--dim); margin-bottom:4px}
+  .lhsearch{font-size:11px; color:var(--faint)}
+  .lhrow{font-size:13px; font-weight:700; color:var(--txt)}
+  .lhslack{font-weight:600; color:var(--dim); font-size:11px}
+  .lhrow.tight{color:var(--amber)}
+  .lhnone{font-size:13px; font-weight:700; color:var(--amber)}
+  .enroutebox:not(:empty){margin-top:12px; padding-top:10px; border-top:1px solid var(--line)}
+  .ertitle{font-size:12px; font-weight:800; color:var(--dim); margin-bottom:6px}
+  .ersearch{font-size:11px; color:var(--faint)}
+  .errow{display:flex; align-items:baseline; gap:8px; padding:3px 0; font-size:13px}
+  .errow .ern{font-weight:700; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .errow .ers{margin-left:auto; color:var(--faint); font-size:11px; white-space:nowrap}
+  .errow .erm{text-decoration:none; opacity:.75}
+  .skmaps{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px}
+  .skmaps a{font-size:12px; font-weight:600; color:var(--dim); text-decoration:none;
+    background:var(--chip); border:1px solid var(--line); border-radius:9px; padding:6px 10px}
+  .skmaps a:active{opacity:.6}
+  .sk-unused{font-size:11px; font-weight:700;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif}
+  .conn .dur{margin-left:auto; text-align:right}
+  .conn .dur b{font-size:16px; font-weight:700}
+  .conn .dur span{display:block; font-size:11px; color:var(--faint)}
+  .legs{display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:12px; padding-top:12px; border-top:1px solid var(--line)}
+  .legs .b2{min-width:0; height:26px; padding:0 8px; border-radius:8px; display:grid; place-items:center; font-weight:800; font-size:12px; color:#fff; border:0; font-family:inherit; cursor:pointer; position:relative; transition:box-shadow .15s, transform .15s}
+  .legs .b2:active{transform:scale(.94)}
+  .legs .b2.on{box-shadow:0 0 0 2px var(--bg), 0 0 0 4px currentColor}
+  .legs .sep{color:var(--faint); font-size:13px}
+  .legs .lhint{margin-right:auto; font-size:10px; color:var(--faint); margin-left:auto; letter-spacing:.02em}
+
+  /* ---- expandable leg -> intermediate stops (from section.journey.passList) ---- */
+  .stops:empty{display:none}
+  .stops{margin-top:10px; padding:10px 2px 2px; border-top:1px dashed var(--line)}
+  .stops .sline{display:flex; gap:9px; align-items:baseline; padding:3px 0; font-size:13px; font-variant-numeric:tabular-nums}
+  .stops .st{color:var(--dim); flex:0 0 auto; min-width:42px; font-weight:700}
+  .stops .sdot{flex:0 0 auto; width:9px; height:9px; border-radius:50%; border:2px solid var(--faint); align-self:center}
+  .stops .sline.end .sdot{background:var(--txt); border-color:var(--txt)}
+  .stops .sname{color:var(--dim); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .stops .sline.end .sname{color:var(--txt); font-weight:700}
+  .stops .sdly{color:var(--amber); font-weight:700; flex:0 0 auto; font-size:12px}
+  .stops .splt{color:var(--faint); flex:0 0 auto; font-size:11px; margin-left:auto}
+  .stops .snone{font-size:12px; color:var(--faint); padding:2px 0}
+  .stops .svb{font-size:12px; color:var(--dim); padding:0 0 7px; display:flex; flex-wrap:wrap; gap:5px; align-items:baseline}
+  .stops .svb .vbz{background:var(--line); color:var(--txt); border-radius:9px; padding:1px 7px; font-size:11px; font-weight:700}
+  .stops .svb .vbq{color:var(--faint); font-size:11px}
+  .conn .meta{margin-top:10px; font-size:12px; color:var(--dim)}
+  .conn .meta b{color:var(--txt)}
+  .conn .plt{color:var(--amber)}
+
+  /* ---- smart change-finder ---- */
+  .smartbar{display:flex; align-items:center; gap:10px; margin:2px 2px 14px; flex-wrap:wrap}
+  .smart-toggle{display:flex; align-items:center; gap:9px; cursor:pointer; user-select:none}
+  .smart-toggle input{position:absolute; opacity:0; pointer-events:none}
+  .smart-toggle .track{width:42px; height:24px; border-radius:999px; background:var(--track); border:1px solid var(--line); position:relative; transition:.25s; flex:0 0 auto}
+  .smart-toggle .knob{position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%; background:var(--knob); transition:.25s}
+  .smart-toggle input:checked + .track{background:linear-gradient(145deg,var(--red),#a30000); border-color:transparent}
+  .smart-toggle input:checked + .track .knob{left:20px; background:#fff}
+  .smart-toggle .lbl{font-weight:700; font-size:14px}
+  .tzecho{font-size:11px; color:var(--faint); margin-top:2px; font-variant-numeric:tabular-nums}
+  .tznote{font-size:11px; color:var(--amber); background:rgba(245,158,11,.10);
+    border:1px solid rgba(245,158,11,.28); border-radius:10px; padding:7px 11px; margin-bottom:10px}
+  .smart-hint{font-size:11px; color:var(--faint)}
+
+  /* ---- when-to-travel (now / leave at / arrive by) ---- */
+  .whenbar{display:flex; align-items:center; gap:8px; margin:0 2px 14px; flex-wrap:wrap}
+  /* wraps because five options do not fit one phone-width row; the group stays
+     one bordered block so a second line still reads as the same control */
+  .seg{display:flex; flex-wrap:wrap; background:var(--bg2); border:1px solid var(--line); border-radius:12px; padding:3px}
+  .seg button{border:0; background:transparent; color:var(--dim); font:600 13px/1 inherit;
+    padding:8px 12px; border-radius:9px; cursor:pointer; transition:.2s}
+  .seg button.on{background:var(--segon); color:var(--segontxt); box-shadow:0 2px 8px rgba(0,0,0,.18)}
+  .whenat{color-scheme:dark; background:var(--card); border:1px solid var(--line); color:var(--txt);
+    font:600 13px inherit; padding:9px 11px; border-radius:11px; outline:none; color-scheme:dark}
+  .sunhint:not(:empty){flex-basis:100%; font-size:11px; color:var(--amber); margin-top:2px}
+  .sunhint b{color:var(--txt)}
+  .seg button.busy{opacity:.5}
+  .whenclear{width:30px; height:30px; border:0; border-radius:50%; background:var(--chip); color:var(--dim);
+    font-size:13px; cursor:pointer}
+  :root[data-theme="light"] .whenat{color-scheme:light}
+  .shead{font-size:13px; color:var(--dim); background:var(--card); border:1px solid var(--line); border-radius:12px; padding:11px 13px; margin-bottom:12px; line-height:1.5}
+  .shead.warn{background:rgba(245,158,11,.1); border-color:rgba(245,158,11,.3); color:var(--warntxt)}
+  .shead.good{border-color:rgba(34,197,94,.25)}
+  .shead b{color:var(--txt)}
+  .shint{font-size:12px; color:var(--faint); margin:-4px 2px 12px; display:flex; align-items:center; gap:6px}
+  .shint::before{content:""; width:9px; height:9px; border:2px solid var(--faint); border-top-color:transparent; border-radius:50%; display:inline-block; animation:spin .7s linear infinite}
+  .wonders{margin-top:14px}
+  .wtoggle{width:100%; text-align:left; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px; color:var(--txt); font-size:14px; font-weight:600; display:flex; align-items:center; gap:8px; cursor:pointer}
+  .wtoggle .wchev{margin-left:auto; color:var(--faint); transition:transform .2s}
+  .wtoggle.open .wchev{transform:rotate(180deg)}
+  .wbody:not(:empty){margin-top:8px; display:flex; flex-direction:column; gap:8px}
+  .wloading,.wempty{font-size:13px; color:var(--faint); padding:6px 4px}
+  .wcard{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:11px 13px}
+  .wmain{display:flex; align-items:baseline; gap:8px}
+  .wmain .wemoji{font-size:16px}
+  .wmain .wname{font-weight:700; font-size:15px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .wmain .wmeta{margin-left:auto; font-size:12px; color:var(--dim); white-space:nowrap; flex:0 0 auto}
+  .wmain .wpin{flex:0 0 auto; font-size:14px; text-decoration:none; opacity:.7; line-height:1}
+  .wmain .wpin:hover{opacity:1}
+  .wrich:not(:empty){display:flex; gap:10px; margin-top:9px}
+  .wrich .wthumb{width:56px; height:56px; object-fit:cover; border-radius:8px; flex:0 0 auto}
+  .wrich .wtext{min-width:0; font-size:12px; color:var(--dim); line-height:1.45}
+  .wrich .wtext p{margin:0 0 3px}
+  .wrich .wtext a{color:var(--accent, #6ea8fe); text-decoration:none}
+  .wrich .wattr{color:var(--faint); font-size:11px}
+  .conn.win{border-color:rgba(34,197,94,.5); box-shadow:0 0 0 1px rgba(34,197,94,.15),var(--shadow)}
+  .conn.hastight{border-color:rgba(245,158,11,.4)}
+  .chg{display:flex; flex-wrap:wrap; gap:6px; margin-top:11px}
+  .cx{font-size:11px; padding:3px 9px; border-radius:7px; background:var(--chip); color:var(--dim); font-variant-numeric:tabular-nums}
+  .cx b{color:var(--txt); font-weight:800}
+  .cx.warn{background:rgba(245,158,11,.12); color:var(--amber)}
+  .cx.warn b{color:var(--amber)}
+  .cx.tight{background:rgba(235,0,0,.16); color:var(--tighttxt)}
+  .cx.tight b{color:var(--tighttxt)}
+  .rbrow{display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin-bottom:6px}
+  .rbrow:empty{display:none}
+  .rib{font-size:10px; font-weight:800; letter-spacing:.03em; text-transform:uppercase; padding:3px 8px; border-radius:6px; white-space:nowrap}
+  .rib.pick{background:rgba(34,197,94,.16); color:#7be6a3}
+  .rib.base{background:var(--chip); color:var(--dim)}
+  .rib.tight{background:rgba(245,158,11,.16); color:var(--amber)}
+  .rib.scenic{background:rgba(192,38,211,.16); color:var(--scenictxt)}
+  .rib.evbus{background:rgba(239,68,68,.18); color:#ff9b9b}
+  .rib.veh{background:var(--chip); color:var(--dim); text-transform:none; letter-spacing:0}
+  .viatag{font-size:11px; color:var(--violet); font-weight:700}
+
+  /* ---- states ---- */
+  .skel{height:66px; border-radius:16px; margin-bottom:9px;
+    background:linear-gradient(100deg,var(--card) 30%,#22222a 50%,var(--card) 70%); background-size:200% 100%;
+    animation:sh 1.2s linear infinite}
+  .empty{text-align:center; color:var(--faint); padding:60px 20px}
+  .empty .big{font-size:40px; margin-bottom:10px; opacity:.5}
+  .emptywhy{margin-top:14px; font-size:13px; color:var(--dim); line-height:1.5}
+  .linkish{background:none; border:0; padding:0; font:inherit; font-weight:700;
+    color:var(--blue); text-decoration:underline; cursor:pointer}
+  .err{background:rgba(235,0,0,.1); border:1px solid rgba(235,0,0,.3); color:var(--errtxt);
+    padding:14px; border-radius:14px; text-align:center; font-size:14px}
+  .hint{color:var(--faint); font-size:13px; text-align:center; padding:8px}
+
+  /* touch timetable -- the tile grid is the drag surface. touch-action:none on
+     the TILES only, so a drag that starts on a tile draws the line while a
+     swipe in the gaps still scrolls the page. */
+  .twrap{position:relative}
+  .tgrid{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+  .tile{height:72px; border-radius:14px; background:var(--card2); border:1px solid var(--line);
+    display:flex; align-items:flex-end; padding:10px 12px; font-weight:800; font-size:15px;
+    color:var(--txt); user-select:none; -webkit-user-select:none; touch-action:none;
+    overflow:hidden; transition:opacity .15s, border-color .15s, background .15s}
+  .tile.dim{opacity:.35}
+  .tile.sel{border-color:var(--red); background:rgba(235,0,0,.10)}
+  #tchSvg{position:absolute; inset:0; width:100%; height:100%; pointer-events:none; overflow:visible; z-index:3}
+
+  @keyframes pop{from{opacity:0; transform:translateY(-6px)}to{opacity:1}}
+  @keyframes rise{from{opacity:0; transform:translateY(8px)}to{opacity:1}}
+  @keyframes sh{to{background-position:-200% 0}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .view{display:none}
+  .view.on{display:block}

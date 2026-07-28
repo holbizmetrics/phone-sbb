@@ -6,9 +6,8 @@
 //      wrong places, nothing throws.
 //   2. "we could not ask OSM" staying distinguishable from "OSM has nothing".
 import fs from "fs";
-const APP = process.env.APP_HTML || new URL("../index.html", import.meta.url).pathname;
+import { src, APP } from "./_src.mjs";
 console.log("reading " + APP);
-const src = fs.readFileSync(APP, "utf8");
 
 const grab = (n) => {
   const i = src.indexOf("function " + n + "(");

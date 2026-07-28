@@ -12,9 +12,8 @@
 // and a real Ersatzverkehr on Luzern-Vitznau came back category EV / operator
 // SBB-EV. If a future API change renames one, these fail -- which is the point.
 import fs from "fs";
-const APP = process.env.APP_HTML || new URL("../index.html", import.meta.url).pathname;
+import { src, APP } from "./_src.mjs";
 console.log("reading " + APP);
-const src = fs.readFileSync(APP, "utf8");
 
 const grab = (n) => {
   const i = src.indexOf("function " + n + "(");

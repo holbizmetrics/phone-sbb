@@ -13,9 +13,8 @@
 // index each row carries is corrected when trains leave -- because the row index
 // is what "plan a journey on THIS train" indexes back into.
 import fs from "fs";
-const APP = process.env.APP_HTML || new URL("../index.html", import.meta.url).pathname;
+import { src, APP } from "./_src.mjs";
 console.log("reading " + APP);
-const src = fs.readFileSync(APP, "utf8");
 const grab = (n) => {
   const i = src.indexOf("function " + n + "(");
   if (i < 0) throw new Error("HARNESS FAILED -- function not found: " + n);

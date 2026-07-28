@@ -8,9 +8,8 @@
 // was still full. One unguarded setItem, called BEFORE the work at five of six
 // call sites, took every caller down with it.
 import fs from "fs";
-const APP = process.env.APP_HTML || new URL("../index.html", import.meta.url).pathname;
+import { src, APP } from "./_src.mjs";
 console.log("reading " + APP);
-const src = fs.readFileSync(APP, "utf8");
 const grab = (n) => {
   const i = src.indexOf("function " + n + "(");
   if (i < 0) throw new Error("HARNESS FAILED -- function not found: " + n);

@@ -4,9 +4,8 @@
 // That matters: the whole feature hangs on a claim about someone else's data,
 // and a test built from a guess would only prove the guess self-consistent.
 import fs from "fs";
-const APP = process.env.APP_HTML || new URL("../index.html", import.meta.url).pathname;
+import { src, APP } from "./_src.mjs";
 console.log("reading " + APP);
-const src = fs.readFileSync(APP, "utf8");
 
 const grab = (n) => {
   const i = src.indexOf("function " + n + "(");

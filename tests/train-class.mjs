@@ -6,9 +6,8 @@
 // keeping something it should have dropped (a filter that only ever says yes has
 // been shown to run, not to work). Both directions are planted below.
 import fs from "fs";
-const APP = process.env.APP_HTML || new URL("../index.html", import.meta.url).pathname;
+import { src, APP } from "./_src.mjs";
 console.log("reading " + APP);
-const src = fs.readFileSync(APP, "utf8");
 const grab = (n) => {
   const i = src.indexOf("function " + n + "(");
   if (i < 0) throw new Error("HARNESS FAILED -- function not found: " + n);

@@ -6,9 +6,8 @@
 // which is the same defect class as a filter note that names options it never
 // looked at. Both directions are planted below.
 import fs from "fs";
-const APP = process.env.APP_HTML || new URL("../index.html", import.meta.url).pathname;
+import { src, APP } from "./_src.mjs";
 console.log("reading " + APP);
-const src = fs.readFileSync(APP, "utf8");
 const grab = (n) => {
   const i = src.indexOf("function " + n + "(");
   if (i < 0) throw new Error("HARNESS FAILED -- function not found: " + n);

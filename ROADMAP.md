@@ -2,7 +2,7 @@
 
 **Source:** research brief `sbb-app-pain-points.md` (Swiss press, SBB community forum,
 consumer-protection bodies, app-store aggregators). Triaged against what phone-sbb actually
-is: a **client-side single-file web app** on the free `transport.opendata.ch` API — no
+is: a **client-side static web app** (one HTML + CSS + JS, no build step) on the free `transport.opendata.ch` API — no
 ticketing, no accounts, no ads, no tracking.
 
 **Reconciled against `master` on 2026-07-25 at merge.** Three items moved: the manifest and most

@@ -1,9 +1,8 @@
 // Runs the REAL acEnter out of index.html against a minimal fake DOM, so the
 // keyboard path gets covered on a box where Playwright cannot run.
 import fs from "fs";
-const APP = process.env.APP_HTML || new URL("../index.html", import.meta.url).pathname;
+import { src, APP } from "./_src.mjs";
 console.log("reading " + APP);            // say which file the verdict is about
-const src = fs.readFileSync(APP, "utf8");
 const grab = (n) => {
   const i = src.indexOf("function " + n + "(");
   if (i < 0) throw new Error("HARNESS FAILED -- function not found: " + n);

@@ -5,8 +5,7 @@
 import fs from "fs";
 import vm from "vm";
 
-const APP = process.env.APP_HTML || new URL("../index.html", import.meta.url).pathname;
-const src = fs.readFileSync(APP, "utf8");
+import { src, APP } from "./_src.mjs";
 
 let pass = 0, fail = 0;
 const chk = (n, c, d = "") => { if (c) { pass++; console.log("  ok   " + n); } else { fail++; console.log("  FAIL " + n + " :: " + d); } };
