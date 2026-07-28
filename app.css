@@ -143,6 +143,12 @@
   .field .clr{position:absolute; right:10px; top:50%; transform:translateY(-50%); width:26px; height:26px;
     border:0; border-radius:50%; background:var(--chip); color:var(--dim); font-size:14px; display:none; place-items:center; cursor:pointer}
   .field.has .clr{display:grid}
+  /* near-me pin: takes the clear button's spot while the field is EMPTY -- the
+     one moment "where am I" needs answering; a filled field shows the X instead */
+  .field .loc{position:absolute; right:10px; top:50%; transform:translateY(-50%); width:26px; height:26px;
+    border:0; border-radius:50%; background:var(--chip); color:var(--dim); font-size:13px; display:grid; place-items:center; cursor:pointer}
+  .field.has .loc{display:none}
+  .ac .nearmsg{padding:13px 16px; color:var(--dim); font-size:14px; cursor:default}
 
   .ac{position:absolute; z-index:40; left:0; right:0; top:calc(100% + 6px); background:var(--card2);
     border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; display:none}

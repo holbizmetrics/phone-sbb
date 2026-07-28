@@ -138,6 +138,16 @@ async function locations(q){
   const s = (d.stations||[]).filter(x=>x.name);
   locCache.set(q,s); return s;
 }
+/* coordinates-to-stop (cross-vendor finding #4, the cheap one): the API's
+   /locations?x=&y= has answered "nearest stop to here" since day one -- unused
+   until now. x is latitude, y longitude (their convention, same as coordinate
+   objects). Real stops carry an id; addresses and POIs come back id:null and
+   are dropped -- a street address is not somewhere a train stops. */
+async function nearbyStops(lat,lon){
+  const d = await api(`/locations?x=${lat.toFixed(6)}&y=${lon.toFixed(6)}`);
+  return (d.stations||[]).filter(x=>x.id&&x.name)
+    .sort((a,b)=>(a.distance??1e9)-(b.distance??1e9)).slice(0,5);
+}
 
 /* ---------- autocomplete ---------- */
 function wireAC(inpId, acId, fieldId, onPick){
@@ -184,6 +194,54 @@ function clearField(which){
     save(LS.last,"");
     $("depOut").innerHTML=`<div class="empty"><div class="big">&#128647;</div>Search a station to see live departures.</div>`;
   }
+}
+
+/* ---------- near me ----------
+   GPS on an explicit tap only. The app's no-GPS stance is about passive
+   tracking; a one-shot position the passenger just asked for is the opposite
+   of that. The pin lives where the passenger's question lives: the three
+   "where am I" fields (board, journey origin, wander start) and deliberately
+   NOT the destination -- you stand at From, you dream of To. Results reuse the
+   autocomplete dropdown: same rows, same tap, distance appended, nothing new
+   to learn. Every failure keeps its reason -- "denied", "no fix", "no stop
+   near here" are three different situations asking three different next moves,
+   and collapsing them to a shrug deletes the one fact that mattered. */
+const NEAR_PICK={
+  dep : n=>showDepartures(n),
+  from: n=>{ fromName=n; if(toName) planJourney(); },
+  wan : n=>{ wanName=n; if(wanBudget) runWander(); },
+};
+function nearMsg(ac,msg){
+  ac.innerHTML=`<div class="nearmsg">${msg}</div>`;
+  ac.classList.add("show");
+}
+function nearMe(which){
+  const map={dep:["iDep","fDep","acDep"],from:["iFrom","fFrom","acFrom"],wan:["iWan","fWan","acWan"]};
+  const ids=map[which]; if(!ids) return;
+  const [iId,fId,acId]=ids, ac=$(acId);
+  if(!navigator.geolocation){ nearMsg(ac,"No location service in this browser &#8212; type the station."); return; }
+  nearMsg(ac,"Locating&#8230;");
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    try{
+      const s=await nearbyStops(pos.coords.latitude,pos.coords.longitude);
+      if(!s.length){ nearMsg(ac,"No stop near here."); return; }
+      ac.innerHTML = s.map(x=>
+        `<div data-n="${esc(x.name)}"><span>&#128205;</span><span>${esc(x.name)}</span>`
+        + (x.distance!=null?`<span class="t">${Math.round(x.distance)}&#8201;m</span>`:"")
+        + `</div>`).join("");
+      ac.classList.add("show");
+      [...ac.children].forEach(el=>el.onclick=()=>{
+        const n=el.dataset.n;
+        $(iId).value=n; ac.classList.remove("show");
+        $(fId).classList.add("has");
+        NEAR_PICK[which](n);
+      });
+    }catch(e){ nearMsg(ac,"Stop lookup failed ("+esc(e.message)+") &#8212; type the station."); }
+  }, err=>{
+    nearMsg(ac, err.code===1
+      ? "Location permission denied &#8212; type the station."
+      : "No location fix &#8212; type the station.");
+  }, {timeout:8000, maximumAge:60000});
 }
 
 /* ---------- DEPARTURES ---------- */

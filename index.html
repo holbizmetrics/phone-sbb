@@ -91,6 +91,7 @@
     <div class="field" id="fDep">
       <span class="ico">&#9906;</span>
       <input class="stn" id="iDep" placeholder="Search a station&#8230;" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <button class="loc" type="button" aria-label="Use my location for the board" title="Nearest stops to me" onclick="nearMe('dep')">&#128205;</button>
       <button class="clr" type="button" aria-label="Clear station" onclick="clearField('dep')">&#10005;</button>
       <div class="ac" id="acDep"></div>
     </div>
@@ -104,6 +105,7 @@
     <div class="field" id="fFrom">
       <span class="ico">&#9679;</span>
       <input class="stn" id="iFrom" placeholder="From&#8230;" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <button class="loc" type="button" aria-label="Use my location as origin" title="Nearest stops to me" onclick="nearMe('from')">&#128205;</button>
       <button class="clr" type="button" aria-label="Clear origin" onclick="clearField('from')">&#10005;</button>
       <div class="ac" id="acFrom"></div>
     </div>
@@ -158,6 +160,7 @@
     <div class="field" id="fWan">
       <span class="ico">&#9906;</span>
       <input class="stn" id="iWan" placeholder="Start from&#8230;" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <button class="loc" type="button" aria-label="Use my location as start" title="Nearest stops to me" onclick="nearMe('wan')">&#128205;</button>
       <button class="clr" type="button" aria-label="Clear start station" onclick="clearField('wan')">&#10005;</button>
       <div class="ac" id="acWan"></div>
     </div>
