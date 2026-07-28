@@ -3,8 +3,11 @@
 // tests/passenger-sweep.mjs, which pins the specimens and the instrument's own
 // invariants. Run:  node tests/passengers/sweep.mjs
 import fs from "fs";
-import { scoreScenario, cluster } from "./rubric.mjs";
+import { scoreScenario, cluster, reduceFinding } from "./rubric.mjs";
 import { generate } from "./generate.mjs";
+
+const refusals = JSON.parse(fs.readFileSync(new URL("./refusals.json", import.meta.url), "utf8"));
+const ledger = JSON.parse(fs.readFileSync(new URL("./dispositions.json", import.meta.url), "utf8"));
 
 const path = new URL("./population.json", import.meta.url).pathname;
 const pop = fs.existsSync(path) ? JSON.parse(fs.readFileSync(path, "utf8")) : generate();
@@ -19,8 +22,10 @@ for (const [v, n] of Object.entries(tally).sort((a, b) => b[1] - a[1]))
 const by = cluster(scored, pop.scenarios);
 console.log("\nleft-behind clusters (axis value -> % of population it dooms):");
 for (const [k, c] of Object.entries(by).filter(([, c]) => c.status === "LEFT_BEHIND" || c.status === "PARTIAL")
-    .sort((a, b) => b[1].worstFor - a[1].worstFor))
-  console.log(`  ${c.status.padEnd(12)} at ${String(c.step).padEnd(6)} ${k.padEnd(38)} carried by ${c.n}, verdict-setting for ${(100 * c.worstFor / pop.n).toFixed(1)}%`);
+    .sort((a, b) => b[1].worstFor - a[1].worstFor)) {
+  const d = ledger.dispositions[k];
+  console.log(`  ${c.status.padEnd(12)} at ${String(c.step).padEnd(6)} ${k.padEnd(38)} carried by ${c.n}, verdict-setting for ${(100 * c.worstFor / pop.n).toFixed(1)}%  [${d ? d.state : "ABSENT -- ledger rot, CI red"}]`);
+}
 
 // The funnel (pt.3 rule 4): each step drains population; the biggest drain is
 // the top of the roadmap ARITHMETICALLY, no ranking meeting.
@@ -31,8 +36,12 @@ console.log("\nfunnel drain (which step loses the most passengers):");
 for (const [step, n] of Object.entries(drain).sort((a, b) => b[1] - a[1]))
   console.log(`  ${String(step).padEnd(8)} drains ${n}  (${(100 * n / pop.n).toFixed(1)}%)`);
 
+// Reduction check (pt.5 rule d): a worklist item is only a NEW gap candidate
+// if it reduces to no known parent (refusal / ledger row / adjudication).
 const unadj = Object.entries(by).filter(([, c]) => c.status === "UNADJUDICATED");
 console.log(`\nadjudication worklist: ${unadj.length} axis values nobody has checked`);
-for (const [k, c] of unadj.sort((a, b) => b[1].n - a[1].n).slice(0, 10))
-  console.log(`  ${k.padEnd(38)} carried by ${c.n} scenarios`);
+for (const [k, c] of unadj.sort((a, b) => b[1].n - a[1].n).slice(0, 10)) {
+  const parent = reduceFinding(k, { refusals, ledger });
+  console.log(`  ${k.padEnd(38)} carried by ${c.n} scenarios  ${parent ? "reduces to " + parent : "NEW-CANDIDATE"}`);
+}
 if (unadj.length > 10) console.log(`  ...and ${unadj.length - 10} more`);

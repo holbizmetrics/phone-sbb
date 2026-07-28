@@ -1,11 +1,14 @@
 {
-  "comment": "The third colour. These are POLICY refusals, decided on the record -- the sweep must report them as REFUSED-ON-PURPOSE and may never rediscover them as defects. A refusal turning up as LEFT_BEHIND in sweep output is a bug in the instrument, not in the app.",
+  "comment": "The third colour. These are POLICY refusals, decided on the record -- the sweep must report them as REFUSED-ON-PURPOSE and may never rediscover them as defects. A refusal turning up as LEFT_BEHIND in sweep output is a bug in the instrument, not in the app. policy_ref (pt.5 rule b, the xfail parent's known rot): every refusal must cite the policy doc it rests on -- file must exist in-repo AND the section heading must still be present, or CI goes red. A refusal may not outlive its policy.",
   "refusals": [
     { "id": "step-free",  "covers": ["constraints/step-free", "who/parent-pram", "who/wheelchair-user"],
-      "decided": "2026-W30", "why": "no data source the app can verify; a wrong 'accessible' strands someone at a staircase" },
+      "decided": "2026-W30", "why": "no data source the app can verify; a wrong 'accessible' strands someone at a staircase",
+      "policy_ref": { "file": "UNSOLVED-GAPS.md", "section": "4.3 Step-free access" } },
     { "id": "occupancy",  "covers": ["conditions/crowded"],
-      "decided": "2026-W30", "why": "occupancy forecasts are unverifiable marketing-grade data" },
+      "decided": "2026-W30", "why": "occupancy forecasts are unverifiable marketing-grade data",
+      "policy_ref": { "file": "UNSOLVED-GAPS.md", "section": "4.1 Occupancy" } },
     { "id": "fares",      "covers": ["constraints/cheapest-fare"],
-      "decided": "2026-W30", "why": "prices unverifiable; zone NAMES shipped instead (checkable), validity claims refused" }
+      "decided": "2026-W30", "why": "prices unverifiable; zone NAMES shipped instead (checkable), validity claims refused",
+      "policy_ref": { "file": "UNSOLVED-GAPS.md", "section": "4.2 Fares" } }
   ]
 }

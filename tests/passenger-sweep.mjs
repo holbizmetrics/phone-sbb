@@ -3,7 +3,7 @@
 // The generated population is the net; these specimens prove the net has no
 // holes where we already know the fish are.
 import fs from "fs";
-import { scoreScenario } from "./passengers/rubric.mjs";
+import { scoreScenario, shrink, reduceFinding } from "./passengers/rubric.mjs";
 import { ADJUDICATIONS, AXES, adjudicate } from "./passengers/axes.mjs";
 import { generate } from "./passengers/generate.mjs";
 
@@ -61,6 +61,23 @@ chk("every adjudication key names a real axis value",
 chk("every adjudication carries evidence -- ground truth is never bare",
   Object.values(ADJUDICATIONS).every(a => a.evidence && a.evidence.length > 10));
 
+// ---- pt.5 rule b: a refusal may not outlive its policy ----
+// The xfail parent's known rot: reasons pointing at documents that no longer
+// exist. Every refusal must carry a policy_ref whose file exists in-repo AND
+// whose section heading is still present in that file.
+for (const r of refusals.refusals) {
+  chk(`refusal '${r.id}' carries a policy_ref`, !!(r.policy_ref?.file && r.policy_ref?.section), JSON.stringify(r.policy_ref));
+  if (r.policy_ref?.file) {
+    const p = new URL("../" + r.policy_ref.file, import.meta.url).pathname;
+    const exists = fs.existsSync(p);
+    chk(`refusal '${r.id}' policy file exists: ${r.policy_ref.file}`, exists, p);
+    if (exists)
+      chk(`refusal '${r.id}' policy section still present: '${r.policy_ref.section}'`,
+        fs.readFileSync(p, "utf8").includes(r.policy_ref.section),
+        "heading renamed or removed -- refusal is orphaned");
+  }
+}
+
 // ---- the disposition ledger: ABSENT is the only red (pt.3 rule 1) ----
 const ledger = JSON.parse(fs.readFileSync(new URL("./passengers/dispositions.json", import.meta.url), "utf8"));
 const LEGAL = ["built", "refused", "parked-with-reason", "undecided"];
@@ -86,6 +103,36 @@ for (const [k, d] of Object.entries(ledger.dispositions)) {
   chk("...and BARELY is absent when nothing emits it", !r2.findings.some(f => f.status === "BARELY"));
 }
 
+// ---- pt.5 rule a: shrinking -- the minimal failing passenger ----
+{
+  const harold = { who: "business-traveller", purpose: "meet-flight",
+                   constraints: "foreign-tz-time", conditions: "normal", phrasing: "exact-station-names" };
+  const s = shrink(harold);
+  chk("Harold shrinks to ONE field -- the biography was noise",
+    s && Object.keys(s.minimal).length === 1 && s.minimal.constraints === "foreign-tz-time", JSON.stringify(s));
+  chk("...and the shrunk passenger fails identically", s.verdict === "LEFT_BEHIND" && s.worst === "constraints/foreign-tz-time");
+  const partial = shrink({ who: "commuter", purpose: "last-train-home",
+    constraints: "needs-food-en-route", conditions: "normal", phrasing: "exact-station-names" });
+  chk("a PARTIAL passenger shrinks too (to its one load-bearing constraint)",
+    partial && Object.keys(partial.minimal).length === 1 && partial.minimal.constraints === "needs-food-en-route",
+    JSON.stringify(partial));
+  chk("shrink refuses below PARTIAL -- unknown is not a failure to minimize",
+    shrink({ who: "commuter", purpose: "last-train-home", constraints: "arrive-by-time",
+             conditions: "normal", phrasing: "exact-station-names" }) === null);
+}
+
+// ---- pt.5 rule d: reduction check -- no gap may be called new unadjudicated ----
+{
+  const ctx = { refusals, ledger };
+  chk("a refusal-covered key reduces (never a 'new gap')",
+    /refusal 'step-free'/.test(reduceFinding("constraints/step-free", ctx) || ""),
+    reduceFinding("constraints/step-free", ctx));
+  chk("a ledger-parked key reduces to its ledger row",
+    /ledger row \(parked-with-reason\)/.test(reduceFinding("constraints/needs-food-en-route", ctx) || ""));
+  chk("a genuinely unchecked key does NOT reduce -- NEW-CANDIDATE stays reachable",
+    reduceFinding("phrasing/zip-code", ctx) === null, String(reduceFinding("phrasing/zip-code", ctx)));
+}
+
 // ---- generator determinism + committed population freshness ----
 {
   const a = JSON.stringify(generate(20260728, 50)), b = JSON.stringify(generate(20260728, 50));
@@ -98,6 +145,12 @@ for (const [k, d] of Object.entries(ledger.dispositions)) {
     chk("committed population matches the generator (a diff means AXES changed, not dice)",
       JSON.stringify(onDisk) === JSON.stringify(generate(onDisk.seed, onDisk.n)),
       "regenerate with: node test./passengers/generate.mjs");
+    // pt.5 rule c (golden-file parent's known rot): the population may NEVER be
+    // re-rolled to green. The seed is PINNED here; a red passenger gets a
+    // disposition, not new dice. Changing this pin requires editing this test
+    // -- which is the visible, reviewable act the rule wants.
+    chk("population seed is pinned at 20260728/n=1000 (no re-roll to dodge a red passenger)",
+      onDisk.seed === 20260728 && onDisk.n === 1000, `seed=${onDisk.seed} n=${onDisk.n}`);
   }
 }
 
