@@ -1355,7 +1355,7 @@ function renderSmart(base, swept, baseline, searching, reqFailed, nKept, nRaw){
   $("jrnOut").innerHTML = smartHead(baseline, nSafe, swN)
     + catFilterNote(nKept, nRaw)
     + (searching?`<div class="shint">&#8987; searching wider routes&#8230;</div>`
-                :`<div id="jlh"></div>`)   // last-way-home slot, settled render only (one request per search, not per phase)
+                :jrnZoneFact()+`<div id="jlh"></div>`)   // route-level facts, settled render only (one request per search, not per phase)
     + top.map((c,i)=>connCard(c,i)).join("")
     + (searching?"":wondersExpanderHTML((base[0]||swept[0])?.to?.station));   // expander only on the settled render
   if(weather) fillWeather();
@@ -1471,10 +1471,10 @@ function verbundHTML(rows){
    card to silence rather than to a rounded-up claim. Multiple zones are safe
    to print regardless: "touches A and B" stays true however many stops are
    unresolved. */
-function connZoneRib(ci){
-  const c=jrnConns[ci]; if(!c) return "";
+function connZones(ci){
+  const c=jrnConns[ci]; if(!c) return null;
   const legs=(c.sections||[]).filter(x=>x.journey);
-  if(!legs.length) return "";
+  if(!legs.length) return {hasLegs:false, zones:[], unknown:0, missing:false};
   const zones=[]; let unknown=0, missing=false;
   legs.forEach((_,si)=>{
     const rows=legStops(ci,si);
@@ -1483,10 +1483,33 @@ function connZoneRib(ci){
     for(const z of s.zones) if(!zones.includes(z)) zones.push(z);
     unknown+=s.unknown;
   });
-  if(!zones.length) return "";
-  if(zones.length===1)
-    return (unknown||missing) ? "" : `<span class="rib vb">&#127903; ${esc(zones[0])} all the way</span>`;
-  return `<span class="rib vb">&#127903; ${zones.map(esc).join(" &#183; ")}</span>`;
+  return {hasLegs:true, zones, unknown, missing};
+}
+/* Per-card rib ONLY for a multi-zone crossing -- that differs by route, so it
+   discriminates. A single-zone journey is identical on every card; repeating it
+   trains the eye to skip the rib row, which then costs the tight-change warning
+   that matters. The single-zone TICKET fact is not dropped: it moves to
+   jrnZoneFact(), rendered once above the list. */
+function connZoneRib(ci){
+  const z=connZones(ci);
+  if(!z || !z.hasLegs || z.zones.length<2) return "";
+  return `<span class="rib vb">&#127903; ${z.zones.map(esc).join(" &#183; ")}</span>`;
+}
+/* Route-level: "one zone all the way" is what a ticket purchase hangs on. Claimed
+   only when EVERY displayed option resolves fully to the SAME single zone -- one
+   unresolved stop anywhere and this says nothing rather than rounding up. */
+function jrnZoneFact(){
+  let zone=null, seen=false;
+  for(let i=0;i<jrnConns.length;i++){
+    const z=connZones(i);
+    if(!z || !z.hasLegs) continue;
+    seen=true;
+    if(z.unknown || z.missing || z.zones.length!==1) return "";
+    if(zone===null) zone=z.zones[0];
+    else if(zone!==z.zones[0]) return "";
+  }
+  if(!seen || zone===null) return "";
+  return `<div class="jzf">&#127903; ${esc(zone)} all the way &#8212; every option shown</div>`;
 }
 function stopsHTML(rows){
   if(rows===null) return `<div class="snone">Stop list unavailable for this leg.</div>`;
@@ -1954,7 +1977,23 @@ function jlhRowHTML(res, dest){
     return `<div class="jlh unk">Could not check the last way home &#8212; an outage, not a &quot;no&quot;.</div>`;
   if(!res)
     return `<div class="jlh none">&#9888; Nothing comes back from <b>${esc(dest)}</b> tonight &#8212; one way, unless you stay over.</div>`;
-  return `<div class="jlh ok">&#127769; Last way home from <b>${esc(dest)}</b>: <b>${hhmm(res.dep)}</b>${res.arr?` &#8594; ${hhmm(res.arr)}`:""}</div>`;
+  /* "verified": asserts a train that EXISTS, not that it is THE last -- the safe
+     claim-direction on thin lines (wanCard fixed this vocabulary first). */
+  return `<div class="jlh ok">&#127769; Last verified way home from <b>${esc(dest)}</b>: <b>${hhmm(res.dep)}</b>${res.arr?` &#8594; ${hhmm(res.arr)}`:""}</div>`;
+}
+/* Per-card verdict from the SAME single query -- a pure local comparison, no
+   extra request. A 19:44 arrival and a 21:10 arrival are different stranding
+   risks at the same destination. Gated: roomy cards render NOTHING (suppressed
+   is a hidden fact, not a doubt); an outage renders nothing here either, so a
+   failed query can never be flattened into "no way home" at rib length. */
+function jlhCardRib(res, remaining){
+  if(res===undefined || res==="unreachable") return "";
+  if(!res) return `<span class="rib tight">&#9888; no later way home verified after this arrival</span>`;
+  const tight = (res.slack!=null && res.slack<=90) || remaining<=3;
+  if(!tight) return "";
+  const s = res.slack==null ? ""
+    : ` &#183; ${res.slack<60?res.slack+"&#8242;":Math.floor(res.slack/60)+"h "+(res.slack%60)+"&#8242;"} after you arrive`;
+  return `<span class="rib tight">&#9888; last verified way home ${hhmm(res.dep)}${s}</span>`;
 }
 async function fillJourneyLastHome(gen){
   const box=$("jlh"); if(!box) return;
@@ -1962,16 +2001,27 @@ async function fillJourneyLastHome(gen){
   const back=first?.to?.station?.name, home=first?.from?.station?.name;
   const day=homeCutoff(first?.to?.arrival);
   if(!back||!home||back===home||!day) return;   // nothing to say; the box stays empty, claiming nothing
-  let res;
+  let res, homeConns=null;
   try{
     const d=await api(`/connections?from=${encodeURIComponent(back)}&to=${encodeURIComponent(home)}`
       + `&date=${day}&time=03:00&isArrivalTime=1&limit=6`, jrnAbort && jrnAbort.signal);
+    homeConns=d.connections||[];
     /* Counted from the EARLIEST displayed arrival: a service that leaves before
        you could possibly be there is not a way home for any of these options. */
-    res=lastHome(d.connections, first.to.arrival);
+    res=lastHome(homeConns, first.to.arrival);
   }catch(e){ res="unreachable"; }
   if(gen!==jrnGen) return;      // superseded -- a stale answer must not paint over a new route
   box.innerHTML=jlhRowHTML(res, back);
+  if(homeConns===null) return;  // outage: the top line carries it; cards stay silent
+  document.querySelectorAll(".jlhc").forEach(el=>{
+    const c=jrnConns[+el.dataset.ci], a=c?.to?.arrival; if(!a) return;
+    const at=new Date(a).getTime();
+    const remaining=homeConns.filter(x=>{
+      const t=new Date((x&&x.from&&x.from.departure)||NaN).getTime();
+      return isFinite(t)&&t>=at;
+    }).length;
+    el.innerHTML=jlhCardRib(lastHome(homeConns, a), remaining);
+  });
 }
 
 function toggleSketch(btn,ci){
@@ -2047,6 +2097,7 @@ function connCard(c,i){
   else if(c._isBase) ribs+=`<span class="rib base">SBB default</span>`;
   if(c._tight && !c._fasterTight) ribs+=`<span class="rib tight">&#9888; tight change</span>`;
   ribs+=connZoneRib(i);   // zone facts are a pre-purchase criterion, so they ride the card, not the stop list
+  ribs+=`<span class="jlhc" data-ci="${i}"></span>`;   // per-card last-way-home slot, painted by fillJourneyLastHome
   if(c._via) ribs+=`<span class="viatag">via ${esc(c._via)}</span>`;
   const dm=minsUntil(dep);
   /* The platform is the one thing you need while standing IN the station, and it

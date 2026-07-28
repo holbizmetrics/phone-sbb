@@ -419,6 +419,11 @@
   .jlh.none{background:rgba(245,158,11,.1); border:1px solid rgba(245,158,11,.3); color:var(--warntxt); font-weight:600}
   .jlh.none b{color:inherit}
   .jlh.unk{color:var(--faint)}
+  /* route-level single-zone ticket fact (one line above the cards, never a per-card rib) */
+  .jzf{font-size:12px; color:#8fd6f5; margin-bottom:8px}
+  /* per-card last-way-home slot: empty until the fill paints it, and an empty
+     span must not open a gap in the rib row */
+  .jlhc:empty{display:none}
 
   /* ---- states ---- */
   .skel{height:66px; border-radius:16px; margin-bottom:9px;
