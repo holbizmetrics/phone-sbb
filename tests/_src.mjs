@@ -20,7 +20,7 @@ const dir = path.dirname(APP);
 
 const inline = (m, ref, open, close) => {
   if (/^https?:/.test(ref)) return m;          // remote refs stay remote
-  const p = path.join(dir, ref);
+  const p = path.join(dir, ref.split("?")[0]); // ?v= cache-buster is not part of the filename
   let body;
   try { body = fs.readFileSync(p, "utf8"); }
   catch { throw new Error("HARNESS FAILED -- " + APP + " references " + ref + " but it is not readable at " + p); }
