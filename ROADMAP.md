@@ -212,9 +212,18 @@ earns its keep most on T2.
   it was the one element in `.favs` with neither `flex:0 0 auto` nor `white-space:nowrap`. Fixed, with
   the CSS contract asserted in `train-class.mjs` (70 checks) — a unit test cannot see a wrap, but it
   can hold the two properties that prevent one.
-  **Still genuinely open:** whether the fade is *visible enough in dark mode*. It masks an opaque dark
-  chip toward a near-identical dark background, so the gradient may be close to invisible — the
-  screenshot is not conclusive either way. Needs a look, not a test.
+  The open question I left after that — whether the fade is *visible enough in dark mode* — came back
+  **answered, and answered against the first attempt: "it just looks chopped."** The ramp was 24px,
+  which is roughly the last third of one ~64px chip, so most of the trailing chip stayed at full
+  opacity and the eye still landed on the hard vertical cut at the container edge. Widened to 64px
+  and front-loaded (a linear ramp spends most of its length near full opacity, which is the part that
+  reads as solid). Dark-on-dark has little luminance to work with, so the dissolve has to be long and
+  start early or it is not a dissolve at all.
+  Worth naming: **all 24 fade checks passed on the version that was reported as chopped.** They assert
+  a mask exists and is derived from a measured scroll position — not that it reads as a dissolve.
+  `fade-edges.mjs` now carries a 25th that pins the measurable half (the ramp must be at least one
+  chip wide), verified to go red at 24px and green at 64px. Whether it *looks* right is still a look,
+  not a test; the test only stops that specific failure from recurring silently.
 - **T11–T13:** unassigned, and deliberately below T1/T2 — each is a new panel, not a fix to a
   feature people already rely on.
 - **55ef3834** verifies; **operator** merges + real-commute-accepts.

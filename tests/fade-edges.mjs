@@ -107,5 +107,18 @@ chk("the mask is prefixed for webkit (this ships to mobile Safari)",
 chk("the fade is a mask, not a background gradient",
   !/\.favs\.fade[LR][^}]*background/.test(src.replace(/\n\s*/g, "")));
 
+// Every assertion above this line ALSO passed on the version a real phone reported
+// as "it just looks chopped" -- they check that a mask exists, not that it reads as
+// a dissolve. This is the one structural fact that separates the two: a ramp shorter
+// than a chip only nicks the trailing chip's edge, leaving the rest at full opacity
+// against a hard vertical cut. A chip is ~64px at 360px, so the ramp must reach full
+// opacity no sooner than that. (Strength itself is a judgement a unit test cannot
+// make -- this pins the measurable half.)
+{
+  const L = (src.match(/\.favs\.fadeL\{[^}]*\}/) || [""])[0];
+  const end = (L.match(/#000 (\d+)px/) || [])[1];
+  chk("the ramp is at least one chip wide", Number(end) >= 64, "ramp ends at " + end + "px");
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

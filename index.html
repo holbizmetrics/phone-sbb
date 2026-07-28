@@ -176,17 +176,26 @@
   .favs{display:flex; gap:8px; overflow-x:auto; padding:2px 0 12px; scrollbar-width:none}
   .favs::-webkit-scrollbar{display:none}
   /* The scrollbar is hidden, so an overflowing chip row gives no sign that more
-     chips exist -- at 360px the mode row and the train-type row both run about
-     80px past the edge. These masks fade the edge you can still scroll toward.
+     chips exist -- at 360px the mode row runs past the edge and clips Tram.
+     These masks fade the edge you can still scroll toward.
      A mask, not a background gradient: the chips are opaque, so anything painted
      BEHIND them would not fade them. Applied only from a measured scroll
-     position (fadeEdges) -- see the note there. */
-  .favs.fadeL{-webkit-mask-image:linear-gradient(to right,transparent,#000 24px);
-              mask-image:linear-gradient(to right,transparent,#000 24px)}
-  .favs.fadeR{-webkit-mask-image:linear-gradient(to left,transparent,#000 24px);
-              mask-image:linear-gradient(to left,transparent,#000 24px)}
-  .favs.fadeL.fadeR{-webkit-mask-image:linear-gradient(to right,transparent,#000 24px,#000 calc(100% - 24px),transparent);
-                    mask-image:linear-gradient(to right,transparent,#000 24px,#000 calc(100% - 24px),transparent)}
+     position (fadeEdges) -- see the note there.
+
+     Distance is 64px, not the 24px this shipped with. At 24px the ramp only
+     covered the last third of a ~67px chip, so most of the chip stayed at full
+     opacity and the eye still landed on the hard vertical cut at the container
+     edge -- reported from a real dark-mode phone as "it just looks chopped".
+     The stops are also front-loaded rather than linear: a straight ramp spends
+     most of its length near full opacity, which is exactly the part that reads
+     as solid. Dark-on-dark has little luminance to work with, so the dissolve
+     has to be long and start early or it is not a dissolve at all. */
+  .favs.fadeL{-webkit-mask-image:linear-gradient(to right,transparent,rgba(0,0,0,.35) 18px,rgba(0,0,0,.75) 38px,#000 64px);
+              mask-image:linear-gradient(to right,transparent,rgba(0,0,0,.35) 18px,rgba(0,0,0,.75) 38px,#000 64px)}
+  .favs.fadeR{-webkit-mask-image:linear-gradient(to left,transparent,rgba(0,0,0,.35) 18px,rgba(0,0,0,.75) 38px,#000 64px);
+              mask-image:linear-gradient(to left,transparent,rgba(0,0,0,.35) 18px,rgba(0,0,0,.75) 38px,#000 64px)}
+  .favs.fadeL.fadeR{-webkit-mask-image:linear-gradient(to right,transparent,rgba(0,0,0,.35) 18px,rgba(0,0,0,.75) 38px,#000 64px,#000 calc(100% - 64px),rgba(0,0,0,.75) calc(100% - 38px),rgba(0,0,0,.35) calc(100% - 18px),transparent);
+                    mask-image:linear-gradient(to right,transparent,rgba(0,0,0,.35) 18px,rgba(0,0,0,.75) 38px,#000 64px,#000 calc(100% - 64px),rgba(0,0,0,.75) calc(100% - 38px),rgba(0,0,0,.35) calc(100% - 18px),transparent)}
   .chip{flex:0 0 auto; background:var(--card); border:1px solid var(--line); color:var(--txt);
     padding:9px 14px; border-radius:999px; font:600 13px inherit; cursor:pointer; white-space:nowrap; transition:.2s}
   .chip:active{transform:scale(.94)}
