@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-180.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <title>Rail &#183; live departures</title>
-<link rel="stylesheet" href="app.css?v=20260729">
+<link rel="stylesheet" href="app.css?v=20260729a">
 </head>
 <body>
 <div class="wrap">
@@ -46,6 +46,8 @@
       <h3>Journey</h3>
       <div class="hrow"><span class="k">A &#8594; B</span><span class="v">the chips above the two fields are routes you have searched before, newest first. Nothing to save &#8212; a search records itself. The two directions are kept apart, because the morning trip and the evening one are not the same trip.</span></div>
       <div class="hrow"><span class="k">&#8645;</span><span class="v">swaps the two stations.</span></div>
+      <div class="hrow"><span class="k">&#128205;</span><span class="v">in an empty From field fills in the nearest stop to where you are standing &#8212; it asks for your location only when you tap it, never on its own.</span></div>
+      <div class="hrow"><span class="k">&#8599; Share</span><span class="v">above the results sends the <i>search</i> to a friend &#8212; WhatsApp, wherever. Their phone looks the timetable up live when they open it, so they see current trains, not a screenshot of yours. A shared time that has already passed is quietly replaced with &#8220;now&#8221;.</span></div>
       <div class="hrow"><span class="k">Now</span><span class="v">&#183; Leave at &#183; Arrive by &#8212; Arrive by works backwards from when you must be there.</span></div>
       <div class="hrow"><span class="k">&#127751; Sunset</span><span class="v">a fourth way to say when: arrive before the sun goes down at the place you are going, on the day you are going. It looks the sunset up there, not here, and fills in the arrive-by time for you. Tap it after dark and it plans for tomorrow instead. The forecast only reaches two days out, so for anything further it says so rather than quietly answering about today.</span></div>
       <div class="hrow"><span class="k">&#127749; Sunrise</span><span class="v">the same thing at the other end of the day, and it usually means tomorrow: it plans to have you there <i>before</i> first light, which is the point of going up a mountain early. Tapping it after the sun is already up rolls to the next day by itself. If nothing gets you there that early it says so plainly &#8212; that is the first train of the day, not a mistake in your search.</span></div>
@@ -190,6 +192,6 @@
   </section>
 </div>
 
-<script src="app.js?v=20260729"></script>
+<script src="app.js?v=20260729a"></script>
 </body>
 </html>

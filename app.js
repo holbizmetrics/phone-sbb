@@ -944,6 +944,67 @@ function errBox(e){
 }
 function planJourney(){ return smart ? smartPlan() : plainPlan(); }
 
+/* ---------- share a route ----------
+   What travels is the QUERY, never the result: timetables shift, so the
+   receiver's phone re-plans live instead of trusting a frozen screenshot.
+   A "now" search shares as NOW (no at= param) -- stamping the sender's
+   clock onto it would arrive already stale. */
+function shareURL(){
+  const u = new URL(location.href.split("?")[0].split("#")[0]);
+  u.searchParams.set("from", fromName);
+  u.searchParams.set("to", toName);
+  if(whenMode!=="now" && whenValue){
+    u.searchParams.set("at", whenValue);
+    if(whenMode==="arr") u.searchParams.set("mode","arr");
+  }
+  return u.toString();
+}
+function shareRoute(ev){
+  if(!fromName||!toName) return;
+  const when = whenMode==="dep" && whenValue ? `, dep ${whenValue.slice(11,16)}`
+             : whenMode==="arr" && whenValue ? `, arr by ${whenValue.slice(11,16)}`
+             : "";
+  const text = `${fromName} \u2192 ${toName}${when}`;
+  const url = shareURL();
+  const btn = ev?.currentTarget;
+  const copied = () => { if(btn){ btn.textContent="Copied \u2713"; setTimeout(()=>{ btn.innerHTML=SHARE_LBL; },1600); } };
+  const copy = () => navigator.clipboard?.writeText(text+"\n"+url).then(copied)
+    .catch(()=>{ if(btn) btn.textContent="Could not copy \u2014 long-press the address bar"; });
+  if(navigator.share){
+    // a cancelled share sheet is a choice, not a failure; only real errors fall back
+    navigator.share({ title:"Rail", text, url }).catch(e=>{ if(e && e.name!=="AbortError") copy(); });
+  } else copy();
+}
+const SHARE_LBL = "&#8599; Share this route";
+function shareBarHTML(){
+  return `<div class="sharebar"><button type="button" class="shr" onclick="shareRoute(event)">${SHARE_LBL}</button></div>`;
+}
+
+/* ---------- deep link: ?from=&to=[&at=][&mode=arr] ----------
+   The read side of sharing. A shared time that has already passed is NOT
+   replayed -- a dead timestamp would produce a ghost plan -- we fall back to
+   NOW and say so next to the time controls. */
+function applyDeepLink(){
+  let q;
+  try{ q = new URLSearchParams(location.search); }catch{ return false; }
+  const f=(q.get("from")||"").trim(), t=(q.get("to")||"").trim();
+  if(!f||!t) return false;
+  fromName=f; toName=t;
+  $("iFrom").value=f; $("fFrom").classList.add("has");
+  $("iTo").value=t;   $("fTo").classList.add("has");
+  const at=(q.get("at")||"").trim();
+  const live = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(at) && new Date(at).getTime() > Date.now();
+  if(live){
+    $("whenAt").value=at;
+    setWhen(q.get("mode")==="arr" ? "arr" : "dep");     // replans as its last act
+  }else{
+    setWhen("now");                                      // replans as its last act
+    if(at){ const s=$("sunHint"); if(s) s.innerHTML=`<span class="hint">The shared time has already passed &#8212; showing connections from now.</span>`; }
+  }
+  setTab("jrn");
+  return true;
+}
+
 async function plainPlan(){
   if(!fromName||!toName) return;
   const gen=++jrnGen;
@@ -965,7 +1026,7 @@ async function plainPlan(){
     const cs=kept.slice(0,6);
     cs.forEach(annotate);
     jrnConns = cs;   // render order == the ci the leg buttons index back into
-    $("jrnOut").innerHTML = catFilterNote(kept.length, raw.length)
+    $("jrnOut").innerHTML = shareBarHTML() + catFilterNote(kept.length, raw.length)
       + cs.map((c,i)=>connCard(c,i)).join("") + wondersExpanderHTML(cs[0].to?.station);
     if(weather) fillWeather();
   }catch(e){
@@ -1428,6 +1489,7 @@ function renderSmart(base, swept, baseline, searching, reqFailed, nKept, nRaw){
 
   jrnConns = top;   // render order == the ci the leg buttons index back into
   $("jrnOut").innerHTML = smartHead(baseline, nSafe, swN)
+    + shareBarHTML()
     + catFilterNote(nKept, nRaw)
     + (searching?`<div class="shint">&#8987; searching wider routes&#8230;</div>`
                 :jrnZoneFact()+`<div id="jlh"></div>`)   // route-level facts, settled render only (one request per search, not per phase)
@@ -2627,6 +2689,7 @@ const last=load(LS.last,"");
 if(last){ $("iWan").value=last; wanName=last; $("fWan").classList.add("has"); }
 if(last) showDepartures(last);
 else $("depOut").innerHTML=`<div class="empty"><div class="big">&#128647;</div>Search a station to see live departures.</div>`;
+applyDeepLink();   // AFTER the board default so a shared link lands on the Journey tab, planned
 
 document.addEventListener("visibilitychange",()=>{
   if(document.hidden){ stopBoardTimers(); return; }       // asleep: zero requests
