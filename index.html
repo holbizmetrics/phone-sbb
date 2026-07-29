@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-180.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <title>Rail &#183; live departures</title>
-<link rel="stylesheet" href="app.css?v=20260729a">
+<link rel="stylesheet" href="app.css?v=20260729b">
 </head>
 <body>
 <div class="wrap">
@@ -42,6 +42,7 @@
       <div class="hrow"><span class="k">&#9734;</span><span class="v">stars a station so it sits one tap away next time.</span></div>
       <div class="hrow"><span class="k">Tap a row</span><span class="v">to see where that train actually goes &#8212; every stop, with times.</span></div>
       <div class="hrow"><span class="k">Tap the destination</span><span class="v">to plan a journey there on that train, not a generic search from now.</span></div>
+      <div class="hrow"><span class="k">&#127769;</span><span class="v">next to the station name: what still moves from here tonight &#8212; each line&#8217;s last run, in the order they expire. If nothing moves any more it says exactly that, which at 01:00 is the answer you need.</span></div>
 
       <h3>Journey</h3>
       <div class="hrow"><span class="k">A &#8594; B</span><span class="v">the chips above the two fields are routes you have searched before, newest first. Nothing to save &#8212; a search records itself. The two directions are kept apart, because the morning trip and the evening one are not the same trip.</span></div>
@@ -98,6 +99,7 @@
       <div class="ac" id="acDep"></div>
     </div>
     <div class="favs" id="favs"></div>
+    <div id="strandedOut"></div>
     <div id="depOut"></div>
   </section>
 
@@ -192,6 +194,6 @@
   </section>
 </div>
 
-<script src="app.js?v=20260729a"></script>
+<script src="app.js?v=20260729b"></script>
 </body>
 </html>

@@ -216,6 +216,21 @@
   .boardhead .star.on{color:var(--amber); text-shadow:0 0 14px rgba(245,158,11,.5)}
   .boardhead .rf{background:none;border:0;color:var(--dim);font-size:18px;cursor:pointer;padding:4px}
   .boardhead .rf.spin{animation:spin .8s linear infinite}
+  .boardhead .ngt{background:none;border:0;color:var(--dim);font-size:16px;cursor:pointer;padding:4px}
+  /* stranded-now board: the night answer card */
+  .night{background:var(--card2); border:1px solid var(--line); border-radius:14px;
+    padding:12px 14px; margin:0 0 12px; animation:rise .25s ease both}
+  .night .nhead{display:flex; align-items:center; gap:8px; margin-bottom:8px}
+  .night .ntitle{font-weight:700; font-size:14px}
+  .night .nx{margin-left:auto; background:none; border:0; color:var(--faint); font-size:14px; cursor:pointer; padding:2px 4px}
+  .night .nrow{display:flex; align-items:baseline; gap:7px; padding:5px 0; font-size:14px;
+    font-variant-numeric:tabular-nums; border-top:1px solid var(--line)}
+  .night .nrow:first-of-type{border-top:0}
+  .night .nline{color:var(--dim); font-weight:600; font-size:12.5px}
+  .night .nlast{margin-left:auto; flex:0 0 auto; font-size:11px; color:var(--amber);
+    background:rgba(245,158,11,.10); padding:2px 7px; border-radius:8px}
+  .night .nnone{font-weight:700; color:var(--amber); font-size:14.5px}
+  .night .ncav{margin-top:7px; font-size:12px; color:var(--faint); line-height:1.5}
 
   .dep{display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--line);
     padding:14px; border-radius:16px; margin-bottom:9px; animation:rise .3s ease backwards}

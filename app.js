@@ -482,6 +482,7 @@ function boardHeadHTML(name){
   return `<div class="boardhead">
     <h2>${esc(name)}</h2>
     <button class="rf" id="rf" type="button" title="refresh" aria-label="Refresh departures">&#8635;</button>
+    <button class="ngt" id="ngt" type="button" title="What still leaves tonight" aria-label="What still moves from here tonight">&#127769;</button>
     <button class="star ${on?"on":""}" id="fav" type="button" title="favourite" aria-pressed="${on}" aria-label="${on?"Remove from favourites":"Add to favourites"}">${on?"&#9733;":"&#9734;"}</button>
   </div>`;
 }
@@ -489,6 +490,74 @@ function renderBoardHead(){ /* placeholder kept for flow */ }
 function wireBoardHead(name){
   const fav=$("fav"); if(fav) fav.onclick=()=>toggleFav(name);
   const rf=$("rf"); if(rf) rf.onclick=()=>loadBoard(name);
+  const n=$("ngt"); if(n) n.onclick=()=>strandedBoard(name);
+}
+
+/* ---------- stranded-now board ----------
+   "Last connection missed -- what still moves from here tonight?" The night-
+   stranding cluster, distinct from replanning: there may be NO route left, and
+   saying so honestly is the feature. One stationboard fetch, grouped by
+   line+direction, each group reduced to its LAST run of the night, sorted by
+   which option expires first. */
+function nightCutoff(nowMs){
+  // "tonight" ends at 04:30 local -- a 06:00 train is tomorrow, not a rescue
+  const c=new Date(nowMs); c.setHours(4,30,0,0);
+  if(c.getTime()<=nowMs) c.setDate(c.getDate()+1);
+  return c.getTime();
+}
+function tonightGroups(board, nowMs){
+  const cut=nightCutoff(nowMs);
+  const g=new Map();
+  for(const j of board||[]){
+    const dep=j.stop?.prognosis?.departure || j.stop?.departure;
+    const t=dep?new Date(dep).getTime():NaN;
+    if(!isFinite(t) || t<nowMs-60000 || t>cut) continue;
+    const line=((j.category||"")+" "+(j.number||j.line||"")).trim();
+    const key=line+"|"+(j.to||"");
+    const cur=g.get(key);
+    if(!cur || t>cur.t) g.set(key,{line, to:j.to||"", dep, t});
+  }
+  // soonest-expiring first: the order in which the options die
+  return [...g.values()].sort((a,b)=>a.t-b.t);
+}
+function nightWrap(name, inner){
+  return `<div class="night"><div class="nhead"><span class="ntitle">&#127769; Still moving tonight &#8212; ${esc(shortStop(name))}</span>`
+    + `<button class="nx" type="button" aria-label="Close" onclick="closeNight()">&#10005;</button></div>${inner}</div>`;
+}
+function closeNight(){ const b=$("strandedOut"); if(b) b.innerHTML=""; }
+async function strandedBoard(name){
+  const box=$("strandedOut"); if(!box||!name) return;
+  box.innerHTML=nightWrap(name, `<div class="ncav">checking what still moves&#8230;</div>`);
+  try{
+    const LIM=100;
+    const d=await api(`/stationboard?limit=${LIM}&station=${encodeURIComponent(name)}`);
+    const board=d.stationboard||[];
+    const disp=d.station?.name||name;
+    const now=Date.now();
+    const rows=tonightGroups(board, now);
+    if(!rows.length){
+      /* the honest verdict IS the feature: an empty night board is a finding */
+      box.innerHTML=nightWrap(disp,
+        `<div class="nnone">&#9888; Nothing moves from here tonight anymore.</div>`
+        + `<div class="ncav">Night buses and taxis outside this timetable may still run; the first morning train is not shown here.</div>`);
+      return;
+    }
+    /* If we got a FULL page and its horizon still lies inside tonight, later
+       departures can exist beyond what we fetched -- then "last tonight" would
+       be a claim the data cannot carry. Downgrade the label, say the horizon. */
+    let maxT=-1, maxISO=null;
+    for(const j of board){ const s=j.stop?.departure; const t=s?new Date(s).getTime():NaN;
+      if(isFinite(t)&&t>maxT){ maxT=t; maxISO=s; } }
+    const trunc = board.length>=LIM && maxT<nightCutoff(now);
+    const tag = trunc ? "last we can see" : "last tonight";
+    box.innerHTML=nightWrap(disp,
+      rows.map(r=>`<div class="nrow"><b>${hhmm(r.dep)}</b> <span class="nline">${esc(r.line)}</span> &#8594; ${esc(shortStop(r.to))}<span class="nlast">${tag}</span></div>`).join("")
+      + (trunc?`<div class="ncav">The timetable window we could fetch ends at ${hhmm(maxISO)} &#8212; later departures may exist beyond it.</div>`:"")
+      + `<div class="ncav">Times are the timetable&#8217;s word, cancellations included where it knows them &#8212; on a broken night, confirm on the platform display too.</div>`);
+  }catch(e){
+    box.innerHTML=nightWrap(name,
+      `<div class="ncav">Could not check (${esc(e&&e.message||"no answer")}) &#8212; an outage, not a &quot;no&quot;. Tap &#127769; to retry.</div>`);
+  }
 }
 function toggleFav(name){
   const i=favs.indexOf(name);
