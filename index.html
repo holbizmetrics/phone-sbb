@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-180.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <title>Rail &#183; live departures</title>
-<link rel="stylesheet" href="app.css?v=20260729d">
+<link rel="stylesheet" href="app.css?v=20260729e">
 </head>
 <body>
 <div class="wrap">
@@ -55,6 +55,7 @@
       <div class="hrow"><span class="k">Pl.&#8201;7</span><span class="v">is the platform you leave from. Amber with &#9888; means it changed from the scheduled one.</span></div>
       <div class="hrow"><span class="k">7&#8594;5</span><span class="v">on a change means you arrive at 7 and leave from 5 &#8212; you have to cross the station.</span></div>
       <div class="hrow"><span class="k">&#9749; step out?</span><span class="v">appears on a change of twenty minutes or more: what is within a short walk of that station &#8212; a caf&#233;, a bakery, a viewpoint &#8212; with one-way walking times scoped to the minutes you actually have, keeping ten in reserve to find your platform again. Nothing nearby is said plainly, and a map outage is an outage, not a &#8220;no&#8221;.</span></div>
+      <div class="hrow"><span class="k">&#128204; I&#39;m on this one</span><span class="v">pins the journey you actually boarded to a bar that stays with you across tabs and reloads &#8212; no GPS, no permission prompt. Tap the bar for the next change: arrival and departure platforms, and whether the minutes are enough to leave the platform or you should stay on it. Nearby spots during long changes are optional &#8212; a toggle inside the sheet, off until you switch it on.</span></div>
       <div class="hrow"><span class="k">Tap a leg</span><span class="v">(the coloured badge) for the stops in between.</span></div>
       <div class="hrow"><span class="k">&#128506; map</span><span class="v">sketches the whole route, with a pulsing dot for where the train is now.</span></div>
       <div class="hrow"><span class="k">&#9968;</span><span class="v">under the sketch: the same journey seen from the side, so a valley run and a mountain climb are one glance apart. It is the ground height at each stop joined by straight lines &#8212; terrain, not railway data, and nothing about the track&#8217;s own gradient. Routes with too few stops to say anything get no strip at all.</span></div>
@@ -195,6 +196,10 @@
   </section>
 </div>
 
-<script src="app.js?v=20260729d"></script>
+<!-- ONBOARD bar: lives OUTSIDE the tab sections on purpose -- the journey you
+     are on follows you to every tab, which is the whole point of pinning it. -->
+<div id="ob"></div>
+
+<script src="app.js?v=20260729e"></script>
 </body>
 </html>

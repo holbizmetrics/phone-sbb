@@ -6,7 +6,7 @@
 const BUILD = "dev";  // BUILD-STAMP
 const API = "https://transport.opendata.ch/v1";
 const $ = id => document.getElementById(id);
-const LS = { favs:"rail.favs", last:"rail.last", modes:"rail.modes", cats:"rail.cats", routes:"rail.routes", theme:"rail.theme" };
+const LS = { favs:"rail.favs", last:"rail.last", modes:"rail.modes", cats:"rail.cats", routes:"rail.routes", theme:"rail.theme", onboard:"rail.onboard", obpoi:"rail.obpoi" };
 let favs = load(LS.favs, []);
 let current = "";        // current departures station
 let refreshTimer = null;
@@ -1146,7 +1146,9 @@ function changeDetails(c){
     // where the layover physically happens -- the step-out card needs a coordinate,
     // and an address-station without one simply gets no card, not a guessed one
     const co=rides[k].departure?.station?.coordinate || rides[k-1].arrival?.station?.coordinate || null;
-    if(b<600) out.push({stn, b, pa, pd, co, missed:b<0});
+    // the change's own clock times ride along: the onboard bar anchors "which
+    // change is NEXT" to them, and without them it could only guess by order
+    if(b<600) out.push({stn, b, pa, pd, co, at:prevArr, dt:nextDep, missed:b<0});
   }
   return out;
 }
@@ -1445,6 +1447,169 @@ async function layoverPOI(btn,ci,k){
     + rows.map(p=>`<div class="lprow"><span class="lpe">${p.ty.e}</span><span class="lpn">${esc(p.name)}</span><span class="lpm">${p.ty.l?esc(p.ty.l)+" &#183; ":""}${p.walk}&#8242; walk</span></div>`).join("")
     + `<div class="lpcav">One-way walk times; keep ~${LAYOVER_KEEP}&#8242; to be back and find your platform. Opening hours not checked.</div>`;
 }
+/* ---------- ONBOARD: the pinned "I'm on this one" journey ----------
+   Once you board, the planning list is history -- the one journey you are ON
+   deserves a surface of its own. A persistent bar holds it across tabs and
+   reloads (localStorage, NO GPS, no permission prompt: "which train am I on"
+   is something you already know; the app only has to remember it). The gap
+   sheet anchors to the NEXT change BY CLOCK, not by list order, and its
+   verdict line -- enough to leave the platform / stay on the platform -- is
+   always on, because only this app knows the buffer maths behind it. The
+   nearby-spots list is OPTIONAL and user-toggleable: the app's first setting. */
+let onboard = load(LS.onboard, null);   // slim snapshot of the pinned journey, or null
+let obPoi   = load(LS.obpoi, false);    // nearby-spots layer during long changes (the setting)
+let obOpen  = false;                    // gap sheet expanded?
+let obKey   = "";                       // phase:k of the last paint -- an open sheet re-renders when the anchor moves
+const OB_EXPIRE_MIN = 30;               // this long after arrival the pin quietly retires
+
+/* The snapshot is SLIM on purpose: the full connection object drags the whole
+   API response into localStorage; the bar needs names, times, legs and the
+   change rows -- nothing else. */
+function onboardSnap(c){
+  const secs=(c.sections||[]).filter(s=>s.journey);
+  return {
+    from:c.from?.station?.name||"", to:c.to?.station?.name||"",
+    dep:c.from?.prognosis?.departure||c.from?.departure||null,
+    arr:c.to?.prognosis?.arrival||c.to?.arrival||null,
+    legs:secs.map(s=>badge(s.journey.category,s.journey.number).label),
+    chg:c._chg||[],
+  };
+}
+/* Which change is NEXT is a clock question: the first one whose onward
+   departure has not happened yet. While you stand at Olten waiting for the
+   10:25, Olten IS still the next change -- its platform is the one you need. */
+function onboardNext(ob,now){
+  const chg=ob.chg||[];
+  for(let k=0;k<chg.length;k++){
+    const x=chg[k];
+    if(x.dt && new Date(x.dt).getTime()>now) return {phase:"change",k,x,left:chg.length-k-1};
+  }
+  const arrT=ob.arr?new Date(ob.arr).getTime():0;
+  return {phase: now>arrT ? "arrived" : "arriving", k:-1, x:null, left:0};
+}
+/* The verdict line is ALWAYS on -- it is the one thing here nobody else can
+   tell you. The station signage knows the platform; only the buffer maths
+   knows whether those minutes buy you the station hall or just the Gleis. */
+function obVerdictHTML(x){
+  if(x.missed)          return `<div class="obverdict miss">&#9888; missed by ${-x.b}&#8242; &#8212; this change cannot be made; replan from ${esc(x.stn)}</div>`;
+  if(x.b>=LAYOVER_MIN)  return `<div class="obverdict go">${x.b}&#8242; &#8212; enough to leave the platform</div>`;
+  return `<div class="obverdict stay">${x.b}&#8242; &#8212; stay on the platform</div>`;
+}
+function obLineHTML(ob,nx){
+  const pin=CP(0x1F4CC);
+  if(nx.phase==="arrived")  return `${pin} <b>${esc(ob.to)}</b> &#8212; arrived`;
+  if(nx.phase==="arriving"){
+    const m=minsUntil(ob.arr);
+    return `${pin} &#8594; <b>${esc(ob.to)}</b> ${hhmm(ob.arr)}${m>0&&m<600?` &#183; in ${m}&#8242;`:""} &#183; no more changes`;
+  }
+  const x=nx.x;
+  const t=x.missed?`<b class="obmiss">missed</b>`:`<b>${x.b}&#8242;</b>`;
+  return `${pin} &#8594; <b>${esc(ob.to)}</b> &#183; next change ${esc(x.stn)} ${t}${x.pd?` &#183; Pl.&#8201;${esc(x.pd)}`:""}`;
+}
+function obSheetHTML(ob,nx){
+  const unpin=`<button type="button" class="obunpin" onclick="onboardUnpin()">unpin &#8212; I&#39;m off this journey</button>`;
+  if(nx.phase!=="change"){
+    const line=nx.phase==="arrived"
+      ? `Arrived at <b>${esc(ob.to)}</b>.`
+      : `No more changes &#8212; ride it out to <b>${esc(ob.to)}</b>, arriving <b>${hhmm(ob.arr)}</b>.`;
+    return `<div class="obh">${line}</div>${unpin}`;
+  }
+  const x=nx.x;
+  const times=`${x.at?`arrive ${hhmm(x.at)}${x.pa?` Pl.&#8201;${esc(x.pa)}`:""}`:""}${x.dt?` &#183; depart ${hhmm(x.dt)}${x.pd?` Pl.&#8201;${esc(x.pd)}`:""}`:""}`;
+  const later = nx.left>0 ? `then ${nx.left} more change${nx.left===1?"":"s"} &#183; ` : "";
+  // the setting travels with the sheet, so turning it on happens exactly where
+  // its effect appears -- not in a settings screen the app does not have
+  const tog=`<label class="obtog"><input type="checkbox" onchange="onboardPoiToggle(this)"${obPoi?" checked":""}> ${CP(0x1F5FA)}&#65039; show nearby spots during long changes</label>`;
+  const poiBox = obPoi && !x.missed && x.b>=LAYOVER_MIN && x.co ? `<div class="obpoi"></div>` : "";
+  return `<div class="obh">Next change &#8212; <b>${esc(x.stn)}</b></div>`
+    + `<div class="obt">${times}</div>`
+    + obVerdictHTML(x)
+    + poiBox + tog
+    + `<div class="obt">${later}arriving ${esc(ob.to)} <b>${hhmm(ob.arr)}</b></div>`
+    + unpin;
+}
+/* Same Overpass client and row-maths as the layover card; only the container
+   differs. Overpass takes real seconds at a big station, so the loading line
+   is not decoration -- without it the sheet just looks broken. */
+async function obFillPoi(box,x){
+  if(!box) return;
+  const r=layoverWalkM(x.b);
+  const my=box.dataset.q=String(Date.now()+Math.random());
+  box.innerHTML=`<div class="lploading">looking around ${esc(x.stn)}&#8230;</div>`;
+  const els=await layoverSpots(x.co.x,x.co.y,r);
+  if(box.dataset.q!==my) return;   // sheet re-rendered / toggled off while in flight
+  if(els===null){
+    box.innerHTML=`<div class="lpcav">Could not check what&#39;s near ${esc(x.stn)} (no map mirror answered) &#8212; an outage, not a &quot;no&quot;.</div>`;
+    return;
+  }
+  const rows=layoverRows(els,x.co.x,x.co.y,r);
+  if(!rows.length){
+    box.innerHTML=`<div class="lpempty">Nothing named within a ~${Math.max(1,Math.ceil(r/75))}&#8242; walk of ${esc(x.stn)}.</div>`;
+    return;
+  }
+  box.innerHTML=rows.map(p=>`<div class="lprow"><span class="lpe">${p.ty.e}</span><span class="lpn">${esc(p.name)}</span><span class="lpm">${p.ty.l?esc(p.ty.l)+" &#183; ":""}${p.walk}&#8242; walk</span></div>`).join("")
+    + `<div class="lpcav">One-way walk times; keep ~${LAYOVER_KEEP}&#8242; to be back and find your platform. Opening hours not checked.</div>`;
+}
+function onboardPin(i){
+  const c=jrnConns[i]; if(!c) return;
+  onboard=onboardSnap(c);
+  save(LS.onboard,onboard);
+  obOpen=false; obKey="";
+  const host=$("ob"); if(host) host.innerHTML="";   // rebuild the bar from scratch for the new journey
+  paintOnboard();
+}
+function onboardUnpin(){
+  onboard=null; save(LS.onboard,null);
+  obOpen=false; obKey="";
+  paintOnboard();
+}
+function onboardPoiToggle(el){
+  obPoi=!!(el&&el.checked);
+  save(LS.obpoi,obPoi);
+  renderObSheet();
+}
+function onboardSheetToggle(){
+  const bar=document.querySelector("#ob .obbar"); if(!bar) return;
+  obOpen=!obOpen;
+  bar.classList.toggle("open",obOpen);
+  const btn=bar.querySelector(".obline"); if(btn) btn.setAttribute("aria-expanded",String(obOpen));
+  const sheet=bar.querySelector(".obsheet");
+  if(obOpen) renderObSheet();
+  else if(sheet) sheet.innerHTML="";
+}
+function renderObSheet(){
+  const box=document.querySelector("#ob .obsheet");
+  if(!box||!onboard||!obOpen) return;
+  const nx=onboardNext(onboard,Date.now());
+  box.innerHTML=obSheetHTML(onboard,nx);
+  if(obPoi && nx.phase==="change" && !nx.x.missed && nx.x.b>=LAYOVER_MIN && nx.x.co)
+    obFillPoi(box.querySelector(".obpoi"), nx.x);
+}
+/* Runs on load and every 30 s. Only the one-line bar is rewritten each tick --
+   the open sheet is left alone (a repaint would kill an in-flight Overpass
+   fetch) unless the anchor itself moved to the next change. */
+function paintOnboard(){
+  const host=$("ob"); if(!host) return;
+  if(onboard && onboard.arr && Date.now()>new Date(onboard.arr).getTime()+OB_EXPIRE_MIN*60000){
+    onboard=null; save(LS.onboard,null);   // the journey ended; the pin must not haunt tomorrow
+  }
+  if(!onboard){ host.innerHTML=""; document.body.classList.remove("hasob"); obOpen=false; return; }
+  document.body.classList.add("hasob");
+  const nx=onboardNext(onboard,Date.now());
+  const key=nx.phase+":"+nx.k;
+  if(!host.querySelector(".obbar")){
+    host.innerHTML=`<div class="obbar"><div class="obtop">`
+      +`<button type="button" class="obline" onclick="onboardSheetToggle()" aria-expanded="false" aria-label="Your pinned journey &#8212; tap for the next change"></button>`
+      +`<button type="button" class="obx" onclick="onboardUnpin()" aria-label="Unpin this journey">&#10005;</button>`
+      +`</div><div class="obsheet"></div></div>`;
+  }
+  const lineEl=host.querySelector(".obline");
+  const line=obLineHTML(onboard,nx);
+  if(lineEl.innerHTML!==line) lineEl.innerHTML=line;
+  if(obOpen && key!==obKey) renderObSheet();   // the anchor moved while the sheet was open
+  obKey=key;
+}
+
 /* ---- Wikipedia enrichment (REST summary; keyless, CORS-open) ---- */
 const wikiCache={};
 function wikiSummary(title,lang){
@@ -2525,6 +2690,7 @@ function connCard(c,i){
     ${chgHTML}
     <div class="lpoi"></div>
     <div class="meta"><div class="rbrow">${ribs}</div>${dm>0&&dm<90?`Departs in <b>${dm} min</b>`:"Departs "+hhmm(dep)}</div>
+    <button type="button" class="obpin" onclick="onboardPin(${i})" aria-label="Pin this journey &#8212; I&#39;m on this one">${CP(0x1F4CC)} I&#39;m on this one</button>
   </div>`;
 }
 
@@ -2880,6 +3046,7 @@ renderRoutes();
 renderBuild();
 wireFades();      // after the painters: the rows must have their chips before anything measures them
 tickClock(); setInterval(tickClock,1000); setInterval(tickSketches,15000);
+paintOnboard(); setInterval(paintOnboard,30000);   // the pinned journey survives a reload -- the bar must too
 const last=load(LS.last,"");
 /* Wander starts where you last looked at departures -- one tap on a budget
    chip and it runs; typing a start station stays possible but optional. */

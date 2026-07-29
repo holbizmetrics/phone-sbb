@@ -466,6 +466,33 @@
   .lpm{margin-left:auto; font-size:11px; color:var(--dim); font-variant-numeric:tabular-nums; white-space:nowrap}
   .lploading,.lpempty{font-size:12.5px; color:var(--faint); padding:4px 0}
   .lpcav{font-size:11px; color:var(--faint); margin-top:5px}
+  /* ONBOARD: the pinned journey's bar + gap sheet */
+  .obpin{margin-top:9px; font-size:11px; font-weight:700; padding:5px 10px; border:1px solid var(--line);
+    border-radius:8px; background:transparent; color:var(--dim); cursor:pointer; font-family:inherit}
+  .obpin:active{transform:scale(.97)}
+  body.hasob{padding-bottom:64px}
+  #ob .obbar{position:fixed; left:0; right:0; bottom:0; z-index:60; background:var(--card);
+    border-top:1px solid var(--line); box-shadow:var(--shadow); padding-bottom:env(safe-area-inset-bottom)}
+  .obtop{display:flex; align-items:center}
+  .obline{flex:1; min-width:0; text-align:left; background:none; border:0; color:var(--txt);
+    padding:11px 4px 11px 14px; font-size:12.5px; font-family:inherit; cursor:pointer;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .obline b{font-weight:800}
+  .obmiss{color:var(--tighttxt)}
+  .obx{background:none; border:0; color:var(--faint); padding:11px 14px; font-size:13px; cursor:pointer; font-family:inherit}
+  .obsheet{max-height:60vh; overflow:auto; padding:0 14px}   /* the gap sheet may run LONG -- verticality is fine, it scrolls */
+  .obsheet:empty{display:none}
+  .obbar.open .obsheet{padding-bottom:12px; border-top:1px solid var(--line); padding-top:10px}
+  .obh{font-size:13px; color:var(--txt); margin-bottom:4px}
+  .obt{font-size:12px; color:var(--dim); margin:3px 0}
+  .obverdict{font-size:13px; font-weight:800; margin:7px 0; padding:6px 10px; border-radius:8px}
+  .obverdict.go{background:rgba(34,197,94,.14); color:var(--grn)}
+  .obverdict.stay{background:var(--chip); color:var(--dim)}
+  .obverdict.miss{background:rgba(235,0,0,.16); color:var(--tighttxt)}
+  .obtog{display:flex; align-items:center; gap:7px; font-size:12px; color:var(--dim); margin:8px 0}
+  .obpoi{margin:6px 0}
+  .obunpin{margin-top:9px; font-size:11px; font-weight:700; padding:5px 10px; border:1px solid var(--line);
+    border-radius:8px; background:transparent; color:var(--faint); cursor:pointer; font-family:inherit}
   .rbrow{display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin-bottom:6px}
   .rbrow:empty{display:none}
   .rib{font-size:10px; font-weight:800; letter-spacing:.03em; text-transform:uppercase; padding:3px 8px; border-radius:6px; white-space:nowrap}
