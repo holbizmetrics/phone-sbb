@@ -1143,7 +1143,10 @@ function changeDetails(c){
        the change you physically cannot make. Dropping it rendered that connection as
        having FEWER changes and no tight warning, so the one journey you will miss
        came out looking cleanest of all. Keep it and let it shout. */
-    if(b<600) out.push({stn, b, pa, pd, missed:b<0});
+    // where the layover physically happens -- the step-out card needs a coordinate,
+    // and an address-station without one simply gets no card, not a guessed one
+    const co=rides[k].departure?.station?.coordinate || rides[k-1].arrival?.station?.coordinate || null;
+    if(b<600) out.push({stn, b, pa, pd, co, missed:b<0});
   }
   return out;
 }
@@ -1369,6 +1372,78 @@ function wonderCard(w,i){
     +`<span class="wmeta">${w.ty.label?esc(w.ty.label)+" &#183; ":""}${w.dist.toFixed(1)} km</span>${pin}</div>
     <div class="wrich"></div>
   </div>`;
+}
+/* ---------- layover step-out (what's near the CHANGE station) ----------
+   The change-buffer maths already knows how long you stand at Olten; this turns
+   a long layover from dead time into a choice. Same Overpass client as the
+   wonders list, but scoped to the MINUTES YOU ACTUALLY HAVE: half the usable
+   buffer walks out, at ~75 m/min, capped -- a layover is not a hike. */
+const LAYOVER_MIN=20;   // below this you stay on the platform; a 12' change is a walk to a Gleis, not an outing
+const LAYOVER_KEEP=10;  // minutes reserved to get back and find the platform again
+function layoverWalkM(b){
+  return Math.min(1000, Math.round((b-LAYOVER_KEEP)/2*75));
+}
+function lpType(t){
+  if(t.amenity==="cafe")        return {e:CP(0x2615), l:"caf\u00e9"};
+  if(t.amenity==="restaurant")  return {e:CP(0x1F37D),l:"restaurant"};
+  if(t.amenity==="ice_cream")   return {e:CP(0x1F366),l:"ice cream"};
+  if(t.shop==="bakery")         return {e:CP(0x1F950),l:"bakery"};
+  if(t.tourism==="viewpoint")   return {e:CP(0x1F304),l:"viewpoint"};
+  if(t.tourism==="museum")      return {e:CP(0x1F3DB),l:"museum"};
+  if(t.historic)                return {e:CP(0x1F3F0),l:"historic"};
+  if(t.leisure==="park")        return {e:CP(0x1F333),l:"park"};
+  return {e:CP(0x1F4CD), l:""};
+}
+function layoverSpots(lat,lon,r){
+  return overpassQuery(`lp:${lat},${lon},${r}`,
+    `[out:json][timeout:12];(`
+    +`node(around:${r},${lat},${lon})[amenity~"^(cafe|restaurant|ice_cream)$"][name];`
+    +`node(around:${r},${lat},${lon})[shop=bakery][name];`
+    +`node(around:${r},${lat},${lon})[tourism~"^(viewpoint|museum)$"][name];`
+    +`node(around:${r},${lat},${lon})[historic~"^(castle|monument)$"][name];`
+    +`way(around:${r},${lat},${lon})[leisure=park][name];`
+    +`);out center 30;`);
+}
+function layoverRows(els, lat, lon, r){
+  const seen=new Set(), list=[];
+  for(const e of els||[]){
+    const t=e.tags||{}; const name=t.name;
+    if(!name || seen.has(name)) continue;
+    const la=e.lat??e.center?.lat, lo=e.lon??e.center?.lon;
+    if(la==null||lo==null) continue;
+    const m=haversineKm(+lat,+lon,la,lo)*1000;
+    if(m>r) continue;   // "around" is a circle over OSM geometry; re-check against OUR radius
+    seen.add(name);
+    list.push({name, ty:lpType(t), walk:Math.max(1,Math.ceil(m/75))});
+  }
+  list.sort((a,b)=>a.walk-b.walk);
+  return list.slice(0,6);
+}
+async function layoverPOI(btn,ci,k){
+  const x=jrnConns[ci]?._chg?.[k]; if(!x||!x.co) return;
+  const card=btn.closest(".conn"), box=card&&card.querySelector(".lpoi");
+  if(!box) return;
+  if(box.innerHTML && !box.dataset.err){ box.innerHTML=""; return; }   // second tap folds it away
+  delete box.dataset.err;   // a tap on an outage message retries instead of folding
+  const r=layoverWalkM(x.b);
+  const my=box.dataset.q=String(Date.now()+Math.random());
+  box.innerHTML=`<div class="lploading">looking around ${esc(x.stn)}&#8230;</div>`;
+  const els=await layoverSpots(x.co.x, x.co.y, r);
+  if(box.dataset.q!==my || !box.innerHTML) return;   // folded away or re-asked while loading
+  if(els===null){
+    box.dataset.err="1";
+    box.innerHTML=`<div class="lpcav">Could not check what&#39;s near ${esc(x.stn)} (no map mirror answered) &#8212; an outage, not a &quot;no&quot;. Tap again to retry.</div>`;
+    return;
+  }
+  const rows=layoverRows(els, x.co.x, x.co.y, r);
+  const walkMax=Math.max(1,Math.ceil(r/75));
+  if(!rows.length){
+    box.innerHTML=`<div class="lpempty">Nothing named within a ~${walkMax}&#8242; walk of ${esc(x.stn)} &#8212; a stretch on the platform, then.</div>`;
+    return;
+  }
+  box.innerHTML=`<div class="lphead">${x.b}&#8242; at ${esc(x.stn)} &#8212; enough to step out</div>`
+    + rows.map(p=>`<div class="lprow"><span class="lpe">${p.ty.e}</span><span class="lpn">${esc(p.name)}</span><span class="lpm">${p.ty.l?esc(p.ty.l)+" &#183; ":""}${p.walk}&#8242; walk</span></div>`).join("")
+    + `<div class="lpcav">One-way walk times; keep ~${LAYOVER_KEEP}&#8242; to be back and find your platform. Opening hours not checked.</div>`;
 }
 /* ---- Wikipedia enrichment (REST summary; keyless, CORS-open) ---- */
 const wikiCache={};
@@ -2398,12 +2473,15 @@ function connCard(c,i){
   }).join('<span class="sep">&#8250;</span>') || '<span class="sep">walk</span>';
   const lhint = secs.length ? `<span class="lhint">tap a leg for stops</span>` : "";
   const chg = c._chg || [];
-  const chgHTML = chg.length ? `<div class="chg">`+chg.map(x=>{
+  const chgHTML = chg.length ? `<div class="chg">`+chg.map((x,k)=>{
     const cls = x.b<TIGHT?"tight":x.b<COMFY?"warn":"";
     const pf = x.pa && x.pd && x.pa!==x.pd ? ` <span class="cxpf">${esc(x.pa)}&#8594;${esc(x.pd)}</span>`
              : x.pd ? ` <span class="cxpf">Pl.&#8201;${esc(x.pd)}</span>` : "";
     const t = x.missed ? `<b>missed by ${-x.b}&#8242;</b>` : `<b>${x.b}&#8242;</b>`;
-    return `<span class="cx ${cls}">${esc(x.stn)} ${t}${pf}</span>`;
+    // a long layover with a known coordinate is an invitation, not just a wait
+    const out = !x.missed && x.b>=LAYOVER_MIN && x.co
+      ? ` <button type="button" class="cxout" onclick="layoverPOI(this,${i},${k})" aria-label="What is near ${esc(x.stn)} in this ${x.b}-minute layover">${CP(0x2615)} step out?</button>` : "";
+    return `<span class="cx ${cls}">${esc(x.stn)} ${t}${pf}${out}</span>`;
   }).join("")+`</div>` : "";
   const scenic = secs.some(s=>isScenic(s.journey.category));
   let ribs="";
@@ -2445,6 +2523,7 @@ function connCard(c,i){
     <div class="stops"></div>
     <div class="sketch"></div>
     ${chgHTML}
+    <div class="lpoi"></div>
     <div class="meta"><div class="rbrow">${ribs}</div>${dm>0&&dm<90?`Departs in <b>${dm} min</b>`:"Departs "+hhmm(dep)}</div>
   </div>`;
 }

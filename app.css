@@ -454,6 +454,18 @@
   .cx.warn b{color:var(--amber)}
   .cx.tight{background:rgba(235,0,0,.16); color:var(--tighttxt)}
   .cx.tight b{color:var(--tighttxt)}
+  .cxout{font-size:10px; font-weight:700; margin-left:5px; padding:2px 7px; border:1px solid var(--line);
+    border-radius:6px; background:transparent; color:var(--dim); cursor:pointer; font-family:inherit}
+  .cxout:active{transform:scale(.96)}
+  .lpoi{margin-top:8px}
+  .lpoi:empty{display:none}
+  .lphead{font-size:12px; font-weight:800; color:var(--txt); margin-bottom:5px}
+  .lprow{display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--txt); padding:3px 0}
+  .lpe{width:20px; text-align:center}
+  .lpn{font-weight:600}
+  .lpm{margin-left:auto; font-size:11px; color:var(--dim); font-variant-numeric:tabular-nums; white-space:nowrap}
+  .lploading,.lpempty{font-size:12.5px; color:var(--faint); padding:4px 0}
+  .lpcav{font-size:11px; color:var(--faint); margin-top:5px}
   .rbrow{display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin-bottom:6px}
   .rbrow:empty{display:none}
   .rib{font-size:10px; font-weight:800; letter-spacing:.03em; text-transform:uppercase; padding:3px 8px; border-radius:6px; white-space:nowrap}

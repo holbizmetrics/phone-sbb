@@ -161,8 +161,8 @@ function build(elements, passList = PASSLIST) {
 {
   const hosts = (src.match(/const OVERPASS_HOSTS=\[[^\]]+\]/) || [""])[0];
   chk("there is exactly one Overpass mirror list", (src.match(/overpass-api\.de\/api\/interpreter/g) || []).length === 1, hosts);
-  chk("both features go through overpassQuery", (src.match(/overpassQuery\(/g) || []).length === 3,
-    "expected 1 definition + 2 callers");
+  chk("all three OSM features go through overpassQuery", (src.match(/overpassQuery\(/g) || []).length === 4,
+    "expected 1 definition + 3 callers (wonders, en-route, layover step-out)");
 }
 {
   let tries = 0;
