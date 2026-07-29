@@ -46,7 +46,12 @@ export const ADJUDICATIONS = {
   "conditions/last-service-passed":   { status: "SERVED",      step: "decide", evidence: "feature: last-way-home line + stranding rib (journey-anchor.mjs)" },
   "purpose/last-train-home":          { status: "SERVED",      step: "decide", evidence: "feature: jlh top line + per-card rib, 1625cbe" },
   "purpose/scenic-ride":              { status: "SERVED",      step: "plan",   evidence: "feature: scenic prefer-toggle + zone facts" },
-  "conditions/delay-50min":           { status: "LEFT_BEHIND", step: "ride",   evidence: "register-2.1: no replan-from-here; Harold-variant converts to it" },
+  // Re-adjudicated 2026-07-29, forced by the absence-rot check in passenger-sweep:
+  // this row cited an absence that had since been filled. replanFromStop plus the
+  // missed-change obverdict serve the recover half; the residual is that the app
+  // never offers the replan unprompted -- the passenger must notice first. So
+  // PARTIAL, deliberately not SERVED: half a rescue is not a rescue.
+  "conditions/delay-50min":           { status: "PARTIAL",     step: "ride",   evidence: "register-2.1 half-built: replanFromStop from a named stop (replan-from-here.mjs); residual = never offered unprompted" },
   "phrasing/exact-station-names":     { status: "SERVED",      step: "input",  evidence: "feature: the baseline the whole suite exercises" },
   "conditions/normal":                { status: "SERVED",      step: "plan",   evidence: "feature: the baseline the whole suite exercises" },
 };

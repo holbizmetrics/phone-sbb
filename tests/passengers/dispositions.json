@@ -7,6 +7,6 @@
     "purpose/meet-flight":               { "state": "undecided" },
     "constraints/needs-food-en-route":   { "state": "parked-with-reason", "reason": "POI claim deferred on Overpass cost (reviewer triage 2026-07-28 13:12); gap mechanic already serves the slack half" },
     "constraints/needs-toilet-en-route": { "state": "parked-with-reason", "reason": "same Overpass-cost parking as needs-food" },
-    "conditions/delay-50min":            { "state": "undecided", "note": "register-2.1 replan-from-here; Harold-late specimen is its evidence half" }
+    "conditions/delay-50min":            { "state": "parked-with-reason", "reason": "replan-from-here SHIPPED, so the row went LEFT_BEHIND -> PARTIAL (2026-07-29, forced by the absence-rot check). What is parked is only the residual: whether the app should offer the replan unprompted instead of waiting to be asked" }
   }
 }

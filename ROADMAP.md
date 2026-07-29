@@ -258,6 +258,48 @@ fixtures, so it passed on the phone and failed in UTC — a test pinned to one t
 makes a claim about the machine, not about the code. The fixtures now build their offsets from the
 runner's own clock, and the suite is verified green in five zones including a half-hour one.
 
+### Harness work, 2026-07-29 — two gates that were comments asking for care
+
+Both guard the same shape from opposite ends: **a check that is green over the wrong denominator.**
+Neither is a feature; no app asset changed, so there is deliberately no `?v=` bump.
+
+**`tests/workflow-parity.mjs` (20 checks) — the deploy gate may not be the smaller gate.** `ci.yml`
+gates every branch, `deploy.yml` gates what goes live, and their test steps are copy-pasted twins.
+`deploy.yml`'s own comment already named the hazard — *"a deploy that runs fewer tests than CI is the
+worst version of this bug"* — and then left it to care. The suite asserts the two suite-runner scripts
+are **identical**, that discovery stays a glob (the hand-written list once orphaned four suites while
+CI stayed green), that `smoke.mjs` is the *only* thing either skips, that the deploy job still carries
+`needs: test`, and that **no `node` invocation is piped** — `node "$t" | tail -1` reports tail's
+status, which is 0 whatever the suite said, so the suite runs, prints FAIL, and the step passes. That
+last check is imported: the same trap has bitten the sibling PCLA sessions four times. **6/6 planted
+mutations caught** (extra exclusion in deploy only · a pipe on the loop body · gate removed · a
+hand-listed suite · `exit $fail` dropped · glob replaced by a list).
+
+**The passenger sweep had rot in the one direction it never checked.** It already enforces that *a
+refusal may not outlive its policy* — every refusal names a file and a section, and both must still
+exist. The mirror was missing: an adjudication whose evidence reads *"no replan-from-here"* is a
+**claim about the app** — that the feature is absent. `replanFromStop` shipped,
+`tests/replan-from-here.mjs` sits in the same directory 20/20 green, and the row went on scoring a
+delayed passenger `LEFT_BEHIND`. The instrument understating the app is still the instrument being
+wrong. The new block resolves every cited absence against the suites on disk, and went red on exactly
+that row on its first run — no mutation needed, it caught a live defect.
+`conditions/delay-50min` is re-adjudicated **`LEFT_BEHIND` → `PARTIAL`** — deliberately not `SERVED`:
+`replanFromStop` and the missed-change obverdict serve the recover half, but the app never offers the
+replan unprompted, so the passenger has to notice first, and half a rescue is not a rescue. Its
+ledger row moves to `parked-with-reason` naming that residual as the open question.
+
+One thing learned while writing it: the first control was a count — *"at least one row cites an
+absence"* — which passed **only while the stale row existed.** Fixing the defect broke the proof that
+the check worked. The corpus is allowed to be clean, so the rule's negative case is now three
+synthetic self-tests (fires on a filled absence · stays silent on one that is still real · does not
+read ordinary prose like *"no data source"* as a feature name). Sweep: **82 checks green**, and the
+full suite is green under `TZ=UTC` as well as local.
+
+**Still open on the sweep, operator's call:** `constraints/arrive-by-time` is `UNADJUDICATED`, but
+arrive-by is shipped (`segArr`, `&isArrivalTime=1`) and T17 now walks it on its own axis. Adding a
+`SERVED` row is squarely the direction this session is biased to over-claim in, so it is left for you
+to rule rather than banked.
+
 ## Regression summary — the "does it add or destroy?" answer
 
 | Item | Risk |

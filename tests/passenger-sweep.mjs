@@ -78,6 +78,39 @@ for (const r of refusals.refusals) {
   }
 }
 
+// ---- the mirror of the rule above: an adjudication may not outlive the ABSENCE it cites ----
+// The refusal rot-check asks "does the cited policy still exist?". This asks the
+// question nobody was asking: a row whose evidence reads "no replan-from-here"
+// is a CLAIM ABOUT THE APP -- that the feature is absent. Ship the feature and
+// the row goes on failing a passenger the app now serves, green the whole time.
+// The instrument understating the app is still the instrument being wrong.
+//
+// Cited absences are matched as hyphenated feature names, because that is what a
+// suite is called in this repo -- so "no replan-from-here" resolves against
+// tests/replan-from-here.mjs, while "no data source" (prose) matches nothing.
+{
+  const suites = fs.readdirSync(new URL("./", import.meta.url).pathname).filter(f => f.endsWith(".mjs"));
+  const staleCites = ev => [...ev.matchAll(/\bno ([a-z]+(?:-[a-z]+)+)\b/g)]
+    .map(m => m[1]).filter(f => suites.includes(f + ".mjs"));
+
+  for (const [k, a] of Object.entries(ADJUDICATIONS)) {
+    const stale = staleCites(a.evidence);
+    chk(`'${k}' cites no absence that the repo has since filled`, stale.length === 0,
+      stale.map(f => `tests/${f}.mjs IS in the repo -- re-adjudicate this row`).join("; "));
+  }
+
+  // The rule's own negative case, synthetic on purpose. A count-based control
+  // ("at least one row cites an absence") passed only while a stale row existed
+  // -- so fixing the defect broke the proof that the check works. The corpus is
+  // allowed to be clean; the rule still has to be demonstrably able to fire.
+  chk("SELF-TEST: the rot-check FIRES on an absence the repo has filled",
+    staleCites("register-2.1: no replan-from-here").length === 1, "");
+  chk("SELF-TEST: ...and stays silent on an absence that is still real",
+    staleCites("no such-feature-as-this exists").length === 0, "");
+  chk("SELF-TEST: ...and does not read ordinary prose as a feature name",
+    staleCites("policy-w30: no data source the app can verify").length === 0, "");
+}
+
 // ---- the disposition ledger: ABSENT is the only red (pt.3 rule 1) ----
 const ledger = JSON.parse(fs.readFileSync(new URL("./passengers/dispositions.json", import.meta.url), "utf8"));
 const LEGAL = ["built", "refused", "parked-with-reason", "undecided"];
