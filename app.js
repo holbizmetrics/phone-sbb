@@ -2398,6 +2398,21 @@ function bestDayHTML(daily){
   return `<div class="smdays"><div class="smbest">${head}</div><div class="smstrip">${cells.join("")}</div>`
     + `<div class="smcav">Beyond ~3 days cloud is a tendency, not a promise &#8212; recheck the day before. Tap a day to plan the trip for it.</div></div>`;
 }
+/* "Check for yourself": a forecast is OUR claim; a webcam is the mountain
+   itself. We hand you the door and nothing more -- no embed, no curation,
+   because we cannot vouch for a frozen webcam any more than a wrong forecast.
+   Both links are coordinate-addressed (no name matching, no API key), and the
+   row stays up even when our own outlook is unreachable -- that is precisely
+   when someone else's picture is worth the most. */
+function smSeeHTML(co){
+  const la=+co?.x, lo=+co?.y;
+  if(!isFinite(la)||!isFinite(lo)) return "";   // only literal numbers may enter a URL
+  const a=la.toFixed(3), o=lo.toFixed(3);
+  return `<div class="smsee">check for yourself: `
+    +`<a href="https://www.windy.com/-Webcams/webcams?${a},${o},11" target="_blank" rel="noopener">${CP(0x1F4F7)} webcams</a>`
+    +` &#183; <a href="https://www.meteoblue.com/en/weather/week/${a}N${o}E" target="_blank" rel="noopener">second forecast</a>`
+    +`<span class="smseecav"> &#8212; their pictures, their forecast, not ours</span></div>`;
+}
 function planForDay(day){
   const at=$("whenAt"); if(!at) return;
   const hh=/^\d{2}:\d{2}$/.test((whenValue||"").slice(11,16)) ? whenValue.slice(11,16) : "08:00";
@@ -2439,7 +2454,8 @@ async function fillSummit(panel,ci){
          not render like a week with no good day */
       + (days==="unreachable"
           ? `<div class="smcav">Could not load the week&#8217;s outlook &#8212; an outage, not a &quot;no&quot;.</div>`
-          : bestDayHTML(days));
+          : bestDayHTML(days))
+      + smSeeHTML(co);
   }catch(e){ box.innerHTML=""; }
 }
 /* ---------- last way back ----------

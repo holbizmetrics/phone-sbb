@@ -116,6 +116,26 @@ const mkPlan = (whenVal) => {
     d2 && d2.weather_code && d2.weather_code[0] === 0 && calls === 2, "calls=" + calls + " d2=" + d2);
 }
 
+// ---- smSeeHTML: the door to someone else's picture ----
+{
+  const smSeeHTML = new Function(`
+    const CP=c=>String.fromCodePoint(c);
+    ${grab("smSeeHTML")}
+    return smSeeHTML;
+  `)();
+  const h = smSeeHTML({ x: 46.9797, y: 8.6659 });
+  chk("the row links webcams AND a second forecast at the summit's own coordinates",
+    h.includes("windy.com/-Webcams/webcams?46.980,8.666,11") && h.includes("meteoblue.com/en/weather/week/46.980N8.666E"), h);
+  chk("both doors open in a new tab, without a window handle back to us",
+    (h.match(/target="_blank" rel="noopener"/g) || []).length === 2, h);
+  chk("the caveat disclaims: their pictures, their forecast, not ours",
+    /their pictures, their forecast, not ours/.test(h), h);
+  chk("a coordinate that is not a number never enters a URL",
+    smSeeHTML({ x: "evil\"><script>", y: 8.6 }) === "" && smSeeHTML(null) === "" && smSeeHTML({}) === "", "");
+}
+chk("the summit card actually renders the row -- outage weeks included",
+  /\+ smSeeHTML\(co\);/.test(src), "row built but never shown -- green tests, invisible feature");
+
 // ---- wiring: green-but-unwired is the named defect class ----
 chk("fillSummit fetches the outlook beside the day's weather",
   /dayOutlook\(co\.x, co\.y\)\.catch\(\(\)=>"unreachable"\)/.test(src),
@@ -126,6 +146,7 @@ chk("the card renders it -- and keeps outage and bad-week APART (three outcomes,
 const css = fs.readFileSync(new URL("../app.css", import.meta.url), "utf8");
 chk("the day strip is styled", css.includes(".smstrip") && css.includes(".smday{"), "unstyled = invisible = unshipped");
 chk("the caveat is the quiet line", /\.smcav\{[^}]*var\(--faint\)/.test(css));
+chk("the check-for-yourself row is styled", css.includes(".smsee") && /\.smseecav\{[^}]*var\(--faint\)/.test(css), "unstyled = invisible = unshipped");
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

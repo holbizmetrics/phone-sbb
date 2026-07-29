@@ -78,6 +78,7 @@ function build({ elev = [3089], hourly = null, code = 0 } = {}) {
     // this suite tests the today-card; the week strip has its own suite (summit-days.mjs)
     const dayOutlook = async () => { throw new Error("no outlook in this harness"); };
     const bestDayHTML = () => "";
+    const smSeeHTML = () => "";   // the check-for-yourself row has its own checks (summit-days.mjs)
     ${grab("fillSummit")}
     return { fillSummit, mountainLegs, summitVerdict, SUMMIT_MIN_M, setConns:(c)=>{jrnConns=c;} };
   `)(panel, elev, H, []);
