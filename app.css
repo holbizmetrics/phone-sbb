@@ -472,6 +472,18 @@
   /* visually hidden, still read by assistive tech (the #annc live region) */
   .vh{position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden;
     clip:rect(0 0 0 0); white-space:nowrap; border:0}
+  /* OFFLINE STALE BOARD (T2) -- deliberately NOT the live board dimmed:
+     a different, poorer rendering, so it can never be mistaken for live */
+  .stale{border:1px solid var(--amber); border-radius:12px; padding:10px 12px; margin-top:8px}
+  .stbanner{font-size:12px; line-height:1.45; color:var(--amber); margin-bottom:8px}
+  .strow{display:flex; align-items:baseline; gap:8px; padding:5px 0; font-size:13px;
+    color:var(--dim); border-top:1px solid var(--line); font-variant-numeric:tabular-nums}
+  .strow:first-of-type{border-top:0}
+  .strow b{color:var(--txt); font-variant-numeric:tabular-nums}
+  .stline{font-weight:700; color:var(--txt)}
+  .stto{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .stpl{margin-left:auto; font-size:11px; color:var(--faint); white-space:nowrap}
+  .stcav{font-size:11px; line-height:1.45; color:var(--faint); margin-top:8px}
   /* AIRPORT / FLIGHT MODE (T13) */
   .fltpanel{margin-top:8px; border:1px solid var(--line); border-radius:12px; padding:10px 12px; background:var(--card)}
   .fltat{display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:700; color:var(--txt); flex-wrap:wrap}

@@ -59,6 +59,37 @@ confidence-damaging bug ("3-min delay shown as none; a cancelled tram listed as 
   cache-first only for a **versioned shell**, explicit stale markers, `skipWaiting` /
   `clients.claim` update flow. Build on a branch; field-test in a real tunnel / airplane-mode
   before it touches master.
+- **BUILT 2026-07-29 on branch `t2-service-worker` — NOT merged, and it must not be merged
+  until the field test below is done.** Each of the three named risks got a structural guard,
+  not a promise:
+  - *(b), the worst one, is answered by scope:* **the worker never touches the timetable.** The
+    fetch handler returns without `respondWith` for anything cross-origin, so all four services
+    go to the network exactly as before — there is deliberately no API caching in the worker at
+    all. Showing a stale board is the **app's** job, because only the app can label it. The
+    stale board is therefore not the live board dimmed but a separate, poorer rendering: clock
+    times only, **no countdowns** (a countdown is computed from *now*, so "in 3 minutes" drawn
+    over a board fetched 40 minutes ago is the app stating a falsehood), timers stopped, and a
+    banner reading "stale as of HH:MM (N minutes ago)" plus a line naming what it cannot know.
+  - *(a)* navigation is **network-first**, never cache-first; the cache name carries the
+    version, `activate` deletes every other cache, `skipWaiting` + `clients.claim`, and
+    registration passes `updateViaCache:"none"`.
+  - *(c)* the shell is precached **per asset**, not `addAll`, so one renamed icon cannot fail
+    the whole install; every path falls back to a plain fetch; only same-origin 200/`basic`
+    responses are ever stored. There is also an escape hatch (`railUnregisterSW()` →
+    `RAIL_UNREGISTER`) that wipes every cache and unregisters — a guard that cannot be turned
+    off is not a guard.
+  - *Tests:* `tests/offline.mjs`, **37 checks** — sw.js is *executed* against a fake worker
+    global, not grepped, so the fetch handler's real decisions are observed; the load-bearing
+    check is the negative one (a timetable request comes back **unclaimed**). Mutation score
+    **5/5 caught** (timetable guard removed · cache-first navigation · all-or-nothing precache ·
+    old caches kept · countdown reused on stale rows). Two of those five *survived* the first
+    pass and the suite was fixed rather than the score reported: the fake CacheStorage keyed
+    relative shell URLs unresolved, so a cache-first navigation missed and looked network-first;
+    and the countdown fixture departed in the past, where a countdown renders as "now" and slips
+    a regex looking for "in N minutes".
+  - *Still required before merge:* **a real tunnel / airplane-mode field test on the phone** —
+    install, go offline, confirm the app still boots, the last board appears labelled stale, and
+    that a later online load picks up a new `?v=` without a manual clear.
 
 ### Tier 2 — cheap, differentiating, near-zero risk (pure add)
 

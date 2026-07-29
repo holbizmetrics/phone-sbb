@@ -6,7 +6,7 @@
 const BUILD = "dev";  // BUILD-STAMP
 const API = "https://transport.opendata.ch/v1";
 const $ = id => document.getElementById(id);
-const LS = { favs:"rail.favs", last:"rail.last", modes:"rail.modes", cats:"rail.cats", routes:"rail.routes", theme:"rail.theme", onboard:"rail.onboard", obpoi:"rail.obpoi", flightbuf:"rail.flightbuf" };
+const LS = { favs:"rail.favs", last:"rail.last", modes:"rail.modes", cats:"rail.cats", routes:"rail.routes", theme:"rail.theme", onboard:"rail.onboard", obpoi:"rail.obpoi", flightbuf:"rail.flightbuf", board:"rail.board" };
 let favs = load(LS.favs, []);
 let current = "";        // current departures station
 let refreshTimer = null;
@@ -316,11 +316,76 @@ async function loadBoard(name, quiet){
       wireBoardHead(disp);
       restoreOpenDep();
     }
+    save(LS.board, {name:disp, at:Date.now(), rows:lastBoard.slice(0,12)});
   }catch(e){
-    if(!quiet) $("depOut").innerHTML = boardHeadHTML(name) +
-      `<div class="err">Couldn&#39;t reach the network.<br>Check your connection and tap &#8635;.</div>`;
+    if(!quiet){
+      const cached=staleBoardFor(name);
+      $("depOut").innerHTML = boardHeadHTML(cached?cached.name:name) + (cached
+        ? staleBoardHTML(cached)
+        : `<div class="err">Couldn&#39;t reach the network.<br>Check your connection and tap &#8635;.</div>`);
+      if(cached) stopBoardTimers();   // nothing may tick on top of frozen data
+    }
     wireBoardHead(name);
   }finally{ const r=$("rf"); if(r) r.classList.remove("spin"); }
+}
+/* ---------- T2: the last board, and why it is rendered DIFFERENTLY ----------
+   The service worker deliberately never caches the timetable, so this is the
+   only place a stale board can appear -- and it is here precisely because this
+   is the only layer that can LABEL it.
+
+   It is not the live board dimmed. It is a separate, deliberately poorer
+   rendering: clock times only, no countdowns, no live platform-change chips,
+   no refresh tick. A countdown is computed from the current time, so a "in 3
+   minutes" drawn over a board fetched forty minutes ago is the app stating a
+   falsehood with a straight face -- exactly the failure the roadmap named for
+   this item. A time printed as 14:05 is still true; "in 3 minutes" is not. */
+function staleBoardFor(name){
+  const c=load(LS.board, null);
+  if(!c || !Array.isArray(c.rows) || !c.rows.length || !c.at) return null;
+  const want=(name||"").toLowerCase();
+  const got=(c.name||"").toLowerCase();
+  if(want && got && want!==got && !got.startsWith(want) && !want.startsWith(got)) return null;
+  return c;
+}
+/* The DEVICE's wall clock, deliberately -- unlike every departure time in this
+   app, which is Swiss local. "Stale as of" is a moment on the phone that did
+   the fetching, and it has to agree with the header clock the user is looking
+   at. tzNoteHTML already explains the two-clock situation when they differ. */
+function clockHM(ms){
+  try{ return new Date(ms).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",hourCycle:"h23"}); }
+  catch(e){ return ""; }
+}
+function staleAgeWords(ms){
+  // Seconds decide the under-a-minute case, not a rounded minute count:
+  // Math.round(30s) is 1, so a half-minute-old board claimed to be a minute old.
+  // Above that, rounding UPward is the safe direction for a staleness marker --
+  // overstating the age costs nothing, understating it is the lie.
+  if(ms < 60000) return "less than a minute ago";
+  const m=Math.round(ms/60000);
+  if(m<60) return `${m} minute${m===1?"":"s"} ago`;
+  const h=Math.round(m/60);
+  return `${h} hour${h===1?"":"s"} ago`;
+}
+function staleBoardHTML(c){
+  const age=Date.now()-c.at;
+  const rows=c.rows.map(j=>{
+    const b=badge(j.category, j.number||j.line);
+    const dep=j.stop?.departure;
+    const pl=j.stop?.platform;
+    return `<div class="strow"><b>${dep?hhmm(dep):"--:--"}</b>`
+      + `<span class="stline">${esc(b.label)}</span>`
+      + `<span class="stto">${esc(shortStop(j.to||""))}</span>`
+      + (pl?`<span class="stpl">Pl. ${esc(pl)}</span>`:"")
+      + `</div>`;
+  }).join("");
+  return `<div class="stale">`
+    + `<div class="stbanner">&#9888; Offline &#183; this is the last board we could fetch, `
+    + `<b>stale as of ${esc(clockHM(c.at))}</b> (${staleAgeWords(age)}).</div>`
+    + rows
+    + `<div class="stcav">Scheduled times as they stood then. No countdowns, no delays and no `
+    + `platform changes since &#8212; anything that moved after that moment is not in here. `
+    + `Tap &#8635; when you have signal.</div>`
+    + `</div>`;
 }
 /* one sentence per row for a screen reader. The visual row is five separate
    fragments (badge, destination, platform, delay, countdown) that read as a
@@ -3346,3 +3411,22 @@ document.addEventListener("visibilitychange",()=>{
   if(document.hidden){ stopBoardTimers(); return; }       // asleep: zero requests
   if(current){ loadBoard(current,true); startBoardTimers(current); }
 });
+
+/* ---------- T2: service-worker registration ----------
+   Registered LAST, and never on an insecure origin (where it is unavailable
+   anyway). updateViaCache:"none" matters more than it looks: without it the
+   browser may serve sw.js itself from the HTTP cache, so a fixed worker never
+   reaches the phone that needs fixing -- the trap-on-stale-version failure one
+   level up. railUnregisterSW() is the escape hatch: call it from the console
+   and the next load is a plain uncached site. */
+function railUnregisterSW(){
+  if(!("serviceWorker" in navigator)) return Promise.resolve(false);
+  navigator.serviceWorker.controller?.postMessage({type:"RAIL_UNREGISTER"});
+  return navigator.serviceWorker.getRegistrations()
+    .then(rs=>Promise.all(rs.map(r=>r.unregister()))).then(()=>true).catch(()=>false);
+}
+if("serviceWorker" in navigator && location.protocol==="https:"){
+  window.addEventListener("load", ()=>{
+    navigator.serviceWorker.register("sw.js", {updateViaCache:"none"}).catch(()=>{});
+  });
+}
