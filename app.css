@@ -472,6 +472,21 @@
   /* visually hidden, still read by assistive tech (the #annc live region) */
   .vh{position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden;
     clip:rect(0 0 0 0); white-space:nowrap; border:0}
+  /* MEET IN THE MIDDLE (T12) */
+  .meetbar{margin:6px 0 2px}
+  .meetbtn{font-size:12px; font-weight:700; padding:6px 12px; border:1px solid var(--line);
+    border-radius:999px; background:transparent; color:var(--dim); cursor:pointer; font-family:inherit}
+  .meetbtn:active{transform:scale(.97)}
+  #meetOut:empty{display:none}
+  .meetc{border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-top:8px; background:var(--card)}
+  .meeth{font-size:14px; color:var(--txt); display:flex; align-items:baseline; gap:8px}
+  .meetgap{font-size:11px; color:var(--grn); font-weight:700; margin-left:auto; white-space:nowrap}
+  .meetl{font-size:12.5px; color:var(--dim); margin-top:4px; font-variant-numeric:tabular-nums}
+  .meetb{display:flex; align-items:center; gap:6px}
+  .meetlegbtn{font-size:11px; font-weight:700; padding:3px 10px; border:1px solid var(--line);
+    border-radius:999px; background:transparent; color:var(--txt); cursor:pointer; font-family:inherit; margin-left:auto}
+  .meetlegbtn+.meetlegbtn{margin-left:0}
+  .meetlegbtn:active{transform:scale(.96)}
   /* ONBOARD: the pinned journey's bar + gap sheet */
   .obpin{margin-top:9px; font-size:11px; font-weight:700; padding:5px 10px; border:1px solid var(--line);
     border-radius:8px; background:transparent; color:var(--dim); cursor:pointer; font-family:inherit}

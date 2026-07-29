@@ -1106,6 +1106,150 @@ function applyDeepLink(){
   return true;
 }
 
+/* ---------- T12: meet in the middle ----------
+   Two people, two origins -- the From and To fields -- one question: where is
+   it FAIR to meet? Fairness is checkable: the stop where the two ride times
+   are closest, both leaving now. The N x M trap is dodged by construction:
+   the two DIRECT connections (A->B and B->A) already call at every candidate
+   worth naming, and each shared stop carries BOTH clock times for free -- so
+   the base cost is 2 requests. Only when the two directions never share a
+   stop does a fallback fire: at most MEET_FB per-candidate lookups against
+   whichever direction answered. Hard ceiling 2+MEET_FB requests, and only
+   ever on the button tap -- never on render. */
+const MEET_FB = 4;
+let meetGen = 0, meetAbort = null, meetRows = [];
+
+function connStops(c){
+  // every station the journey actually calls at, with the clock time there.
+  // Same predicate as legStops: no name or no time = routing marker, not a
+  // stop (and passList[0] can pair the origin's time with the terminus id).
+  const out = new Map();
+  for(const s of (c.sections||[])){
+    const pl = s.journey && s.journey.passList;
+    if(!Array.isArray(pl)) continue;
+    for(const p of pl){
+      const nm = p.station?.name, t = p.arrival || p.departure;
+      if(nm && t && !out.has(nm)) out.set(nm, t);
+    }
+  }
+  return out;
+}
+
+function meetRow(name, depA, arrA, depB, arrB){
+  const mA = Math.round((new Date(arrA)-new Date(depA))/60000);
+  const mB = Math.round((new Date(arrB)-new Date(depB))/60000);
+  return { name, mA, mB, arrA, arrB, gap: Math.abs(mA-mB),
+           together: new Date(arrA) > new Date(arrB) ? arrA : arrB };
+}
+
+function meetCardHTML(r, i){
+  return `<div class="meetc">
+    <div class="meeth">&#129309; <b>${esc(r.name)}</b><span class="meetgap">${
+      r.gap===0 ? "perfectly fair" : `fair within ${r.gap} min`}</span></div>
+    <div class="meetl">You ride ${r.mA} min, there ${hhmm(r.arrA)} &#183; they ride ${r.mB} min, there ${hhmm(r.arrB)}</div>
+    <div class="meetl meetb">both there by <b>${hhmm(r.together)}</b>
+      <button type="button" class="meetlegbtn" onclick="meetLeg(${i},false)">my leg</button>
+      <button type="button" class="meetlegbtn" onclick="meetLeg(${i},true)">their leg</button></div>
+  </div>`;
+}
+
+function meetLeg(i, theirs){
+  const r = meetRows[i]; if(!r) return;
+  // planning THEIR leg swaps the From field to their origin -- an explicit
+  // tap, and the share bar in the resulting plan is how you send it to them
+  const f = theirs ? toName : fromName;
+  fromName = f; toName = r.name;
+  $("iFrom").value = f; $("iTo").value = r.name;
+  $("fFrom").classList.add("has"); $("fTo").classList.add("has");
+  planJourney();
+}
+
+async function meetMiddle(){
+  const out = $("meetOut");
+  if(!fromName || !toName){
+    out.innerHTML = `<div class="hint">Put each person&#8217;s starting station in the two fields, then tap again.</div>`;
+    return;
+  }
+  if(fromName === toName){
+    out.innerHTML = `<div class="hint">Both fields say ${esc(fromName)} &#8212; you are already meeting there.</div>`;
+    return;
+  }
+  const gen = ++meetGen;
+  if(meetAbort) meetAbort.abort();
+  meetAbort = new AbortController();
+  const sig = meetAbort.signal;
+  out.innerHTML = skel(2);
+  try{
+    // requests 1+2 of the ceiling: the two direct connections
+    let eAB=null, eBA=null;
+    const [cab, cba] = await Promise.all([
+      api(`/connections?limit=1&from=${encodeURIComponent(fromName)}&to=${encodeURIComponent(toName)}`, sig)
+        .then(d=>(d.connections||[])[0]||null).catch(e=>{ eAB=e; return null; }),
+      api(`/connections?limit=1&from=${encodeURIComponent(toName)}&to=${encodeURIComponent(fromName)}`, sig)
+        .then(d=>(d.connections||[])[0]||null).catch(e=>{ eBA=e; return null; }),
+    ]);
+    if(gen!==meetGen) return;                                      // superseded
+    if(!cab && !cba){
+      // both directions dead: an error is an OUTAGE, absence of both errors
+      // is a real "no route" verdict -- do not collapse the two
+      if(eAB||eBA) throw (eAB||eBA);
+      out.innerHTML = `<div class="empty"><div class="big">&#129309;</div>The timetable finds no way between ${esc(fromName)} and ${esc(toName)} in either direction &#8212; there is no line to meet along.</div>`;
+      return;
+    }
+    const endNames = new Set([
+      fromName, toName,
+      cab?.from?.station?.name, cab?.to?.station?.name,
+      cba?.from?.station?.name, cba?.to?.station?.name,
+    ].filter(Boolean));
+    let rows = [];
+    if(cab && cba){
+      const sa = connStops(cab), sb = connStops(cba);
+      const depA = cab.from?.departure, depB = cba.from?.departure;
+      for(const [nm, tA] of sa){
+        if(endNames.has(nm)) continue;
+        const tB = sb.get(nm);
+        if(tB && depA && depB) rows.push(meetRow(nm, depA, tA, depB, tB));
+      }
+    }
+    let fbNote = "";
+    if(!rows.length){
+      // the two directions never share a stop (or one direction answered
+      // nothing): bounded fallback against whichever direction we have
+      const src = cab || cba;
+      const depS = src.from?.departure;
+      const other = cab ? toName : fromName;   // the origin with no stop data
+      const cands = [...connStops(src)].filter(([nm])=>!endNames.has(nm));
+      // middle of the route, capped -- the cap IS the feature
+      const start = Math.max(0, Math.floor((cands.length-MEET_FB)/2));
+      const picked = cands.slice(start, start+MEET_FB);
+      let fbFail = 0;
+      const qs = await Promise.all(picked.map(([nm]) =>
+        api(`/connections?limit=1&from=${encodeURIComponent(other)}&to=${encodeURIComponent(nm)}`, sig)
+          .then(d=>(d.connections||[])[0]||null).catch(()=>{ fbFail++; return null; })));
+      if(gen!==meetGen) return;                                    // superseded
+      picked.forEach(([nm,tS], k)=>{
+        const q=qs[k]; if(!q) return;
+        const dO=q.from?.departure, aO=q.to?.arrival;
+        if(!dO||!aO||!depS) return;
+        rows.push(cab ? meetRow(nm, depS, tS, dO, aO) : meetRow(nm, dO, aO, depS, tS));
+      });
+      fbNote = `<div class="hint">The two directions don&#8217;t share a stop, so this checked ${picked.length} mid-route candidate${picked.length===1?"":"s"} the long way${fbFail?` (${fbFail} lookup${fbFail===1?"":"s"} failed)`:""}.</div>`;
+    }
+    if(gen!==meetGen) return;                                      // superseded
+    if(!rows.length){
+      out.innerHTML = `<div class="empty"><div class="big">&#129309;</div>No station between ${esc(fromName)} and ${esc(toName)} could be timed from both sides &#8212; no fair meeting point to name.</div>${fbNote}`;
+      return;
+    }
+    rows.sort((a,b)=>a.gap-b.gap || (new Date(a.together)-new Date(b.together)));
+    meetRows = rows.slice(0,3);
+    out.innerHTML = fbNote + meetRows.map((r,k)=>meetCardHTML(r,k)).join("")
+      + `<div class="hint">Fair = closest ride times, both leaving now. Tap a leg to plan it &#8212; the share bar sends it on.</div>`;
+  }catch(e){
+    if(gen!==meetGen) return;                                      // superseded
+    out.innerHTML = errBox(e);
+  }
+}
+
 async function plainPlan(){
   if(!fromName||!toName) return;
   const gen=++jrnGen;

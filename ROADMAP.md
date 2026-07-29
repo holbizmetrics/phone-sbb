@@ -173,6 +173,13 @@ discipline; not currently planned.
 **T12. Meet-in-the-middle** — two people, two origins, find the station that is fair to both.
 *Regression:* pure add, but **N×M queries** against a volunteer API — must be bounded and fired on
 explicit request only, never on render.
+**SHIPPED 2026-07-29.** The N×M trap is dodged by construction: the two *direct* connections
+(A→B and B→A) already call at every candidate worth naming, and each shared stop carries both
+clock times for free — base cost **2 requests**. Only when the two directions never share a stop
+does a capped fallback fire (≤4 mid-route per-candidate lookups). Hard ceiling 6 requests,
+button-tap only. Fairness = closest ride times both leaving now; top 3 rendered with "my leg /
+their leg" replan taps. `tests/meet.mjs` (27 checks) pins the bound with 9 candidates on offer,
+the never-on-render rule, superseded-tap abort, and outage≠no-route; 3/3 planted mutations caught.
 
 **T13. Airport / flight mode** — "be at the gate by HH:MM", working backwards through check-in and
 security. *Regression:* the check-in buffer is a **CLAIM**, not timetable data. A fixed "be there 2h

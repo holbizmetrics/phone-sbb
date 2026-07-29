@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-180.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <title>Rail &#183; live departures</title>
-<link rel="stylesheet" href="app.css?v=20260729h">
+<link rel="stylesheet" href="app.css?v=20260729i">
 </head>
 <body>
 <div class="wrap">
@@ -171,6 +171,12 @@
     </div>
     <div class="favs" id="modeChips"></div>
     <div class="favs" id="catChips" role="group" aria-label="Train type"></div>
+    <div class="meetbar">
+      <button type="button" id="meetBtn" class="meetbtn" onclick="meetMiddle()"
+              title="Treat the two stations as two people's starting points and find the station that is fair to both">
+        &#129309; Meet in the middle</button>
+    </div>
+    <div id="meetOut"></div>
     <div id="jrnOut"><div class="hint">Enter two stations to plan a journey.</div></div>
   </section>
 
@@ -214,6 +220,6 @@
      are on follows you to every tab, which is the whole point of pinning it. -->
 <div id="ob"></div>
 
-<script src="app.js?v=20260729h"></script>
+<script src="app.js?v=20260729i"></script>
 </body>
 </html>
