@@ -2121,6 +2121,49 @@ function summitVerdict(code){
   if(code>=95)           return {v:"thunderstorm — not the day for it", good:false};
   return {v:"wet at the top", good:false};
 }
+/* ---------- summit go-no-go: which DAY is worth it ----------
+   Today's verdict answers "is it worth it today?"; this answers the question
+   behind it -- "and if not today, WHEN?" -- for trips whose whole value is the
+   view (wrong day at Jungfraujoch = the price of the ticket for the inside of
+   a cloud). One small daily-codes fetch, each day judged by the SAME
+   summitVerdict that judges today: two rules, one truth. */
+const dayOutlookCache={};
+function dayOutlook(lat,lon){
+  const k=(+lat).toFixed(3)+","+(+lon).toFixed(3);
+  if(!dayOutlookCache[k]) dayOutlookCache[k]=fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weather_code&forecast_days=7&timezone=auto`)
+    .then(r=>{ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
+    .then(d=>d.daily)
+    .catch(e=>{ delete dayOutlookCache[k]; throw e; });   // an outage must not be cached as a verdict
+  return dayOutlookCache[k];
+}
+function bestDayHTML(daily){
+  const days=(daily&&daily.time)||[], codes=(daily&&daily.weather_code)||[];
+  if(days.length<2) return "";
+  const cells=[]; let best=null;
+  for(let i=0;i<days.length;i++){
+    // the date goes straight into a handler string: only a literal date may pass
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(days[i]||"")) continue;
+    const v=summitVerdict(codes[i]==null?null:codes[i]);
+    const wd=i===0?"today":new Date(days[i]+"T12:00").toLocaleDateString("en-CH",{weekday:"short"});
+    cells.push(v
+      ? `<button type="button" class="smday ${v.good?"good":"bad"}" onclick="planForDay('${days[i]}')" aria-label="Plan this trip for ${wd}: ${esc(v.v)}">${wxEmoji(codes[i])}<span>${wd}</span></button>`
+      : `<span class="smday">?<span>${wd}</span></span>`);   // no data is no verdict
+    if(!best&&v&&v.good) best={i,wd,v};
+  }
+  if(!cells.length) return "";
+  const head=best
+    ? (best.i===0 ? `Today is a day for it &#8212; ${esc(best.v.v)}.`
+                  : `Best day: <b>${best.wd}</b> &#8212; ${esc(best.v.v)}.`)
+    : `No clear day at the top in this week&#8217;s forecast.`;
+  return `<div class="smdays"><div class="smbest">${head}</div><div class="smstrip">${cells.join("")}</div>`
+    + `<div class="smcav">Beyond ~3 days cloud is a tendency, not a promise &#8212; recheck the day before. Tap a day to plan the trip for it.</div></div>`;
+}
+function planForDay(day){
+  const at=$("whenAt"); if(!at) return;
+  const hh=/^\d{2}:\d{2}$/.test((whenValue||"").slice(11,16)) ? whenValue.slice(11,16) : "08:00";
+  at.value=`${day}T${hh}`;
+  setWhen("dep");                        // replans as its last act
+}
 async function fillSummit(panel,ci){
   const box=panel.querySelector(".summitbox"); if(!box) return;
   const c=jrnConns[ci]; if(!c) return;
@@ -2133,9 +2176,10 @@ async function fillSummit(panel,ci){
      retracting it a second later, once the mountain turns out to be a 41-metre
      city funicular, is worse than the short wait. */
   try{
-    const [wx, elevArr] = await Promise.all([
+    const [wx, elevArr, days] = await Promise.all([
       destWeather(co.x, co.y),
-      routeElevation([{x:+co.y, y:+co.x}]).catch(()=>null)
+      routeElevation([{x:+co.y, y:+co.x}]).catch(()=>null),
+      dayOutlook(co.x, co.y).catch(()=>"unreachable")   // its failure must not cost the card
     ]);
     if(panel.dataset.open!=="1") return;
     const alt = Array.isArray(elevArr) && elevArr.length && isFinite(+elevArr[0]) ? Math.round(+elevArr[0]) : null;
@@ -2150,7 +2194,12 @@ async function fillSummit(panel,ci){
     if(w&&w.rise&&w.set) bits.push(`sun ${w.rise}&#8211;${w.set}`);
     box.innerHTML=`<div class="smtitle">&#128670; ${esc(kinds.join(" + "))} to ${esc(shortStop(c.to.station.name))}`
       + (bits.length?` <span class="smbits">${bits.join(" &#183; ")}</span>`:"")+`</div>`
-      + (verdict?`<div class="smv ${verdict.good?"good":"bad"}">${esc(verdict.v)}</div>`:"");
+      + (verdict?`<div class="smv ${verdict.good?"good":"bad"}">${esc(verdict.v)}</div>`:"")
+      /* three outcomes, never two: the outlook that could not be fetched must
+         not render like a week with no good day */
+      + (days==="unreachable"
+          ? `<div class="smcav">Could not load the week&#8217;s outlook &#8212; an outage, not a &quot;no&quot;.</div>`
+          : bestDayHTML(days));
   }catch(e){ box.innerHTML=""; }
 }
 /* ---------- last way back ----------

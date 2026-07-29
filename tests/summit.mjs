@@ -75,6 +75,9 @@ function build({ elev = [3089], hourly = null, code = 0 } = {}) {
     ${grab("summitVerdict")}
     const destWeather = async () => ({ hourly: HOURLY, daily: { time:["2026-07-25"], sunrise:["2026-07-25T05:56"], sunset:["2026-07-25T21:03"] } });
     const routeElevation = async () => ELEV;
+    // this suite tests the today-card; the week strip has its own suite (summit-days.mjs)
+    const dayOutlook = async () => { throw new Error("no outlook in this harness"); };
+    const bestDayHTML = () => "";
     ${grab("fillSummit")}
     return { fillSummit, mountainLegs, summitVerdict, SUMMIT_MIN_M, setConns:(c)=>{jrnConns=c;} };
   `)(panel, elev, H, []);
