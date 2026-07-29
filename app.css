@@ -163,6 +163,18 @@
     color:var(--dim); font-size:17px; cursor:pointer; transition:.25s; box-shadow:var(--shadow)}
   .swap button:active{transform:rotate(180deg) scale(.9); color:#fff}
 
+  /* ---- user-chosen via ---- */
+  .viaadd{display:block; width:100%; margin:-4px 0 10px; padding:8px 10px; border:1px dashed var(--line);
+    border-radius:10px; background:none; color:var(--dim); font:inherit; font-size:13px; cursor:pointer}
+  .viaadd:active{color:var(--txt); border-color:var(--violet)}
+  .viafield{border-color:var(--violet)}
+  /* text in the box that the search has NOT been given yet: the field must not
+     look like it is constraining a result it is not */
+  .viafield.pending{border-style:dashed; border-color:var(--amber)}
+  .vianote{margin:0 0 10px; padding:8px 10px; border-radius:10px; background:var(--card2);
+    border-left:3px solid var(--violet); font-size:13px; color:var(--dim); line-height:1.5}
+  .vianote b{color:var(--txt)}
+
   /* ---- favourites ---- */
   .favs{display:flex; gap:8px; overflow-x:auto; padding:2px 0 12px; scrollbar-width:none}
   .favs::-webkit-scrollbar{display:none}
@@ -375,6 +387,15 @@
   .sharebar .shr{background:none; border:1px solid var(--line); color:var(--dim);
     border-radius:10px; font-size:12.5px; line-height:1; padding:6px 11px; cursor:pointer}
   .sharebar .shr:active{color:var(--txt); border-color:var(--txt)}
+  /* earlier/later at the FAR LEFT of the same row: margin-right:auto rather than
+     changing the bar's justify-content, so a bar with no pager is untouched */
+  .sharebar .pager{display:flex; gap:6px; margin-right:auto}
+  .sharebar .pg{background:none; border:1px solid var(--line); color:var(--dim);
+    border-radius:10px; font-size:12.5px; line-height:1; padding:6px 12px; cursor:pointer}
+  .sharebar .pg:active{color:var(--txt); border-color:var(--txt)}
+  .sharebar .pg[disabled]{opacity:.35; cursor:default}
+  .pgnote{font-size:12.5px; color:var(--dim); background:var(--card2); border-left:3px solid var(--line);
+    border-radius:0 8px 8px 0; padding:7px 10px; margin:0 0 9px; line-height:1.5}
   /* right-train check: platform-edge facts, calm not shouty; the portion caveat
      is the dimmest line by design -- honesty, not alarm */
   .stops .rtc{font-size:12.5px; color:var(--txt); background:var(--card); border:1px solid var(--line);

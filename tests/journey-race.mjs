@@ -37,7 +37,9 @@ const ctx = {
   $: id => (id === "jrnOut" ? jrnOut : { innerHTML: "" }),
   api: () => new Promise(res => pending.push(res)),
   skel: () => "SKEL",
-  whenQS: () => "", modeQS: () => "",
+  whenQS: () => "", modeQS: () => "", viaQS: () => "",
+  viaName: "", viaNote: () => "", viaWhyEmpty: () => "",
+  pgStuck: "", pgObserve: () => {}, pgNote: () => "", pgWhyEmpty: () => "", pgBarHTML: () => "",
   sunWhyEmpty: () => "", modeWhyEmpty: () => "",
   rememberRoute: () => {}, annotate: c => c,
   // T8's sub-category filter lives inside plainPlan. This test is about the race

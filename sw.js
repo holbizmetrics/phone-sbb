@@ -20,7 +20,7 @@
        failed precache does not fail the install, and only same-origin GET
        with a 200/basic response is ever stored. */
 
-const SHELL_V = "20260729k";
+const SHELL_V = "20260729n";
 const CACHE = "rail-shell-" + SHELL_V;
 const SHELL = [
   "./",

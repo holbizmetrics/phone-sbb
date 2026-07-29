@@ -25,7 +25,7 @@ let pass = 0, fail = 0;
 const chk = (n, c, d = "") => { if (c) { pass++; console.log("  ok   " + n); } else { fail++; console.log("  FAIL " + n + " :: " + d); } };
 
 // ---- shareRoute / shareURL: the query travels, never the result ----
-const mkShare = ({ from = "Z\u00fcrich HB", to = "Bern", mode = "now", val = "",
+const mkShare = ({ from = "Z\u00fcrich HB", to = "Bern", via = "", mode = "now", val = "",
                    canShare = true, shareErr = null } = {}) => {
   const out = { shared: null, copied: null, copyFailed: false };
   const nav = {
@@ -35,6 +35,7 @@ const mkShare = ({ from = "Z\u00fcrich HB", to = "Bern", mode = "now", val = "",
   const fn = new Function("location", "navigator", `
     let fromName=${JSON.stringify(from)}, toName=${JSON.stringify(to)};
     let whenMode=${JSON.stringify(mode)}, whenValue=${JSON.stringify(val)};
+    let viaName=${JSON.stringify(via)};
     ${SHARE_LBL_SRC}
     ${grab("shareURL")}
     ${grab("shareRoute")}
@@ -80,6 +81,21 @@ const mkShare = ({ from = "Z\u00fcrich HB", to = "Bern", mode = "now", val = "",
   const n = mkShare({ from: "" }); n.fire();
   chk("no route yet -> no share call", n.out.shared === null && n.out.copied === null);
 }
+{
+  // A via left out of the link is not a cosmetic loss: the receiver's phone
+  // re-plans, so it would plan a DIFFERENT journey than the one you sent.
+  const t = mkShare({ via: "Olten" }); t.fire();
+  await 0;
+  const u = new URL(t.out.shared.url);
+  chk("PLANTED: a chosen via travels with the link", u.searchParams.get("via") === "Olten", t.out.shared.url);
+  chk("...and the human text says it, since that is the part a person reads",
+    /\(via Olten\)/.test(t.out.shared.text), t.out.shared.text);
+  const bare = mkShare(); bare.fire();
+  await 0;
+  chk("NULL CONTROL: a route with no via shares no via= at all",
+    !new URL(bare.out.shared.url).searchParams.has("via") && !/via/.test(bare.out.shared.text),
+    bare.out.shared.url);
+}
 
 // ---- applyDeepLink: the read side -- fields fill, dead timestamps refuse ----
 const mkDeep = (search) => {
@@ -94,11 +110,11 @@ const mkDeep = (search) => {
   };
   const calls = [];
   const fn = new Function("location", "$", "calls", "state", `
-    let fromName="", toName="";
+    let fromName="", toName="", viaName="";
     const setWhen=(m)=>calls.push(["when",m]);
     const setTab=(t)=>calls.push(["tab",t]);
     ${grab("applyDeepLink")}
-    const r=applyDeepLink(); state.from=fromName; state.to=toName; return r;
+    const r=applyDeepLink(); state.from=fromName; state.to=toName; state.via=viaName; return r;
   `);
   const state = {};
   const ret = fn({ search }, $, calls, state);
@@ -114,6 +130,15 @@ const mkDeep = (search) => {
     t.calls.some(c => c[0] === "when" && c[1] === "now") && t.calls.some(c => c[0] === "tab" && c[1] === "jrn"),
     JSON.stringify(t.calls));
   chk("...and reports true", t.ret === true);
+}
+{
+  const t = mkDeep("?from=Luzern&to=Bellinzona&via=G%C3%B6schenen");
+  chk("a received via is applied to the search", t.state.via === "G\u00f6schenen", JSON.stringify(t.state));
+  chk("PLANTED: ...and REVEALED -- an applied via you cannot see is a constraint you cannot undo",
+    t.els.fVia.hidden === false && t.els.iVia.value === "G\u00f6schenen" && t.els.fVia.classes.has("has"),
+    JSON.stringify({ hidden: t.els.fVia.hidden, v: t.els.iVia.value }));
+  const b = mkDeep("?from=Luzern&to=Bellinzona");
+  chk("NULL CONTROL: a link with no via leaves the field alone", b.state.via === "", JSON.stringify(b.state));
 }
 {
   const t = mkDeep("?from=Luzern&to=Bern&at=2099-01-01T09:30");
@@ -148,8 +173,17 @@ const mkDeep = (search) => {
 }
 
 // ---- wiring: green-but-unwired is the named defect class ----
+// Scoped to each planner's own body rather than to what sits NEXT to the call:
+// the old form keyed off "shareBarHTML() + catFilterNote" and went red the day
+// another line was inserted between the two, reporting a missing share bar that
+// was never missing.
+const body = (marker) => {
+  const i = src.indexOf(marker);
+  return i < 0 ? "" : src.slice(i, src.indexOf("\n}\n", i));
+};
 chk("the share bar rides BOTH planners (plain and smart)",
-  /shareBarHTML\(\) \+ catFilterNote/.test(src) && /\+ shareBarHTML\(\)/.test(src),
+  /shareBarHTML\(\)/.test(body("async function plainPlan")) &&
+  /shareBarHTML\(\)/.test(body("function renderSmart")),
   "a bar rendered on one path silently vanishes when smart-mode flips");
 chk("boot actually applies the deep link", /^applyDeepLink\(\);/m.test(src),
   "parser built but never called -- feature dead, tests green");
