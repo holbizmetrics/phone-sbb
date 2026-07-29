@@ -39,6 +39,7 @@ const ctx = {
   skel: () => "SKEL",
   whenQS: () => "", modeQS: () => "", viaQS: () => "",
   viaName: "", viaNote: () => "", viaWhyEmpty: () => "",
+  pgStuck: "", pgObserve: () => {}, pgNote: () => "", pgWhyEmpty: () => "", pgBarHTML: () => "",
   sunWhyEmpty: () => "", modeWhyEmpty: () => "",
   rememberRoute: () => {}, annotate: c => c,
   // T8's sub-category filter lives inside plainPlan. This test is about the race

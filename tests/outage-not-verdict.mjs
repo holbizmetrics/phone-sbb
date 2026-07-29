@@ -80,6 +80,7 @@ const render = (reqFailed, modeHint) => new Function("REQFAILED", "MODEHINT", `
   const sunWhyEmpty = () => "";
   const modeWhyEmpty = () => MODEHINT ? '<div class="emptywhy">only tram<button onclick="clearModes()">Show every mode</button></div>' : "";
   const viaName = "", viaNote = () => "", viaWhyEmpty = () => "";
+  const pgStuck = "", pgObserve = () => {}, pgNote = () => "", pgWhyEmpty = () => "", pgBarHTML = () => "";
   ${grab("renderSmart")}
   renderSmart([], [], null, false, REQFAILED);
   return out;

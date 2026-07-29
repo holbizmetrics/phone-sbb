@@ -220,7 +220,8 @@ caught**, including a silently-ignored via, a persisted one, a note read from th
 applied value, and an empty result reported as "no route".
 
 **T17. Earlier / later connections (SBB's up-and-down control)** — *not previously on this list; the
-gap was found 2026-07-29 by grepping for it and finding nothing.* Every result set today is one
+gap was found 2026-07-29 by grepping for it and finding nothing.* **SHIPPED 2026-07-29.** Every
+result set until now was one
 fixed window: whatever the API returned around the departure time asked for. SBB lets you walk the
 timetable backwards and forwards from there, and we have no equivalent — if the four shown
 connections are all too early, the only move is to retype the time. Proposed placement (operator):
@@ -233,6 +234,25 @@ same list silently; and the delay/cancellation honesty of T1 applies to every ap
 page fetched five minutes ago must not sit above a fresh one wearing the same "live" styling. A via
 (T16) or a category filter (T8) is part of the query, so paging must carry it — a "later" that
 quietly drops the via is the invisible-constraint defect in a new costume.
+**How each of those was answered.** The step moves the *existing* when-anchor and calls `planJourney()`
+— it builds no query of its own, which is why the via, the category filter and the mode filter ride
+along for free and cannot be dropped (a null control asserts the block contains no query fragment at
+all). The list **replaces** rather than appends, so two vintages of prognosis can never sit in one
+list wearing the same live styling. The anchor stays **visible**: stepping writes the time into the
+when-field, reveals it, and flips the segment to "Leave at" — a window that walked itself while the
+control still read "Now" would be the same invisible-constraint defect as a hidden via. Both ends of
+the day are **detected, not assumed**: the API answers "nothing earlier" by handing back the same
+trains, so the step records what it stepped away from and compares — unmoved means the direction is
+marked exhausted, the button disables, and it is *said* rather than re-rendered as a fresh page. A
+step that lands on nothing offers the exact way back (the anchor it left, to the minute), because a
+step must not strand you with no list to step from. Two details found in build: anchoring must use
+**scheduled** times, not prognosis (the API's `time=` filter is scheduled, so a delayed train would
+be stepped past while still listed at its booked minute), and the backward step is the width of the
+list with a 30-minute floor, or a single-result list would step zero minutes and sit still forever.
+Arrive-by is walked on its own axis — "arrive by 09:00" steps to "arrive by 08:20", it does not
+silently become a departure question. `tests/pager.mjs` (45 checks); **17/17 planted mutations
+caught** — one of which, an arrive-by step silently becoming a departure step, **survived the first
+run** because the assertion said "earlier than 09:00" when both axes satisfy that; it is now exact.
 
 ## Regression summary — the "does it add or destroy?" answer
 
@@ -247,7 +267,7 @@ quietly drops the via is the invisible-constraint defect in a new costume.
 | T8 train sub-categories | **Shipped 2026-07-27.** Additive post-filter; it *can* empty the result list (Genève→Brig under *EC/IC*), so it ships a why-empty sentence, widens the fetch to 16, and counts what it HID rather than claiming what it kept |
 | T13 airport mode | Additive, but the check-in buffer is a **CLAIM** — user-set or labelled, never invented |
 | T16 via a named stop | **Shipped 2026-07-29.** Additive, but it *narrows* results by design, so it ships two negatives: the via is never persisted (invisible constraints are the destroy-risk) and it stands the hub sweep down (a mixed list is worse than a short one) |
-| T17 earlier / later | Additive **only if each page is a real fetch** — re-slicing the current list, or dropping the via/category filter on the next page, turns paging into invented data |
+| T17 earlier / later | **Shipped 2026-07-29.** Each step is a real fetch through the existing anchor (so filters ride along and cannot be dropped), the list replaces rather than appends (so no two vintages of prognosis share a screen), and both ends of the day are detected and said rather than re-rendered |
 | T9 bike carriage | **Blocked upstream — no bike field anywhere in the payload.** Do not infer from category |
 | T10 step-free routing | **Blocked upstream, and the OSM substitute is worse than silence** — a wrong "step-free" strands a wheelchair user |
 

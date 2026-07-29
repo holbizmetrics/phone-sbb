@@ -103,7 +103,7 @@ new vm.Script(fnSrc + "\nthis.viaQS=viaQS; this.viaOpen=viaOpen; this.viaSet=via
   chk("...and it offers the one tap that answers the other question",
     /viaClear\(\)/.test(why) && /without the via/i.test(why), why);
   chk("the smart planner drops 'Check the station names' when a via is set -- that advice is wrong then",
-    /sunWhyEmpty\(\)\|\|\(viaName\?"":"<br>Check the station names\."\)/.test(src), "");
+    /sunWhyEmpty\(\)\|\|\(\(viaName\|\|[A-Za-z]+\)\?"":"<br>Check the station names\."\)/.test(src), "");
   chk("both planners print the explanation on their empty branch",
     (src.match(/\$\{viaWhyEmpty\(\)\}/g) || []).length === 2,
     String((src.match(/\$\{viaWhyEmpty\(\)\}/g) || []).length));
