@@ -322,6 +322,29 @@ async function loadBoard(name, quiet){
     wireBoardHead(name);
   }finally{ const r=$("rf"); if(r) r.classList.remove("spin"); }
 }
+/* one sentence per row for a screen reader. The visual row is five separate
+   fragments (badge, destination, platform, delay, countdown) that read as a
+   wall of text with no row boundaries -- this is the row boundary. */
+function depAria(j){
+  const b=badge(j.category, j.number||j.line);
+  const dep=j.stop?.departure, prog=j.stop?.prognosis?.departure;
+  const d = prog && dep ? Math.round((new Date(prog)-new Date(dep))/60000) : 0;
+  const pl=j.stop?.platform;
+  const plChanged=j.stop?.prognosis?.platform && j.stop.prognosis.platform!==pl;
+  const effPl=j.stop?.prognosis?.platform||pl;
+  const m=minsUntil(prog||dep);
+  const parts=[`${b.label} to ${j.to||"unknown destination"}`];
+  if(dep) parts.push(hhmm(dep) + (d>=1?` plus ${d} minutes`:""));
+  if(effPl) parts.push(`platform ${effPl}`+(plChanged?" changed":""));
+  if(m>0) parts.push(`in ${m} minutes`); else if(m===0) parts.push("leaving now");
+  return parts.join(", ");
+}
+/* the one polite live region: silence is the default, material changes speak */
+function announce(msg){
+  const a=$("annc"); if(!a) return;
+  if(a.textContent===msg) a.textContent="";
+  a.textContent=msg;
+}
 function depRow(j,i){
   const b=badge(j.category, j.number||j.line);
   const dep=j.stop?.departure;
@@ -333,7 +356,7 @@ function depRow(j,i){
   const pl = j.stop?.platform;
   const plChanged = j.stop?.prognosis?.platform && j.stop.prognosis.platform!==pl;
   const effPl = j.stop?.prognosis?.platform || pl;
-  return `<div class="dep" data-key="${esc(depKey(j))}" data-i="${i}" style="animation-delay:${i*28}ms">
+  return `<div class="dep" role="listitem" aria-label="${esc(depAria(j))}" data-key="${esc(depKey(j))}" data-i="${i}" style="animation-delay:${i*28}ms">
     <div class="badge" style="background:${b.col}">${b.label}</div>
     <div class="mid">
       <div class="to"><button class="togo" type="button" onclick="planFromBoard(event)"
@@ -383,6 +406,7 @@ function toggleDeparture(row){
   panel.dataset.open=open?"":"1";
   panel.innerHTML=open?"":onwardHTML(onwardStops(+row.dataset.i));
   row.classList.toggle("open",!open);
+  row.setAttribute("aria-expanded", String(!open));
   // remember WHICH departure is open, by its stable key -- a busy station shifts
   // its set every refresh, which rebuilds the board and would otherwise silently
   // throw the expansion away mid-read.
@@ -476,6 +500,14 @@ function patchRow(row, j){
   if(at) at.innerHTML = `${hhmm(dep)}${late?` <span class="late">+${Math.round((new Date(prog)-new Date(dep))/60000)}</span>`:""}`;
   const via=row.querySelector(".via");
   if(via) via.innerHTML = `${effPl?`<span class="plat${plChanged?" chg":""}">Pl. ${esc(effPl)}${plChanged?" &#9888;":""}</span> `:""}${esc(j.category||"")} ${esc(j.operator||"")}`;
+  /* the label must follow the row it describes -- and the ONLY two transitions
+     worth speaking are a platform change and a delay appearing. The every-30s
+     countdown churn stays silent, or the live region shouts over the user. */
+  const before=row.getAttribute("aria-label")||"";
+  row.setAttribute("aria-label", depAria(j));
+  const who=`${badge(j.category, j.number||j.line).label} to ${j.to||""}`;
+  if(plChanged && !/ changed/.test(before)) announce(`${who} now departs platform ${effPl}`);
+  else if(late && !/ plus \d+ minutes/.test(before)) announce(`${who} is running ${Math.round((new Date(prog)-new Date(dep))/60000)} minutes late`);
 }
 function boardHeadHTML(name){
   const on=favs.includes(name);

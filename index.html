@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-180.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <title>Rail &#183; live departures</title>
-<link rel="stylesheet" href="app.css?v=20260729f">
+<link rel="stylesheet" href="app.css?v=20260729g">
 </head>
 <body>
 <div class="wrap">
@@ -102,7 +102,9 @@
     </div>
     <div class="favs" id="favs"></div>
     <div id="strandedOut"></div>
-    <div id="depOut"></div>
+    <div id="depOut" role="list" aria-label="Departures"></div>
+    <!-- polite live region: platform changes and new delays speak, countdown churn stays silent -->
+    <div id="annc" class="vh" role="status" aria-live="polite"></div>
   </section>
 
   <!-- JOURNEY -->
@@ -200,6 +202,6 @@
      are on follows you to every tab, which is the whole point of pinning it. -->
 <div id="ob"></div>
 
-<script src="app.js?v=20260729f"></script>
+<script src="app.js?v=20260729g"></script>
 </body>
 </html>

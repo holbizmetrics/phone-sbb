@@ -31,6 +31,11 @@ The smart-changefinder already embodies this.
 
 **T1. Delay & cancellation honesty (§5)** — *the single most-checked feature, and SBB's most
 confidence-damaging bug ("3-min delay shown as none; a cancelled tram listed as normal").*
+- **Audit 2026-07-29: the delay half is ALREADY SHIPPED** (predates the file split, `66bcb78`):
+  board rows are prognosis-first with a `+N` late chip and platform-change ⚠ (`depRow`), journey
+  cards carry `+N′` on both ends (`connCard`), and the change-buffer maths reads prognosis times.
+  Only the cancellation half remains — and it stays blocked upstream (no API field). This entry
+  sat open because the roadmap was reconciled before the audit, not because the work was missing.
 - Make delays first-class on the board; **show cancellations as cancelled, never as a normal row.**
 - We already have real-time `prognosis` from the changefinder — extend it.
 - **API check DONE (2026-07-25, live query — the answer is no):** `stop.prognosis` carries
@@ -60,11 +65,15 @@ confidence-damaging bug ("3-min delay shown as none; a cancelled tram listed as 
 **T3. Accessibility-by-default (§7)** — **mostly already true on master, checked 2026-07-25.**
 Refresh, favourite (with `aria-pressed`), swap, the clear buttons, the when-mode group and both
 SVGs already carry labels — 18 `aria-label`s in all — and `prefers-reduced-motion: reduce` is
-honoured app-wide. SBB shunts blind users to a *separate* app; we can just be usable. **What is
-genuinely left:** semantic departure rows (the board is `div`s, so a screen reader reads a wall
-of text with no row boundaries), and a check that the live-updating board announces changes
-without shouting over the user. *Regression:* **pure add** — attributes and roles, no behavior
-change.
+honoured app-wide. SBB shunts blind users to a *separate* app; we can just be usable. **What was
+genuinely left — SHIPPED 2026-07-29:** the board is now `role="list"` with each row a
+`listitem` carrying one spoken sentence (`depAria`: who, where, scheduled time *plus N minutes*,
+platform *changed*, how soon), kept fresh through the quiet-refresh `patchRow` path; tap-to-expand
+exposes `aria-expanded`. The no-shouting half is a single polite `#annc` live region that speaks
+ONLY on two material transitions — a platform change or a delay newly appearing — and stays
+silent on the every-30s countdown churn (a mutation test proves each announce path can go red,
+including the announce-every-refresh regression). Tests: `tests/board-a11y.mjs` (20 checks).
+*As predicted:* pure add — attributes and one hidden div, no behavior change.
 
 **T4. Stay the tidy utility (§1)** — we already *are* the scannable, no-animated-characters
 utility the press asked for. Only actionable lesson: heed one-handed / moving-train use (careful
@@ -151,11 +160,15 @@ These lived only in the PCLA courier ledger, which made them invisible to anyone
 Moved here 2026-07-27 so the backlog has one home. Two of the five already had a roadmap entry and
 are folded rather than duplicated.
 
-**T11. Live webcams at the destination** — the mountain-trip case: before committing to a cable car,
-see whether the summit is in cloud. Distinct from a forecast because it is *now* and it is *evidence*.
-Source not yet chosen. *Regression:* pure add (one more panel section), but it is a **third-party
-image fetch** — it needs the same three-outcome discipline the last-train panel uses, or "we could
-not reach the camera" renders as "the weather is bad", which is a verdict we did not earn.
+**T11. Live webcams at the destination — DISCHARGED AS LINKS, 2026-07-29 (`7636ffa`).** The
+summit card now ends with a "check for yourself" row: 📷 webcams (Windy, coordinate-addressed)
++ a second forecast (meteoblue), `target="_blank" rel="noopener"`, caveat "their pictures, their
+forecast, not ours". Deliberately links-not-embeds: we cannot vouch for a frozen webcam any more
+than a wrong forecast, so the third-party-image-fetch trap named below never arises — the user
+walks through the door, we never repaint what's behind it. The row renders even when our own
+outlook is unreachable (that is when it is most valuable). Tests: `tests/summit-days.mjs`.
+An *embedded* webcam thumbnail remains possible future work and would need the three-outcome
+discipline; not currently planned.
 
 **T12. Meet-in-the-middle** — two people, two origins, find the station that is fair to both.
 *Regression:* pure add, but **N×M queries** against a volunteer API — must be bounded and fired on
