@@ -54,9 +54,23 @@ new vm.Script(fnSrc
   + " this.setConns=c=>{jrnConns=c};").runInContext(ctx);
 
 // A morning list: 08:00, 08:20, 08:40 departures, arriving an hour later.
+//
+// The offsets are the RUNNER'S OWN, computed per timestamp, not a hard-coded
+// +02:00. The anchor the pager writes is a local-time string, so a fixture
+// pinned to Swiss time makes every assertion below a claim about the machine's
+// timezone rather than about the code -- which is exactly how the first version
+// of this suite passed on the phone and failed in CI's UTC. "08:00" here means
+// eight in the morning wherever this runs.
+const isoAt = hhmm => {
+  const [h, m] = hhmm.split(":").map(Number);
+  const off = -new Date(2026, 6, 29, h, m).getTimezoneOffset();
+  const sg = off < 0 ? "-" : "+", ao = Math.abs(off);
+  const p2 = n => String(n).padStart(2, "0");
+  return `2026-07-29T${p2(h)}:${p2(m)}:00${sg}${p2(Math.floor(ao / 60))}:${p2(ao % 60)}`;
+};
 const conn = (dep, arr, prognosis) => ({
-  from: { departure: `2026-07-29T${dep}:00+02:00`, prognosis: prognosis ? { departure: `2026-07-29T${prognosis}:00+02:00` } : undefined },
-  to: { arrival: `2026-07-29T${arr}:00+02:00` },
+  from: { departure: isoAt(dep), prognosis: prognosis ? { departure: isoAt(prognosis) } : undefined },
+  to: { arrival: isoAt(arr) },
 });
 const LIST = [conn("08:00", "09:00"), conn("08:20", "09:20"), conn("08:40", "09:40")];
 const setList = l => { ctx.setConns(l); };

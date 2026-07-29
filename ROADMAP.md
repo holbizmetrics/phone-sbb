@@ -253,6 +253,10 @@ Arrive-by is walked on its own axis — "arrive by 09:00" steps to "arrive by 08
 silently become a departure question. `tests/pager.mjs` (45 checks); **17/17 planted mutations
 caught** — one of which, an arrive-by step silently becoming a departure step, **survived the first
 run** because the assertion said "earlier than 09:00" when both axes satisfy that; it is now exact.
+Caught by CI and worth keeping: the first version of that suite hard-coded `+02:00` into its
+fixtures, so it passed on the phone and failed in UTC — a test pinned to one timezone is a test that
+makes a claim about the machine, not about the code. The fixtures now build their offsets from the
+runner's own clock, and the suite is verified green in five zones including a half-hour one.
 
 ## Regression summary — the "does it add or destroy?" answer
 
