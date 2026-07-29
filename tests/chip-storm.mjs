@@ -86,7 +86,8 @@ async function storm({ honourAbort, slowMs = 14000, settleMs = 50 }) {
       const slow = /limit=16/.test(path) ? slowMs : Math.ceil(slowMs / 14);
       return pool.request(slow, signal).then(() => ({ connections: [{ tag: "OK", to: {} }] }));
     },
-    skel: () => "SKEL", whenQS: () => "", modeQS: () => "",
+    skel: () => "SKEL", whenQS: () => "", modeQS: () => "", viaQS: () => "",
+    viaName: "", viaNote: () => "", viaWhyEmpty: () => "",
     sunWhyEmpty: () => "", modeWhyEmpty: () => "",
     rememberRoute: () => {}, annotate: c => c, connSig: c => JSON.stringify(c),
     // T8's sub-category filter runs inside both planners. This test measures

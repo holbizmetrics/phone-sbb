@@ -202,6 +202,38 @@ is warned about rather than assumed. Found + fixed in build: `new Date("not-a-da
 **T15. ~~Accessibility from OSM wheelchair tags~~** — folded into **T10**, where the live-API check
 and the reason not to ship it now sit together.
 
+**T16. Route via a stop the passenger names — SHIPPED 2026-07-29.** The API has taken `via[]` all
+along (the change-finder has used it for hubs since the day it was written); the only missing piece
+was the passenger being able to say *where*. Two honesty rules carry the feature, and both are
+planted-negative tested: **(1) a set via is always VISIBLE and never persisted** — a remembered
+constraint you cannot see silently changes tomorrow's searches, so it starts empty every load and a
+shared link that carries one *reveals* the field rather than applying it behind a hidden input;
+**(2) a named via stands the hub sweep DOWN** — otherwise the list mixes routes that honour the via
+with routes that ignore it, and nothing on a card tells them apart. Both smart queries carry it, so
+the wide one is not a back door around the constraint. Text typed but not applied marks the field
+`.pending`, and every rendered claim reads `viaName`, never the input box. An empty result under a
+via says *"nothing links the three in that order — which is not the same as no route at all"* with
+one tap to search without it; the smart planner drops *"Check the station names"* while a via is
+set, because that advice is wrong then. The API takes **one** `via[]` here and a second is not "more
+thorough", it is a different journey. `tests/via.mjs` (44 checks); **10/10 planted mutations
+caught**, including a silently-ignored via, a persisted one, a note read from the box instead of the
+applied value, and an empty result reported as "no route".
+
+**T17. Earlier / later connections (SBB's up-and-down control)** — *not previously on this list; the
+gap was found 2026-07-29 by grepping for it and finding nothing.* Every result set today is one
+fixed window: whatever the API returned around the departure time asked for. SBB lets you walk the
+timetable backwards and forwards from there, and we have no equivalent — if the four shown
+connections are all too early, the only move is to retype the time. Proposed placement (operator):
+an **up/down control at the far left of the share bar**, where the row already lives, rather than a
+new panel. *Regressions to design against, all of them the same class — a paged list must never
+imply data it does not have:* pressing **later** must fetch the next window from the API (`&time=`
+past the last departure shown), never re-slice what is already on screen and call it new; pressing
+**earlier** past the first service of the day must say *there is nothing earlier*, not return the
+same list silently; and the delay/cancellation honesty of T1 applies to every appended row, so a
+page fetched five minutes ago must not sit above a fresh one wearing the same "live" styling. A via
+(T16) or a category filter (T8) is part of the query, so paging must carry it — a "later" that
+quietly drops the via is the invisible-constraint defect in a new costume.
+
 ## Regression summary — the "does it add or destroy?" answer
 
 | Item | Risk |
@@ -214,6 +246,8 @@ and the reason not to ship it now sit together.
 | T11 webcams · T12 meet-in-the-middle | **Pure add**, but each carries one named trap: an unreachable camera must not render as bad weather; N×M queries must be bounded and on-request |
 | T8 train sub-categories | **Shipped 2026-07-27.** Additive post-filter; it *can* empty the result list (Genève→Brig under *EC/IC*), so it ships a why-empty sentence, widens the fetch to 16, and counts what it HID rather than claiming what it kept |
 | T13 airport mode | Additive, but the check-in buffer is a **CLAIM** — user-set or labelled, never invented |
+| T16 via a named stop | **Shipped 2026-07-29.** Additive, but it *narrows* results by design, so it ships two negatives: the via is never persisted (invisible constraints are the destroy-risk) and it stands the hub sweep down (a mixed list is worse than a short one) |
+| T17 earlier / later | Additive **only if each page is a real fetch** — re-slicing the current list, or dropping the via/category filter on the next page, turns paging into invented data |
 | T9 bike carriage | **Blocked upstream — no bike field anywhere in the payload.** Do not infer from category |
 | T10 step-free routing | **Blocked upstream, and the OSM substitute is worse than silence** — a wrong "step-free" strands a wheelchair user |
 

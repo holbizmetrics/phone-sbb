@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-180.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <title>Rail &#183; live departures</title>
-<link rel="stylesheet" href="app.css?v=20260729j">
+<link rel="stylesheet" href="app.css?v=20260729m">
 </head>
 <body>
 <div class="wrap">
@@ -47,6 +47,7 @@
       <h3>Journey</h3>
       <div class="hrow"><span class="k">A &#8594; B</span><span class="v">the chips above the two fields are routes you have searched before, newest first. Nothing to save &#8212; a search records itself. The two directions are kept apart, because the morning trip and the evening one are not the same trip.</span></div>
       <div class="hrow"><span class="k">&#8645;</span><span class="v">swaps the two stations.</span></div>
+      <div class="hrow"><span class="k">&#8631;</span><span class="v">route <b>via</b> a stop you name. The change-finder stands down while it is set &#8212; you chose the change, so it stops offering others. An empty result then means &#8220;not in that order&#8221;, not &#8220;no route&#8221;.</span></div>
       <div class="hrow"><span class="k">&#128205;</span><span class="v">in an empty From field fills in the nearest stop to where you are standing &#8212; it asks for your location only when you tap it, never on its own.</span></div>
       <div class="hrow"><span class="k">&#8599; Share</span><span class="v">above the results sends the <i>search</i> to a friend &#8212; WhatsApp, wherever. Their phone looks the timetable up live when they open it, so they see current trains, not a screenshot of yours. A shared time that has already passed is quietly replaced with &#8220;now&#8221;.</span></div>
       <div class="hrow"><span class="k">Now</span><span class="v">&#183; Leave at &#183; Arrive by &#8212; Arrive by works backwards from when you must be there.</span></div>
@@ -132,6 +133,13 @@
       <div class="ac" id="acFrom"></div>
     </div>
     <div class="swap"><button type="button" onclick="swap()" title="swap" aria-label="Swap origin and destination">&#8645;</button></div>
+    <button type="button" class="viaadd" id="viaAdd" onclick="viaOpen()">&#8631; Route it via a stop of your choice</button>
+    <div class="field viafield" id="fVia" hidden>
+      <span class="ico">&#8631;</span>
+      <input class="stn" id="iVia" placeholder="Via&#8230;" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Route via this stop">
+      <button class="clr" type="button" aria-label="Remove the via stop" onclick="viaClear()">&#10005;</button>
+      <div class="ac" id="acVia"></div>
+    </div>
     <div class="field" id="fTo">
       <span class="ico">&#9873;</span>
       <input class="stn" id="iTo" placeholder="To&#8230;" autocomplete="off" autocapitalize="off" spellcheck="false">
@@ -229,6 +237,6 @@
      are on follows you to every tab, which is the whole point of pinning it. -->
 <div id="ob"></div>
 
-<script src="app.js?v=20260729j"></script>
+<script src="app.js?v=20260729m"></script>
 </body>
 </html>

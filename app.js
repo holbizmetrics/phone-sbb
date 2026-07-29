@@ -1019,6 +1019,61 @@ function catWhyEmpty(){
   return `<div class="emptywhy">You are only showing journeys by ${esc(catNames())}. `
     + `<button type="button" class="linkish" onclick="clearCats()">Show every train type</button></div>`;
 }
+/* ---------- the passenger chooses the change (user via) ----------
+   The API has taken via[] all along -- the smart sweep has used it for hubs
+   since the day it was written -- so the only piece missing was the passenger
+   being able to say WHERE. Two rules keep it honest:
+
+   (1) A via that is set is always VISIBLE, and never persisted. A remembered,
+       invisible constraint is how a search quietly stops answering the question
+       you think you asked: tomorrow's Bern->Zurich comes back odd and nothing
+       on the screen says why. Persisting it would be a convenience worth one
+       tap, bought with a bug you cannot see.
+   (2) A chosen via TURNS THE HUB SWEEP OFF. Sweeping other interchanges while
+       you have named yours is the app arguing with you -- and worse, the list
+       would mix routes that honour the via with routes that ignore it, with
+       nothing on the card to tell the two apart. */
+let viaName = "";
+function viaQS(){ return viaName ? `&via[]=${encodeURIComponent(viaName)}` : ""; }
+function viaOpen(){ $("fVia").hidden=false; $("viaAdd").hidden=true; $("iVia").focus(); }
+function viaSet(n){
+  viaName = n;
+  $("fVia").classList.add("has");
+  viaPending();
+  if(fromName&&toName) planJourney();
+}
+/* The box can hold text the search has not been given yet -- typed, but never
+   picked or entered. The results are then unconstrained while the field looks
+   like it is constraining them: the same lie as an invisible via, told the
+   other way round. So an unapplied box is MARKED, and every claim rendered
+   below reads viaName and never the input element. */
+function viaPending(){
+  const i=$("iVia"); if(!i) return;
+  $("fVia").classList.toggle("pending", i.value.trim() !== viaName);
+}
+function viaClear(){
+  const had = !!viaName;
+  viaName = "";
+  $("iVia").value=""; $("fVia").classList.remove("has","pending");
+  $("fVia").hidden=true; $("viaAdd").hidden=false;
+  if(had && fromName && toName) planJourney();   // only re-plan if it was actually constraining
+}
+/* An empty result under a via is NOT "no route" -- it is "no route in that
+   order", and those are different sentences. Printing the first would send you
+   hunting for a typo in three perfectly correct station names. */
+function viaWhyEmpty(){
+  if(!viaName) return "";
+  return `<div class="emptywhy">You asked to travel <b>via ${esc(viaName)}</b>. `
+    + `Nothing links the three in that order &#8212; which is not the same as no route at all. `
+    + `<button type="button" class="linkish" onclick="viaClear()">Search without the via</button></div>`;
+}
+function viaNote(){
+  if(!viaName) return "";
+  return `<div class="vianote">&#8631; via <b>${esc(viaName)}</b>`
+    + (smart ? ` &#183; you named the change, so the change-finder is not sweeping other hubs.` : `.`)
+    + ` <button type="button" class="linkish" onclick="viaClear()">Drop it</button></div>`;
+}
+
 /* ---------- scroll-edge fades ----------
    A faded edge is a CLAIM that there are more chips that way. So it is derived
    from the measured scroll position and never applied statically: a row that
@@ -1149,6 +1204,7 @@ function shareURL(){
   const u = new URL(location.href.split("?")[0].split("#")[0]);
   u.searchParams.set("from", fromName);
   u.searchParams.set("to", toName);
+  if(viaName) u.searchParams.set("via", viaName);   // a via left behind means the receiver plans a DIFFERENT journey
   if(whenMode!=="now" && whenValue){
     u.searchParams.set("at", whenValue);
     if(whenMode==="arr") u.searchParams.set("mode","arr");
@@ -1160,7 +1216,7 @@ function shareRoute(ev){
   const when = whenMode==="dep" && whenValue ? `, dep ${whenValue.slice(11,16)}`
              : whenMode==="arr" && whenValue ? `, arr by ${whenValue.slice(11,16)}`
              : "";
-  const text = `${fromName} \u2192 ${toName}${when}`;
+  const text = `${fromName} \u2192 ${toName}${viaName?` (via ${viaName})`:""}${when}`;
   const url = shareURL();
   const btn = ev?.currentTarget;
   const copied = () => { if(btn){ btn.textContent="Copied \u2713"; setTimeout(()=>{ btn.innerHTML=SHARE_LBL; },1600); } };
@@ -1176,7 +1232,7 @@ function shareBarHTML(){
   return `<div class="sharebar"><button type="button" class="shr" onclick="shareRoute(event)">${SHARE_LBL}</button></div>`;
 }
 
-/* ---------- deep link: ?from=&to=[&at=][&mode=arr] ----------
+/* ---------- deep link: ?from=&to=[&via=][&at=][&mode=arr] ----------
    The read side of sharing. A shared time that has already passed is NOT
    replayed -- a dead timestamp would produce a ghost plan -- we fall back to
    NOW and say so next to the time controls. */
@@ -1188,6 +1244,8 @@ function applyDeepLink(){
   fromName=f; toName=t;
   $("iFrom").value=f; $("fFrom").classList.add("has");
   $("iTo").value=t;   $("fTo").classList.add("has");
+  const v=(q.get("via")||"").trim();
+  if(v){ viaName=v; $("iVia").value=v; $("fVia").hidden=false; $("fVia").classList.add("has"); $("viaAdd").hidden=true; }
   const at=(q.get("at")||"").trim();
   const live = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(at) && new Date(at).getTime() > Date.now();
   if(live){
@@ -1357,16 +1415,16 @@ async function plainPlan(){
     // throwing four away is how you turn a normal timetable into an empty screen,
     // so a train-type filter widens the window instead of thinning the answer.
     const lim = catSel.length ? 16 : 6;
-    const d=await api(`/connections?limit=${lim}&from=${encodeURIComponent(fromName)}&to=${encodeURIComponent(toName)}${whenQS()}${modeQS()}`, sig);
+    const d=await api(`/connections?limit=${lim}&from=${encodeURIComponent(fromName)}&to=${encodeURIComponent(toName)}${viaQS()}${whenQS()}${modeQS()}`, sig);
     if(gen!==jrnGen) return;                                       // superseded
     const raw=d.connections||[];
     const kept=catFilter(raw);
-    if(!kept.length){ $("jrnOut").innerHTML=`<div class="empty"><div class="big">&#9940;</div>No connections found.${sunWhyEmpty()}${modeWhyEmpty()}${raw.length?catWhyEmpty():""}</div>`; return; }
+    if(!kept.length){ $("jrnOut").innerHTML=`<div class="empty"><div class="big">&#9940;</div>No connections found.${sunWhyEmpty()}${viaWhyEmpty()}${modeWhyEmpty()}${raw.length?catWhyEmpty():""}</div>`; return; }
     rememberRoute(fromName,toName);   // a real result -- now it is worth a chip
     const cs=kept.slice(0,6);
     cs.forEach(annotate);
     jrnConns = cs;   // render order == the ci the leg buttons index back into
-    $("jrnOut").innerHTML = shareBarHTML() + catFilterNote(kept.length, raw.length)
+    $("jrnOut").innerHTML = shareBarHTML() + viaNote() + catFilterNote(kept.length, raw.length)
       + cs.map((c,i)=>connCard(c,i)).join("") + wondersExpanderHTML(cs[0].to?.station);
     if(weather) fillWeather();
   }catch(e){
@@ -1978,9 +2036,12 @@ async function smartPlan(){
     // Fire everything at once. The two direct queries (base + wide) are the fast core;
     // hub sweeps run in parallel, each capped so the slowest hub can't hold up first paint.
     const direct={failed:false, ok:false};   // only the two DIRECT queries decide whether "not found" is honest
-    const baseP = tryConns(`from=${f}&to=${t}&limit=6${whenQS()}${modeQS()}`, direct, sig);
-    const wideP = tryConns(`from=${f}&to=${t}&limit=16${whenQS()}${modeQS()}`, direct, sig);
-    const hubList = [...HUBS, ...(preferScenic?SCENIC_HUBS:[])].filter(h=>h!==fromName&&h!==toName);
+    const baseP = tryConns(`from=${f}&to=${t}${viaQS()}&limit=6${whenQS()}${modeQS()}`, direct, sig);
+    const wideP = tryConns(`from=${f}&to=${t}${viaQS()}&limit=16${whenQS()}${modeQS()}`, direct, sig);
+    // A named via stands the sweep down: see the two rules at viaQS(). The
+    // API takes ONE via[] here, and a second one is not "more thorough" --
+    // it is a different journey the passenger did not ask for.
+    const hubList = viaName ? [] : [...HUBS, ...(preferScenic?SCENIC_HUBS:[])].filter(h=>h!==fromName&&h!==toName);
     const HUB_CAP=5000;  // tunable: bounds hub fill-in (hubs measured 3.3-9.3s); the base render fixes PERCEIVED latency regardless of this
     const hubJobs = hubList.map(h=>
       withTimeout(tryConns(`from=${f}&to=${t}&via[]=${encodeURIComponent(h)}&limit=3${whenQS()}${modeQS()}`, null, sig), HUB_CAP)
@@ -2028,7 +2089,7 @@ function renderSmart(base, swept, baseline, searching, reqFailed, nKept, nRaw){
     if(!searching) $("jrnOut").innerHTML = reqFailed
       ? `<div class="err">We could not reach the timetable, so we do not know whether this journey runs.<br>`
         + `This is not a &quot;no&quot; &#8212; check your connection and tap Search again.</div>${modeWhyEmpty()}${nRaw?catWhyEmpty():""}`
-      : `<div class="empty"><div class="big">&#9940;</div>No connections found.${sunWhyEmpty()||"<br>Check the station names."}${modeWhyEmpty()}${nRaw?catWhyEmpty():""}</div>`;
+      : `<div class="empty"><div class="big">&#9940;</div>No connections found.${sunWhyEmpty()||(viaName?"":"<br>Check the station names.")}${viaWhyEmpty()}${modeWhyEmpty()}${nRaw?catWhyEmpty():""}</div>`;
     return;
   }
 
@@ -2070,6 +2131,7 @@ function renderSmart(base, swept, baseline, searching, reqFailed, nKept, nRaw){
   jrnConns = top;   // render order == the ci the leg buttons index back into
   $("jrnOut").innerHTML = smartHead(baseline, nSafe, swN)
     + shareBarHTML()
+    + viaNote()
     + catFilterNote(nKept, nRaw)
     + (searching?`<div class="shint">&#8987; searching wider routes&#8230;</div>`
                 :jrnZoneFact()+`<div id="jlh"></div>`)   // route-level facts, settled render only (one request per search, not per phase)
@@ -3316,10 +3378,13 @@ function acEnter(inpId, acId, onPick){
 }
 acEnter("iFrom","acFrom", n=>{ fromName=n; $("fFrom").classList.add("has"); if(toName) planJourney(); });
 acEnter("iTo","acTo",     n=>{ toName=n;   $("fTo").classList.add("has");   if(fromName) planJourney(); });
+acEnter("iVia","acVia",   viaSet);
 acEnter("iWan","acWan",   n=>{ wanName=n;  $("fWan").classList.add("has");  if(wanBudget) runWander(); });
 wireAC("iDep","acDep","fDep", showDepartures);
 wireAC("iFrom","acFrom","fFrom", n=>{ fromName=n; if(toName) planJourney(); });
 wireAC("iTo","acTo","fTo",     n=>{ toName=n;   if(fromName) planJourney(); });
+wireAC("iVia","acVia","fVia", viaSet);
+$("iVia").addEventListener("input", viaPending);
 wireAC("iWan","acWan","fWan",  n=>{ wanName=n;  if(wanBudget) runWander(); });
 $("iDep").addEventListener("keydown",e=>{ if(e.key==="Enter"){e.target.blur(); showDepartures(e.target.value.trim());}});
 
