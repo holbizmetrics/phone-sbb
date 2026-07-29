@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-180.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <title>Rail &#183; live departures</title>
-<link rel="stylesheet" href="app.css?v=20260729i">
+<link rel="stylesheet" href="app.css?v=20260729j">
 </head>
 <body>
 <div class="wrap">
@@ -52,6 +52,8 @@
       <div class="hrow"><span class="k">Now</span><span class="v">&#183; Leave at &#183; Arrive by &#8212; Arrive by works backwards from when you must be there.</span></div>
       <div class="hrow"><span class="k">&#127751; Sunset</span><span class="v">a fourth way to say when: arrive before the sun goes down at the place you are going, on the day you are going. It looks the sunset up there, not here, and fills in the arrive-by time for you. Tap it after dark and it plans for tomorrow instead. The forecast only reaches two days out, so for anything further it says so rather than quietly answering about today.</span></div>
       <div class="hrow"><span class="k">&#127749; Sunrise</span><span class="v">the same thing at the other end of the day, and it usually means tomorrow: it plans to have you there <i>before</i> first light, which is the point of going up a mountain early. Tapping it after the sun is already up rolls to the next day by itself. If nothing gets you there that early it says so plainly &#8212; that is the first train of the day, not a mistake in your search.</span></div>
+      <div class="hrow"><span class="k">&#9992; Flight</span><span class="v">works backwards from a flight: you give the departure time, <i>you</i> say how early you want to be at the airport, and it plans the trains to land you there. It will not pick that number for you &#8212; nothing is planned until you tap one. This app knows trains; it does not know your airline&#8217;s check-in deadline, your bag drop, the queue at security, or the walk from the platform to the desk, and it says so every time. The time on your booking wins. If your destination does not look like an airport station it warns you rather than assuming.</span></div>
+      <div class="hrow"><span class="k">&#129309; Meet in the middle</span><span class="v">treats the two fields as two people&#8217;s starting points and names the stations where your ride times come out closest, fairest first &#8212; with both clock times and when you would both be there. Tap <i>my leg</i> or <i>their leg</i> to plan either half; the share bar sends theirs on. It reads the two direct connections rather than hammering the timetable, so it costs two requests, and it only ever runs when you tap it.</span></div>
       <div class="hrow"><span class="k">Pl.&#8201;7</span><span class="v">is the platform you leave from. Amber with &#9888; means it changed from the scheduled one.</span></div>
       <div class="hrow"><span class="k">7&#8594;5</span><span class="v">on a change means you arrive at 7 and leave from 5 &#8212; you have to cross the station.</span></div>
       <div class="hrow"><span class="k">&#9749; step out?</span><span class="v">appears on a change of twenty minutes or more: what is within a short walk of that station &#8212; a caf&#233;, a bakery, a viewpoint &#8212; with one-way walking times scoped to the minutes you actually have, keeping ten in reserve to find your platform again. Nothing nearby is said plainly, and a map outage is an outage, not a &#8220;no&#8221;.</span></div>
@@ -162,10 +164,17 @@
         <button type="button" id="segArr"  onclick="setWhen('arr')">Arrive by</button>
         <button type="button" id="segSun"  onclick="setWhenSun('set')"  title="Arrive before sunset at your destination">&#127751; Sunset</button>
         <button type="button" id="segRise" onclick="setWhenSun('rise')" title="Be at your destination for sunrise">&#127749; Sunrise</button>
+        <button type="button" id="segFlt"  onclick="setWhenFlight()" title="Work backwards from a flight - you set how early you want to be">&#9992; Flight</button>
       </div>
       <input type="datetime-local" id="whenAt" class="whenat" aria-label="Date and time"
              onchange="onWhenChange()" hidden>
       <div id="sunHint" class="sunhint"></div>
+      <div id="fltPanel" class="fltpanel" hidden>
+        <label class="fltat">&#9992; Flight departs
+          <input type="datetime-local" id="fltAt" onchange="onFlightAt()" aria-label="Flight departure date and time">
+        </label>
+        <div id="fltHint"></div>
+      </div>
       <button type="button" id="whenClear" class="whenclear" onclick="setWhen('now')" hidden
               aria-label="Back to departures from now">&#10005;</button>
     </div>
@@ -220,6 +229,6 @@
      are on follows you to every tab, which is the whole point of pinning it. -->
 <div id="ob"></div>
 
-<script src="app.js?v=20260729i"></script>
+<script src="app.js?v=20260729j"></script>
 </body>
 </html>

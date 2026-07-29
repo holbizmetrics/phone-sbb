@@ -6,7 +6,7 @@
 const BUILD = "dev";  // BUILD-STAMP
 const API = "https://transport.opendata.ch/v1";
 const $ = id => document.getElementById(id);
-const LS = { favs:"rail.favs", last:"rail.last", modes:"rail.modes", cats:"rail.cats", routes:"rail.routes", theme:"rail.theme", onboard:"rail.onboard", obpoi:"rail.obpoi" };
+const LS = { favs:"rail.favs", last:"rail.last", modes:"rail.modes", cats:"rail.cats", routes:"rail.routes", theme:"rail.theme", onboard:"rail.onboard", obpoi:"rail.obpoi", flightbuf:"rail.flightbuf" };
 let favs = load(LS.favs, []);
 let current = "";        // current departures station
 let refreshTimer = null;
@@ -743,7 +743,8 @@ function setWhen(mode){
   whenMode = mode;
   // the explanation must not outlive the request that caused it
   { sunTarget=null; const s=$("sunHint"); if(s) s.innerHTML="";
-    ["segSun","segRise"].forEach(id=>{ const b=$(id); if(b) b.classList.remove("on"); }); }
+    ["segSun","segRise"].forEach(id=>{ const b=$(id); if(b) b.classList.remove("on"); });
+    flightOff(); }
   const at=$("whenAt"), clr=$("whenClear");
   ["now","dep","arr"].forEach(m=>$("seg"+m[0].toUpperCase()+m.slice(1)).classList.toggle("on", m===mode));
   if(mode === "now"){
@@ -762,7 +763,101 @@ function setWhen(mode){
 function onWhenChange(){
   whenValue = $("whenAt").value;
   sunTarget=null;   // hand-edited: whatever the sun said, this is the user's time now
+  flightOff();      // ...and the flight the time was derived from is no longer the reason
   if(whenValue && fromName && toName) planJourney();
+}
+
+/* ---------- T13: airport / flight mode ----------
+   "Be at the airport by HH:MM" is an ARRIVE-BY question the app can already
+   answer. The dangerous half is the number you subtract.
+
+   THE APP DOES NOT KNOW HOW EARLY YOUR AIRLINE WANTS YOU. Check-in deadlines,
+   bag-drop cutoffs, passport queues and the walk from the platform to the desk
+   are not in any timetable, they differ per airline, airport, destination and
+   day, and they change. A confident built-in "be there two hours before" would
+   be this app inventing an airline's policy -- and the one feature capable of
+   making someone miss a flight.
+
+   So the buffer is NEVER invented: flightBuf starts null and STAYS null until
+   you tap a number. Until then no arrive-by time is set and nothing is planned.
+   Your choice is remembered afterwards, because it is yours -- not ours. The
+   caveat sits under the numbers permanently, not once at first use. */
+const FLIGHT_BUFS = [60, 90, 120, 150, 180, 210];
+let flightAt = "";                       // datetime-local of the flight itself
+let flightBuf = load(LS.flightbuf, null); // MINUTES. null = the user has not said. Never defaulted.
+
+function looksLikeAirport(n){ return /flughafen|a[eé]roport|aeroporto|airport/i.test(n||""); }
+function bufWords(m){
+  const h=Math.floor(m/60), r=m%60;
+  return (h?`${h} h`:"") + (h&&r?" ":"") + (r?`${r} min`:"");
+}
+function flightArriveBy(at, buf){
+  if(!at || buf==null) return "";
+  // Shape-check BEFORE parsing. new Date() is not a validator: it happily read
+  // "not-a-date:00" as 1999-12-31T22:00 -- a garbage input rendered as a
+  // confident departure time, which is the one thing this feature must not do.
+  if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(at)) return "";
+  const d=new Date(at.length<=16 ? at+":00" : at);
+  if(isNaN(d)) return "";
+  return new Date(d.getTime()-buf*60000-d.getTimezoneOffset()*60000).toISOString().slice(0,16);
+}
+function flightOff(){
+  flightAt="";
+  const p=$("fltPanel"); if(p) p.hidden=true;
+  const b=$("segFlt");   if(b) b.classList.remove("on");
+}
+function setWhenFlight(){
+  const p=$("fltPanel"); if(!p) return;
+  sunTarget=null; { const s=$("sunHint"); if(s) s.innerHTML=""; }
+  ["segNow","segDep","segArr","segSun","segRise"].forEach(id=>{const b=$(id); if(b) b.classList.remove("on");});
+  const b=$("segFlt"); if(b) b.classList.add("on");
+  p.hidden=false;
+  const fi=$("fltAt");
+  if(fi && !fi.value){                    // seed the FLIGHT time, not the arrival
+    const d=new Date(Date.now()+4*3600000); d.setSeconds(0,0); d.setMinutes(0);
+    fi.value=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  }
+  flightAt = fi ? fi.value : "";
+  renderFlight();
+}
+function onFlightAt(){ flightAt=$("fltAt").value; renderFlight(); }
+/* Radio-like on purpose: there is no un-choose. A revoked buffer would leave an
+   arrive-by time on screen that was derived from a rule the user just withdrew
+   -- a stale derived value, which is the same defect as an invented one. */
+function setFlightBuf(m){
+  flightBuf = m;
+  save(LS.flightbuf, flightBuf);
+  renderFlight();
+}
+function renderFlight(){
+  const out=$("fltHint"); if(!out) return;
+  const chips=FLIGHT_BUFS.map(m=>
+    `<button type="button" class="chip fltbuf${flightBuf===m?" on":""}" onclick="setFlightBuf(${m})">${bufWords(m)}</button>`).join("");
+  const airportNote = toName && !looksLikeAirport(toName)
+    ? `<div class="fltwarn">&#9888; <b>${esc(shortStop(toName))}</b> does not look like an airport station to us. If your airport has no railway station of its own, this is planning you to the wrong place &#8212; check how you cover the last stretch.</div>`
+    : "";
+  if(flightBuf==null){
+    out.innerHTML = `<div class="fltrow"><span class="fltq">How early do you want to be at the airport?</span></div>`
+      + `<div class="fltchips">${chips}</div>`
+      + `<div class="fltcav">We are not picking this for you. The app knows trains; it does not know your airline&#8217;s check-in deadline, your bag drop, the queue at security, or the walk from the platform to the desk. Nothing is planned until you choose &#8212; and the deadline printed on your booking beats whatever you choose here.</div>`
+      + airportNote;
+    return;
+  }
+  const arr=flightArriveBy(flightAt, flightBuf);
+  out.innerHTML = `<div class="fltrow"><span class="fltq">How early do you want to be at the airport?</span></div>`
+    + `<div class="fltchips">${chips}</div>`
+    + (arr
+        ? `<div class="fltcalc">Flight <b>${esc((flightAt||"").slice(11,16))}</b> &#8722; your ${bufWords(flightBuf)} = at the airport by <b>${esc(arr.slice(11,16))}</b>${
+            (flightAt||"").slice(0,10)!==arr.slice(0,10) ? ` <span class="fltq">(the day before)</span>` : ""}</div>`
+        : `<div class="fltcalc fltq">Set the flight&#8217;s departure time above.</div>`)
+    + `<div class="fltcav"><b>${bufWords(flightBuf)} is your number, not your airline&#8217;s rule.</b> This app has no access to check-in deadlines, bag-drop cutoffs or security queues, and it does not model the walk from the platform to the desk. The time on your booking wins.</div>`
+    + airportNote;
+  if(!arr) return;
+  whenMode="arr"; whenValue=arr;
+  const at=$("whenAt"), clr=$("whenClear");
+  if(at){ at.hidden=false; at.value=arr; }
+  if(clr) clr.hidden=false;
+  if(fromName && toName) planJourney();
 }
 
 /* ---------- transport-mode filter ----------

@@ -185,6 +185,16 @@ the never-on-render rule, superseded-tap abort, and outage≠no-route; 3/3 plant
 security. *Regression:* the check-in buffer is a **CLAIM**, not timetable data. A fixed "be there 2h
 before" is us inventing an airline's policy; it must be user-set or plainly labelled a rule of thumb,
 or this becomes the one feature that makes someone miss a flight.
+**SHIPPED 2026-07-29.** Both, not either: the buffer is **user-set AND permanently labelled**.
+`flightBuf` loads as `null` and *stays* null until the user taps a number — until then no arrive-by
+is set and nothing is planned, so the app never once states a check-in time it does not know. The
+caveat (no access to check-in deadlines, bag drop, security queues, or the platform-to-desk walk;
+"the time on your booking wins") sits under the chips in **both** states, not once at first use. No
+un-choose, deliberately: a revoked buffer would strand a derived arrive-by on screen, which is the
+same defect as an invented one. A destination not matching `flughafen|aéroport|aeroporto|airport`
+is warned about rather than assumed. Found + fixed in build: `new Date("not-a-date:00")` parsed to
+1999-12-31, so the flight time is shape-checked before parsing. `tests/flight.mjs` (36 checks);
+4/4 planted mutations caught — including the roadmap's exact trap, a smuggled 120-minute default.
 
 **T14. ~~One-shot GPS on the sketch~~** — folded into **T7**; same discipline (one-shot
 `getCurrentPosition`, never background tracking).
