@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-180.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <title>Rail &#183; live departures</title>
-<link rel="stylesheet" href="app.css?v=20260729g">
+<link rel="stylesheet" href="app.css?v=20260729h">
 </head>
 <body>
 <div class="wrap">
@@ -78,6 +78,18 @@
         fetch, though what is already on screen keeps working. The moving dot on the sketch is the
         <b>scheduled</b> position worked out from the timetable, not GPS &#8212; it shows where the train
         should be, which is not always where it is.
+      </div>
+
+      <h3>Privacy</h3>
+      <div class="hnote" id="privacy">
+        No account, no ads, no analytics, no cookies. Your favourites, routes and the pinned
+        journey live in this browser&#8217;s own storage and never leave the phone. The app talks to
+        exactly four services, each with only what the question needs: station names and times to
+        <b>transport.opendata.ch</b>, coordinates to <b>Open-Meteo</b> (weather), <b>Overpass/OSM</b>
+        (nearby places), and <b>Wikipedia</b> (sights); links to maps, webcams or a second forecast
+        open in a new tab &#8212; what you do there is between you and them. Your location is read
+        only in the moment you tap &#128205;, and is sent nowhere except that one nearest-stop
+        lookup. There is nothing to log in to because there is nothing about you here.
       </div>
       <div class="hbuild" id="buildStamp"></div>
     </div>
@@ -202,6 +214,6 @@
      are on follows you to every tab, which is the whole point of pinning it. -->
 <div id="ob"></div>
 
-<script src="app.js?v=20260729g"></script>
+<script src="app.js?v=20260729h"></script>
 </body>
 </html>
