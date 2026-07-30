@@ -295,10 +295,34 @@ synthetic self-tests (fires on a filled absence · stays silent on one that is s
 read ordinary prose like *"no data source"* as a feature name). Sweep: **82 checks green**, and the
 full suite is green under `TZ=UTC` as well as local.
 
-**Still open on the sweep, operator's call:** `constraints/arrive-by-time` is `UNADJUDICATED`, but
-arrive-by is shipped (`segArr`, `&isArrivalTime=1`) and T17 now walks it on its own axis. Adding a
-`SERVED` row is squarely the direction this session is biased to over-claim in, so it is left for you
-to rule rather than banked.
+**`constraints/arrive-by-time` → `SERVED` (operator ruling, 2026-07-30).** Evidence: `segArr` plus
+`&isArrivalTime=1` on the query, and the earlier/later pager walks arrivals on their own axis rather
+than silently becoming a departure question. This is the *opposite* staleness from the rot above — not
+a rotted row but a **missing** one: a value the app plainly serves that the table had never ruled on,
+so every passenger carrying it scored `UNADJUDICATED`.
+
+Adding it exposed a third instance of tonight's class, and the worst-behaved one. Three checks used
+`arrive-by-time` as their hard-coded stand-in for "an unadjudicated value". Ruling it `SERVED` did not
+turn them red — it turned them **vacuous**. An unrelated field (`who/commuter`) happens to be
+unadjudicated too, so each check went on passing while no longer testing the thing it is named after.
+Green before, green after, and *nothing in the suite could see it*, because green is green. That is
+strictly nastier than the `LEFT_BEHIND` rot, which at least had a wrong answer sitting in a file
+somebody might read.
+
+Fixed by making the premise discovered and asserted rather than assumed: `UNADJ` resolves an unruled
+axis value at run time, two controls assert it exists *and* is genuinely unruled, and the
+UNADJUDICATED check now asserts the status **on that value's own axis** instead of on the
+whole-scenario verdict — a verdict is reachable through any unruled field, which is exactly how the
+check went vacuous. It now prints its own specimen (`who/commuter`) so a future reader can see what
+it actually tested.
+
+And the symmetry got closed while the row was being added. The absence rule had a third direction
+missing: **an adjudication may not outlive the PRESENCE it cites either.** `"feature: … (pager.mjs)"`
+is a claim that the evidence is still there to be re-read; rename or delete that suite and the row
+becomes an assertion backed by nothing, green. Five rows cite suites; all five are now checked.
+Sweep: **93 checks green**, in local, `TZ=UTC` and `TZ=Asia/Kolkata`. **4/4 mutations caught** —
+absence-rot restored · no unruled specimen available · the attributable check reverted to its old
+vacuous verdict-form · a cited evidence suite deleted.
 
 ## Regression summary — the "does it add or destroy?" answer
 

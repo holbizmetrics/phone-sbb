@@ -10,6 +10,26 @@ import { generate } from "./passengers/generate.mjs";
 let pass = 0, fail = 0;
 const chk = (n, c, d = "") => { if (c) { pass++; console.log("  ok   " + n); } else { fail++; console.log("  FAIL " + n + " :: " + d); } };
 
+// An axis value the table has NOT ruled on, resolved AT RUN TIME.
+//
+// This was hard-coded as "arrive-by-time" until the operator adjudicated that
+// value SERVED (2026-07-30). The three checks below did not go red -- they went
+// VACUOUS: an unrelated field (who/commuter) happens to be unadjudicated too, so
+// each one carried on passing while no longer testing the thing it is named
+// after. Nothing in the suite could see that, because green is green.
+// So the specimen is now discovered, and every check that depends on it asserts
+// its own premise instead of assuming it.
+const UNADJ = (() => {
+  for (const axis of Object.keys(AXES))
+    for (const value of AXES[axis])
+      if (!ADJUDICATIONS[`${axis}/${value}`]) return { axis, value };
+  return null;
+})();
+chk("control: the table still has an unruled value to test UNADJUDICATED with",
+  !!UNADJ, "every axis value is now adjudicated -- these checks need a new specimen");
+chk("control: ...and it really is unruled", UNADJ && adjudicate(UNADJ.axis, UNADJ.value).status === "UNADJUDICATED",
+  UNADJ ? JSON.stringify(adjudicate(UNADJ.axis, UNADJ.value)) : "no specimen");
+
 // ---- specimen #1: Harold (bus msg 87102361, adjudicated by hand vs 1625cbe) ----
 const harold = { who: "business-traveller", purpose: "meet-flight",
                  constraints: "foreign-tz-time", conditions: "normal", phrasing: "exact-station-names" };
@@ -42,9 +62,14 @@ for (const c of ["future-origin-not-here", "relative-date-phrase"])
                constraints: "needs-food-en-route", conditions: "normal", phrasing: "exact-station-names" };
   const r = scoreScenario(ok);
   chk("a servable traveller is not doomsaid: worst is PARTIAL, not LEFT_BEHIND", r.verdict === "PARTIAL", r.verdict);
-  const s = { ...ok, constraints: "arrive-by-time" };
-  chk("an unchecked value reports UNADJUDICATED, never a guessed verdict",
-    scoreScenario(s).verdict === "UNADJUDICATED", scoreScenario(s).verdict);
+  // Attributable on purpose: assert the UNADJUDICATED status on the axis that
+  // carries the unruled value, not on the whole-scenario verdict. The verdict is
+  // reachable through any unruled field, which is exactly how this check went
+  // vacuous once before.
+  const s = { ...ok, [UNADJ.axis]: UNADJ.value };
+  const sf = scoreScenario(s).findings.find(f => f.axis === UNADJ.axis);
+  chk(`an unchecked value (${UNADJ.axis}/${UNADJ.value}) reports UNADJUDICATED on its OWN axis, never a guessed verdict`,
+    sf && sf.status === "UNADJUDICATED", JSON.stringify(sf));
 }
 
 // ---- instrument invariants ----
@@ -99,6 +124,16 @@ for (const r of refusals.refusals) {
       stale.map(f => `tests/${f}.mjs IS in the repo -- re-adjudicate this row`).join("; "));
   }
 
+  // The same rule in the third direction, which is what a SERVED row needs: an
+  // adjudication may not outlive the PRESENCE it cites either. "feature: ...
+  // (pager.mjs)" is a claim that the evidence is still there to be re-read; delete
+  // or rename that suite and the row becomes an assertion backed by nothing, green.
+  const citedSuites = ev => [...ev.matchAll(/\b([a-z0-9-]+\.mjs)\b/g)].map(m => m[1]);
+  for (const [k, a] of Object.entries(ADJUDICATIONS))
+    for (const f of citedSuites(a.evidence))
+      chk(`'${k}' cites ${f} as evidence, and that suite is still in the repo`, suites.includes(f),
+        `tests/${f} is gone -- this row's evidence can no longer be re-read, so the row is unbacked`);
+
   // The rule's own negative case, synthetic on purpose. A count-based control
   // ("at least one row cites an absence") passed only while a stale row existed
   // -- so fixing the defect broke the proof that the check works. The corpus is
@@ -109,6 +144,12 @@ for (const r of refusals.refusals) {
     staleCites("no such-feature-as-this exists").length === 0, "");
   chk("SELF-TEST: ...and does not read ordinary prose as a feature name",
     staleCites("policy-w30: no data source the app can verify").length === 0, "");
+  chk("SELF-TEST: the presence-check FINDS a cited suite that is really there",
+    citedSuites("feature: ... (pager.mjs)").join() === "pager.mjs", "");
+  chk("SELF-TEST: ...and would flag one that is not",
+    !suites.includes(citedSuites("feature: ... (no-such-suite.mjs)")[0]), "");
+  chk("SELF-TEST: ...and reads BOTH files when a row cites two",
+    citedSuites("feature: (outage-not-verdict.mjs, journey-anchor.mjs)").length === 2, "");
 }
 
 // ---- the disposition ledger: ABSENT is the only red (pt.3 rule 1) ----
@@ -149,9 +190,13 @@ for (const [k, d] of Object.entries(ledger.dispositions)) {
   chk("a PARTIAL passenger shrinks too (to its one load-bearing constraint)",
     partial && Object.keys(partial.minimal).length === 1 && partial.minimal.constraints === "needs-food-en-route",
     JSON.stringify(partial));
+  // An otherwise fully-SERVED passenger carrying exactly one unruled value. The
+  // unknown is the DISCOVERED one, not a hard-coded value that can quietly become
+  // SERVED and leave this check resting on some unrelated field.
+  const unknown = { who: "commuter", purpose: "last-train-home", constraints: "arrive-by-time",
+                    conditions: "normal", phrasing: "exact-station-names", [UNADJ.axis]: UNADJ.value };
   chk("shrink refuses below PARTIAL -- unknown is not a failure to minimize",
-    shrink({ who: "commuter", purpose: "last-train-home", constraints: "arrive-by-time",
-             conditions: "normal", phrasing: "exact-station-names" }) === null);
+    shrink(unknown) === null, "an unruled passenger was minimized as if the gap were understood");
 }
 
 // ---- pt.5 rule d: reduction check -- no gap may be called new unadjudicated ----

@@ -52,6 +52,11 @@ export const ADJUDICATIONS = {
   // never offers the replan unprompted -- the passenger must notice first. So
   // PARTIAL, deliberately not SERVED: half a rescue is not a rescue.
   "conditions/delay-50min":           { status: "PARTIAL",     step: "ride",   evidence: "register-2.1 half-built: replanFromStop from a named stop (replan-from-here.mjs); residual = never offered unprompted" },
+  // Operator-adjudicated 2026-07-30. Surfaced by the absence-rot pass as the
+  // opposite kind of staleness: not a rotted row, a MISSING one -- a value the
+  // app plainly serves that the table had never ruled on, so every passenger
+  // carrying it scored UNADJUDICATED.
+  "constraints/arrive-by-time":        { status: "SERVED",      step: "plan",   evidence: "feature: segArr + isArrivalTime=1 on the query, and the earlier/later pager walks arrivals on their own axis rather than silently becoming a departure question (pager.mjs)" },
   "phrasing/exact-station-names":     { status: "SERVED",      step: "input",  evidence: "feature: the baseline the whole suite exercises" },
   "conditions/normal":                { status: "SERVED",      step: "plan",   evidence: "feature: the baseline the whole suite exercises" },
 };
