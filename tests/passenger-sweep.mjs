@@ -33,20 +33,46 @@ chk("control: ...and it really is unruled", UNADJ && adjudicate(UNADJ.axis, UNAD
 // ---- specimen #1: Harold (bus msg 87102361, adjudicated by hand vs 1625cbe) ----
 const harold = { who: "business-traveller", purpose: "meet-flight",
                  constraints: "foreign-tz-time", conditions: "normal", phrasing: "exact-station-names" };
+// Harold MOVED, 2026-07-30, and the way he moved is worth more than the rows.
+//
+// These checks used to read "Harold is LEFT_BEHIND ... on the timezone axis".
+// Shipping the swissLocal fix turned all three red in one run. That is the
+// specimen doing its job: it asserted a FALSIFIABLE claim about the app, so
+// when the app changed underneath it, it said so out loud -- where the
+// adjudication rows next to it rot in silence for days.
+//
+// Which is the freshness contract, already built, sitting one file away from
+// the rows that lack it: (a) what was observed, (b) what would falsify it,
+// (c) a mechanical re-check. Note the DIRECTION too: an adjudication cites an
+// absence, so shipping can only ever make it stale PESSIMISTIC. A specimen
+// asserts a failure, so shipping makes it stale OPTIMISTIC -- it goes on
+// claiming the app is worse than it is. Same decay, opposite sign, and only
+// this one is loud.
 {
   const r = scoreScenario(harold);
-  chk("Harold is LEFT_BEHIND", r.verdict === "LEFT_BEHIND", JSON.stringify(r));
-  chk("...and falls off at INPUT (the '6 PM EST' finding)", r.failsAt === "input", r.failsAt);
-  chk("...on the timezone axis", r.worst === "constraints/foreign-tz-time", r.worst);
+  chk("Harold is no longer LEFT_BEHIND -- the timezone half of his trip was fixed",
+    r.verdict === "PARTIAL", JSON.stringify(r));
+  chk("...and what is left of him fails at DECIDE, not at input",
+    r.failsAt === "decide", r.failsAt);
+  chk("...on the meet-flight axis now, not the timezone one",
+    r.worst === "purpose/meet-flight", r.worst);
+  const tz = r.findings.find(f => f.axis === "constraints");
+  chk("...and his timezone finding is PARTIAL with the residual named, not SERVED",
+    tz.status === "PARTIAL" && /residual/.test(tz.evidence), JSON.stringify(tz));
   const partial = r.findings.find(f => f.axis === "purpose");
   chk("landing!=meeting is PARTIAL at decide, not silently SERVED",
     partial.status === "PARTIAL" && partial.step === "decide", JSON.stringify(partial));
 }
-// Harold's other two input findings carry the same verdict:
-for (const c of ["future-origin-not-here", "relative-date-phrase"])
-  chk(`Harold-variant '${c}' also LEFT_BEHIND at input`,
-    scoreScenario({ ...harold, constraints: c }).verdict === "LEFT_BEHIND"
-      && scoreScenario({ ...harold, constraints: c }).failsAt === "input");
+// His other two input variants did NOT move together, and that is the finding:
+// 'future-origin-not-here' had rotted (stored places exist now), while
+// 'relative-date-phrase' is untouched as written. One specimen, two rows, two
+// different fates -- which is why they are asserted separately rather than
+// swept into one loop with a shared verdict.
+chk("Harold-variant 'future-origin-not-here' has moved off LEFT_BEHIND -- route history filled it",
+  scoreScenario({ ...harold, constraints: "future-origin-not-here" }).verdict === "PARTIAL", "");
+chk("Harold-variant 'relative-date-phrase' is still LEFT_BEHIND at input -- nothing parses the phrase",
+  scoreScenario({ ...harold, constraints: "relative-date-phrase" }).verdict === "LEFT_BEHIND"
+    && scoreScenario({ ...harold, constraints: "relative-date-phrase" }).failsAt === "input", "");
 
 // ---- specimen: parent with pram -- MUST score REFUSED, never LEFT_BEHIND ----
 {
@@ -181,10 +207,22 @@ for (const [k, d] of Object.entries(ledger.dispositions)) {
 {
   const harold = { who: "business-traveller", purpose: "meet-flight",
                    constraints: "foreign-tz-time", conditions: "normal", phrasing: "exact-station-names" };
+  // The claim is that shrinking KEEPS THE VERDICT while dropping everything
+  // that did not earn its place -- so that is what is asserted. Naming the
+  // surviving field ("...and it is constraints/foreign-tz-time") was the same
+  // mistake as the vacuous verdict checks: it hard-codes one adjudication into
+  // an assertion about a different property, and it went red the moment that
+  // row was re-adjudicated -- correct behaviour, wrong reason, and it would
+  // have gone GREEN-but-meaningless just as easily had the two rows swapped
+  // ranks instead. Read the surviving field off the full scoring instead.
+  const full = scoreScenario(harold);
   const s = shrink(harold);
   chk("Harold shrinks to ONE field -- the biography was noise",
-    s && Object.keys(s.minimal).length === 1 && s.minimal.constraints === "foreign-tz-time", JSON.stringify(s));
-  chk("...and the shrunk passenger fails identically", s.verdict === "LEFT_BEHIND" && s.worst === "constraints/foreign-tz-time");
+    s && Object.keys(s.minimal).length === 1, JSON.stringify(s));
+  chk("...and the shrunk passenger fails identically -- same verdict, same worst axis",
+    s.verdict === full.verdict && s.worst === full.worst, `${s.verdict}/${s.worst} vs ${full.verdict}/${full.worst}`);
+  chk("...and what survived IS the axis that decided the verdict, not some other field",
+    s.worst.startsWith(Object.keys(s.minimal)[0] + "/"), `${JSON.stringify(s.minimal)} vs ${s.worst}`);
   const partial = shrink({ who: "commuter", purpose: "last-train-home",
     constraints: "needs-food-en-route", conditions: "normal", phrasing: "exact-station-names" });
   chk("a PARTIAL passenger shrinks too (to its one load-bearing constraint)",

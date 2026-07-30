@@ -31,9 +31,42 @@ export const AXES = {
 // evidence tags: harold-N = specimen #1 finding N (bus msg 87102361);
 // policy-w30 = refusal decided week of 2026-07-27; feature = shipped + tested in repo.
 export const ADJUDICATIONS = {
-  "constraints/foreign-tz-time":      { status: "LEFT_BEHIND", step: "input",  evidence: "harold-1: card echoes TZ on output, input assumes local" },
-  "constraints/future-origin-not-here": { status: "LEFT_BEHIND", step: "input", evidence: "harold-2: 'from work on Thursday' is neither here-now nor a stored place" },
-  "constraints/relative-date-phrase": { status: "LEFT_BEHIND", step: "input",  evidence: "harold-5: 'this Thursday' not parsed" },
+  // Re-adjudicated 2026-07-30. These three were flagged in the part-2 bus report
+  // as the rows most likely to be stale next -- oldest absence claims, no
+  // freshness contract of any kind, and explicitly unverified. Checked by hand,
+  // which is the only way: all three are PROSE absences, and the absence-rot
+  // check only resolves the `no <suite-name>` form. Two of the three had moved.
+  //
+  // (1) The input half was REAL and is now fixed. The planner seed, the flight
+  // seed and the pager anchor all wrote the DEVICE wall clock into a field the
+  // API reads as Swiss -- 3h30 wrong in Mumbai, the wrong DAY in Auckland,
+  // and self-consistent in Zurich, which is why it survived. swissLocal() is
+  // now the single datetime-local boundary; tests/tz-input.mjs, 42 checks over
+  // six zones and both DST offsets, 5/5 mutations caught. PARTIAL and not
+  // SERVED on purpose: the sunset roll-to-tomorrow still compares a Swiss
+  // forecast time against the device clock (named residual, asserted in that
+  // suite so it cannot be forgotten), and the field carries no zone label of
+  // its own -- it leans on tzNoteHTML's sentence elsewhere on screen.
+  "constraints/foreign-tz-time":      { status: "PARTIAL",     step: "input",  evidence: "fixed 2026-07-30: swissLocal() is the one datetime-local boundary, all three field writers Swiss (tz-input.mjs); residual = the sunset roll still reads the device clock, and the field has no zone label" },
+  // (2) ROTTED, and in the direction the framework predicts: the row cited an
+  // absence ("nor a stored place") that the app has since filled. Route history
+  // stores six routes, direction-distinct, recorded automatically, and one tap
+  // fills BOTH fields and re-plans (route-history.mjs) -- so an origin that is
+  // not here-now is a tap, and a future day is the datetime-local picker.
+  // PARTIAL, not SERVED: the two halves must still be combined by hand, and a
+  // route chip is a PAIR, not a named place -- there is no "work" to say.
+  "constraints/future-origin-not-here": { status: "PARTIAL",   step: "input", evidence: "route history: 6 stored routes, one tap fills from+to and re-plans (route-history.mjs), future day via the datetime-local picker; residual = no NAMED place, and the day must be set separately" },
+  // (3) NOT re-adjudicated, because ruling it means deciding what the row is
+  // ABOUT, and that is the operator's call rather than mine. Read as phrasing,
+  // it is untouched: nothing anywhere parses "this Thursday", so LEFT_BEHIND
+  // stands. Read as the underlying need -- plan this trip for a named future
+  // day -- it has moved twice: the datetime-local picker takes any date, and
+  // the summit day strip turns a weekday into one tap (planForDay, app.js).
+  // The ambiguity is structural: this row sits on the `constraints` axis while
+  // its evidence is a sentence about PARSING, and the table has a `phrasing`
+  // axis. A row whose axis makes its subject ambiguous can be read as rotted or
+  // as fresh at will, which is a third staleness shape worth naming.
+  "constraints/relative-date-phrase": { status: "LEFT_BEHIND", step: "input",  evidence: "harold-5: 'this Thursday' not parsed -- still literally true; but see the note above: the NEED is now served by the date picker and the summit day strip, and which of the two this row means is unruled" },
   "purpose/meet-flight":              { status: "PARTIAL",     step: "decide", evidence: "harold-3: landing time != meeting time (bags/passport/walk-out unmodelled)" },
   "constraints/needs-food-en-route":  { status: "PARTIAL",     step: "decide", evidence: "harold-4: gap mechanic shows which change has slack; no POI claim" },
   "constraints/needs-toilet-en-route":{ status: "PARTIAL",     step: "decide", evidence: "harold-4: same gap mechanic, same missing POI residual" },

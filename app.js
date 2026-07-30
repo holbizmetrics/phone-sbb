@@ -63,6 +63,22 @@ function tzNoteHTML(){
     return `<div class="tznote">All times are Swiss local (${swiss} now) &#183; your device shows ${local}</div>`;
   }catch(e){ return ""; }
 }
+/* The datetime-local BOUNDARY, in ONE place. Every time this app SHOWS is Swiss
+   (tzNoteHTML above says so out loud) and the API reads date=&time= as Swiss wall
+   time -- so a value seeded INTO a time field has to be Swiss as well. It was the
+   device wall clock: tap "dep" in Mumbai and the field read 18:30 while the
+   planner asked for 18:30 SWISS, three and a half hours off; in Auckland it asked
+   for the wrong DAY. Zurich agreed with itself, which is why it went unseen.
+   MEASURED across six zones and four instants, incl. both DST offsets --
+   tests/tz-input.mjs. Not to be confused with flightArriveBy's offset dance,
+   which is wall-clock arithmetic on a string the user typed and is correctly
+   zone-neutral; the note there says so, and the suite protects it. */
+function swissLocal(ms){
+  const p=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Zurich",year:"numeric",month:"2-digit",
+    day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(new Date(ms));
+  const g=t=>p.find(x=>x.type===t)?.value||"00";
+  return `${g("year")}-${g("month")}-${g("day")}T${g("hour")}:${g("minute")}`;
+}
 function minsUntil(iso){ return Math.round((new Date(iso)-Date.now())/60000); }
 /* The countdown slot, ONE definition -- depRow renders it and patchRow rewrites
    it every 30s, and two copies of this formula would drift apart. Past an hour
@@ -753,9 +769,9 @@ function setWhen(mode){
     return;
   }
   at.hidden = false; clr.hidden = false;
-  if(!at.value){                       // seed with the next round half-hour, local time
-    const d=new Date(Date.now()+30*60000); d.setSeconds(0,0); d.setMinutes(d.getMinutes()>=30?30:0);
-    at.value = new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  if(!at.value){                       // seed with the next round half-hour, SWISS time
+    const s=swissLocal(Date.now()+30*60000);
+    at.value = s.slice(0,14) + (+s.slice(14)>=30 ? "30" : "00");
   }
   whenValue = at.value;
   if(fromName && toName) planJourney();
@@ -805,7 +821,7 @@ function pgArr(c){ return c && c.to   && c.to.arrival     ? new Date(c.to.arriva
 // 09:00" steps to "arrive by 08:00", it does not silently become a departure.
 function pgOf(c){ return whenMode === "arr" ? pgArr(c) : pgDep(c); }
 function pgTimes(list){ return (list||[]).map(pgOf).filter(t=>t>0).sort((a,b)=>a-b); }
-function pgLocal(ms){ const d=new Date(ms); return new Date(ms - d.getTimezoneOffset()*60000).toISOString().slice(0,16); }
+function pgLocal(ms){ return swissLocal(ms); }
 
 function pgStep(dir){
   const ts = pgTimes(jrnConns);
@@ -916,8 +932,7 @@ function setWhenFlight(){
   p.hidden=false;
   const fi=$("fltAt");
   if(fi && !fi.value){                    // seed the FLIGHT time, not the arrival
-    const d=new Date(Date.now()+4*3600000); d.setSeconds(0,0); d.setMinutes(0);
-    fi.value=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);
+    fi.value=swissLocal(Date.now()+4*3600000).slice(0,14)+"00";
   }
   flightAt = fi ? fi.value : "";
   renderFlight();
@@ -1152,6 +1167,30 @@ function viaSet(n){
 function viaPending(){
   const i=$("iVia"); if(!i) return;
   $("fVia").classList.toggle("pending", i.value.trim() !== viaName);
+}
+/* ...and MARKING it was not enough. Field report 2026-07-30 (Zurich -> Luzern
+   via Buchrain): the via applied only on Enter or on tapping a suggestion, so
+   typing the stop and then touching anything else -- the To box, a route chip,
+   the results -- ran the search with no via at all. The dashed border was the
+   whole warning, and it says nothing. On a phone you do not press Enter; you
+   tap away. So leaving the box IS applying it: the API resolves a literal
+   station name fine (measured against via[]=Buchrain), and if the text was
+   junk the via note names it with one tap to drop it -- visible and reversible,
+   which an unconstrained search pretending otherwise never was. */
+function viaBlur(){
+  const i=$("iVia"); if(!i) return;
+  const typed=i.value.trim();
+  if(!typed || typed===viaName) return;      // nothing pending
+  /* A tap on a suggestion blurs the box BEFORE its click lands, and that blur
+     carries the half-typed text the dropdown was still answering. Applying it
+     here would fire a search for "Buchra" and then a second for "Buchrain".
+     One frame is enough for the click to win; if it did, typed===viaName by
+     the time this runs and the guard above ends it. */
+  setTimeout(()=>{
+    const now=$("iVia"); if(!now) return;
+    const t=now.value.trim();
+    if(t && t!==viaName) viaSet(t);
+  }, 150);
 }
 function viaClear(){
   const had = !!viaName;
@@ -3493,6 +3532,7 @@ wireAC("iFrom","acFrom","fFrom", n=>{ fromName=n; if(toName) planJourney(); });
 wireAC("iTo","acTo","fTo",     n=>{ toName=n;   if(fromName) planJourney(); });
 wireAC("iVia","acVia","fVia", viaSet);
 $("iVia").addEventListener("input", viaPending);
+$("iVia").addEventListener("blur", viaBlur);
 wireAC("iWan","acWan","fWan",  n=>{ wanName=n;  if(wanBudget) runWander(); });
 $("iDep").addEventListener("keydown",e=>{ if(e.key==="Enter"){e.target.blur(); showDepartures(e.target.value.trim());}});
 

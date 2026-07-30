@@ -324,6 +324,60 @@ Sweep: **93 checks green**, in local, `TZ=UTC` and `TZ=Asia/Kolkata`. **4/4 muta
 absence-rot restored · no unruled specimen available · the attributable check reverted to its old
 vacuous verdict-form · a cited evidence suite deleted.
 
+### 2026-07-30 — a field report, and the three rows I said would rot next
+
+Two shipped fixes, and the rot argument tested against itself.
+
+**The via was ignoring you.** Field report: *Zürich HB → Luzern via Buchrain* returned ordinary
+direct trains. The API is innocent — `via[]=Buchrain` returns real routes (IR75, change, then the
+S1 through Buchrain), and `tests/via.mjs` already covered the query string, the hub stand-down and
+the not-lying. The gap was the *moment of applying it*: `iVia` had a keydown handler and two
+`input` handlers and **no blur**, so the via only took effect on Enter or on tapping a suggestion.
+Type it and tap away — which is the only thing you do on a phone — and the search ran unconstrained
+behind a field that read "Buchrain", with a dashed amber border as the entire warning. The suite
+even *asserted* that state ("text typed but never applied MARKS the field"); marking it had been
+judged remedy enough. Leaving the box now applies it, deferred one frame so a suggestion tap still
+wins the race.
+
+**Every time field was in the wrong timezone.** Chasing `constraints/foreign-tz-time` — one of the
+three rows the part-2 bus report named as most likely stale — found it real and worse than written.
+Three writers seeded the **device** wall clock into a `datetime-local` field whose value `whenQS()`
+ships as **Swiss** wall time: the planner seed, the flight seed and the pager's anchor. Measured
+across five zones before the fix: Mumbai asks for a train 3h30 off, Auckland asks for the **wrong
+day**, and Zurich agrees with itself — which is why it survived this long. `swissLocal()` is now
+the single datetime-local boundary. One look-alike deliberately **kept**: `flightArriveBy`'s offset
+dance is wall-clock arithmetic on a string you typed, correctly zone-neutral, and a careless sweep
+of `getTimezoneOffset` through the file would break it — so the suite asserts its neutrality and
+counts the survivors.
+
+`tests/tz-input.mjs` (42 checks, six zones, both DST offsets) · `tests/via.mjs` +7 ·
+**9/9 mutations caught** after fixing three survivors of the first battery. Two of those three were
+weak mutations of *mine*; the third was real — a wiring check a **commented-out line still
+satisfied**, since a source-text regex cannot see a comment. All four wiring regexes in that file
+had it. **App assets changed, so `?v=` bumped to `20260730a`.** Whole suite **1002 checks green**
+in `TZ=UTC`, `Asia/Kolkata` and `Europe/Zurich`.
+
+**And the rot argument met its own mirror.** Fixing the timezone bug turned the *specimen* checks
+red: "Harold is LEFT_BEHIND … on the timezone axis" was no longer true. That is the specimen doing
+its job — it asserts a **falsifiable** claim, so it said so out loud, where the adjudication rows
+beside it rot silently for days. So the freshness contract the part-2 report proposed already
+exists in a second place, one file away from the rows that lack it. And it decays with the
+**opposite sign**: an adjudication cites an absence, so shipping makes it stale *pessimistic*; a
+specimen asserts a failure, so shipping makes it stale *optimistic* — it goes on claiming the app
+is worse than it is. Same decay, opposite direction, and only one of the two is loud.
+
+Of the three flagged rows: `foreign-tz-time` → **PARTIAL** (fixed; residual = the sunset
+roll-to-tomorrow still reads the device clock, asserted in the suite so it cannot be forgotten, and
+the field carries no zone label of its own). `future-origin-not-here` → **PARTIAL**: it had
+genuinely **rotted** — it cited "nor a stored place" and route history stores six, one tap filling
+both fields and re-planning. Caught by hand, *not* by the absence-rot check, because it is a prose
+absence — exactly the boundary the bus report declared, confirmed within a day of declaring it.
+`relative-date-phrase` **left unruled on purpose**: read as phrasing it is untouched (nothing parses
+"this Thursday"), read as the underlying need it has moved twice (date picker, summit day strip) —
+and the row sits on the `constraints` axis while its evidence is a sentence about parsing. A row
+whose axis makes its subject ambiguous can be read as rotted or fresh at will. That is a third
+staleness shape, and ruling it is the operator's call, not mine.
+
 ## Regression summary — the "does it add or destroy?" answer
 
 | Item | Risk |

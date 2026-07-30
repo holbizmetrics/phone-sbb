@@ -51,10 +51,18 @@ const ctx = {
   planJourney: () => { planned++; },
   fromName: "Aarau", toName: "Z\u00fcrich Flughafen",
   whenMode: "now", whenValue: "", sunTarget: null,
-  Date, isNaN, Math, JSON,
+  Date, isNaN, Math, JSON, Intl,
 };
+// The panel seeds its flight time through the app's Swiss-zone formatter, so the
+// REAL one comes along. A stub here would let that seed drift back to the device
+// clock with this suite none the wiser -- see tests/tz-input.mjs.
+const swissLocalSrc = (() => {
+  const i = src.indexOf("function swissLocal(");
+  if (i < 0) throw new Error("HARNESS FAILED -- swissLocal not found in " + APP);
+  return src.slice(i, src.indexOf("\n}", i) + 2);
+})();
 vm.createContext(ctx);
-new vm.Script(fnSrc + `
+new vm.Script(swissLocalSrc + "\n" + fnSrc + `
 this.setWhenFlight=setWhenFlight; this.setFlightBuf=setFlightBuf; this.renderFlight=renderFlight;
 this.onFlightAt=onFlightAt; this.flightArriveBy=flightArriveBy; this.looksLikeAirport=looksLikeAirport;
 this.bufWords=bufWords; this.flightOff=flightOff;

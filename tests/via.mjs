@@ -46,10 +46,18 @@ const ctx = {
   // crashing the suite on a missing global -- a crash reports as silence
   load: (k, d) => d, save: () => {}, LS: {},
   fromName: "", toName: "", smart: true,
+  // A HAND-CRANKED clock. viaBlur defers one frame so a suggestion's click can
+  // beat it; on a real timer that race becomes a question of how fast the
+  // machine is, which is the opposite of a test. This queue is flushed
+  // explicitly, so "before the click lands" and "after it lands" are two states
+  // the suite can name and assert on.
+  setTimeout: (fn) => { timers.push(fn); return timers.length; },
 };
+const timers = [];
+const tick = () => { const q = timers.splice(0); q.forEach(fn => fn()); return q.length; };
 vm.createContext(ctx);
 new vm.Script(fnSrc + "\nthis.viaQS=viaQS; this.viaOpen=viaOpen; this.viaSet=viaSet; this.viaClear=viaClear;"
-  + " this.viaPending=viaPending; this.viaWhyEmpty=viaWhyEmpty; this.viaNote=viaNote;"
+  + " this.viaPending=viaPending; this.viaWhyEmpty=viaWhyEmpty; this.viaNote=viaNote; this.viaBlur=viaBlur;"
   + " this.getVia=()=>viaName; this.setVia=v=>{viaName=v};").runInContext(ctx);
 
 // ================= the query string =================
@@ -134,6 +142,58 @@ new vm.Script(fnSrc + "\nthis.viaQS=viaQS; this.viaOpen=viaOpen; this.viaSet=via
   ctx.setVia("");
 }
 
+// ================= leaving the box IS applying it =================
+// Field report 2026-07-30, Zurich -> Luzern via Buchrain: the via applied only
+// on Enter or on tapping a suggestion. On a phone you do nothing of the sort --
+// you type and tap away -- so the search ran unconstrained behind a field that
+// read "Buchrain", with a dashed border as the entire warning. Marking the
+// state was not enough; leaving the box now applies it.
+{
+  ctx.fromName = "Zürich HB"; ctx.toName = "Luzern";
+  ctx.setVia(""); els.iVia.value = "Buchrain"; ctx.viaPending();
+  plans = 0; ctx.viaBlur();
+  chk("PLANTED: a via typed and left UNAPPLIED does not stay unapplied -- blur applies it",
+    tick() === 1 && ctx.getVia() === "Buchrain", ctx.getVia());
+  chk("...and it re-plans, so the answer on screen is the one the box claims",
+    plans === 1, String(plans));
+  chk("...and the pending mark is gone, because the box and the search now agree",
+    !els.fVia.classList.contains("pending"), "");
+
+  // the two ways of doing nothing
+  plans = 0; ctx.viaBlur();
+  chk("PLANTED: leaving a box that already agrees with the search fires NOTHING",
+    tick() === 0 && plans === 0, String(plans));
+  ctx.setVia(""); els.iVia.value = "   ";
+  plans = 0; ctx.viaBlur();
+  chk("PLANTED: leaving an EMPTY box sets no via -- whitespace is not a constraint",
+    tick() === 0 && ctx.getVia() === "" && plans === 0, ctx.getVia());
+
+  // The deferred frame means the box can be EMPTIED between the blur and the
+  // apply. An empty box must not become an empty via: dropping a via is what
+  // the X button is for, one tap and explicit, and inferring it from a cleared
+  // box would silently unconstrain a search the passenger still sees a via on.
+  ctx.setVia("Olten"); els.iVia.value = "Buchrain";
+  plans = 0; ctx.viaBlur();                        // scheduled while it held text
+  els.iVia.value = "";                             // ...and emptied before it ran
+  tick();
+  chk("PLANTED: a box emptied between leaving it and applying it drops NOTHING",
+    ctx.getVia() === "Olten" && plans === 0, `${ctx.getVia()} / ${plans} plans`);
+
+  // THE RACE. Tapping a suggestion blurs the box first, and that blur carries
+  // the half-typed text the dropdown was still answering. If blur won, the app
+  // would search "Buchra" and then "Buchrain": two requests, and the first one
+  // is a station the passenger never asked for.
+  ctx.setVia(""); els.iVia.value = "Buchra";
+  plans = 0; ctx.viaBlur();                       // blur fires first, timer parked
+  els.iVia.value = "Buchrain"; ctx.viaSet("Buchrain");   // the click lands
+  const fired = tick();
+  chk("PLANTED: a suggestion tap BEATS the blur -- the half-typed text is never searched",
+    ctx.getVia() === "Buchrain", ctx.getVia());
+  chk("...and it costs exactly ONE request, not two",
+    plans === 1, `${plans} plans, ${fired} deferred callback(s)`);
+  ctx.setVia(""); els.iVia.value = ""; ctx.fromName = ""; ctx.toName = "";
+}
+
 // ================= setting and clearing =================
 {
   ctx.setVia(""); plans = 0;
@@ -180,12 +240,23 @@ new vm.Script(fnSrc + "\nthis.viaQS=viaQS; this.viaOpen=viaOpen; this.viaSet=via
 
 // ================= wired to the screen at all =================
 {
+  // ANCHORED AT COLUMN 0 (the /m), and that is not decoration. The first draft
+  // of the blur check was `/\$\("iVia"\)\.addEventListener\("blur", viaBlur\);/`
+  // and a mutation that COMMENTED THE LINE OUT survived it: the text is still
+  // in the file, so the regex still matched. A wiring check a comment can
+  // satisfy is not a wiring check. Caught by ~/tmp/mut-via-tz.py, and all four
+  // here had it.
   chk("the via input is autocompleted like the other two station fields",
-    /wireAC\("iVia","acVia","fVia", viaSet\);/.test(src), "");
+    /^wireAC\("iVia","acVia","fVia", viaSet\);/m.test(src), "");
   chk("...and Enter in it applies the typed text",
-    /acEnter\("iVia","acVia",\s*viaSet\);/.test(src), "");
+    /^acEnter\("iVia","acVia",\s*viaSet\);/m.test(src), "");
   chk("...and typing in it re-checks the applied/unapplied mark",
-    /\$\("iVia"\)\.addEventListener\("input", viaPending\);/.test(src), "");
+    /^\$\("iVia"\)\.addEventListener\("input", viaPending\);/m.test(src), "");
+  // The one the field report was about. Everything above this line was already
+  // true on the build that ignored "via Buchrain": the logic was wired, the
+  // APPLY was not, and no check could tell the difference.
+  chk("...and LEAVING it applies what is in it -- the phone path, which needs no Enter",
+    /^\$\("iVia"\)\.addEventListener\("blur", viaBlur\);/m.test(src), "");
   chk("the markup has the field, the offer button and its own suggestion list",
     /id="fVia"/.test(src) && /id="iVia"/.test(src) && /id="acVia"/.test(src) && /id="viaAdd"/.test(src), "");
   chk("the field starts hidden, so it costs nothing until asked for",
