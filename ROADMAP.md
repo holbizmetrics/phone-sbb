@@ -413,6 +413,27 @@ directly. And my first `wander.mjs` slice ran backwards and produced `""`, on wh
 delegation check failed honestly but the "no hardcoded sentence" check **passed vacuously** — a
 negative assertion over a region is worthless unless something proves the region exists.
 
+### 2026-07-30 (later still) — "I do not know right now" is a state the table could not hold
+
+Asked the operator to rule `constraints/relative-date-phrase`; his answer was that he does not know
+yet. That is a legitimate state, and the ground-truth table had nowhere to put it — the ambiguity
+lived only in a source comment, which is precisely the thing that rots.
+
+So the not-knowing is data now. `openQuestion` records the question, the date it was asked, and
+**the status it was raised against**. The sweep prints every open row as an `OPEN` line so it cannot
+go quiet, and fails if the row is ruled while the question is still attached: retiring the question
+and changing the status must be the same edit. The row can be *decided*; it can no longer *drift*.
+
+Null-tested in both directions, because a gate that has only ever said yes has been shown to run and
+not to work — ruling the row without retiring the question goes red, and deleting the last open
+question goes red on the control rather than silently making the section vacuous.
+
+This is the third staleness shape named on 2026-07-30, and the only one that decays through nobody
+deciding rather than through shipping. The other two decay by shipping in opposite directions: an
+adjudication cites an absence the app later fills (stale **pessimistic**, and silent); a specimen
+asserts a failure the app later fixes (stale **optimistic**, and loud, because it asserts something
+falsifiable).
+
 ## Regression summary — the "does it add or destroy?" answer
 
 | Item | Risk |

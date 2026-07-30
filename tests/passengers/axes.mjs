@@ -66,7 +66,15 @@ export const ADJUDICATIONS = {
   // its evidence is a sentence about PARSING, and the table has a `phrasing`
   // axis. A row whose axis makes its subject ambiguous can be read as rotted or
   // as fresh at will, which is a third staleness shape worth naming.
-  "constraints/relative-date-phrase": { status: "LEFT_BEHIND", step: "input",  evidence: "harold-5: 'this Thursday' not parsed -- still literally true; but see the note above: the NEED is now served by the date picker and the summit day strip, and which of the two this row means is unruled" },
+  // Operator asked 2026-07-30, answered "I do not know right now" -- which is a
+  // legitimate state and the table had nowhere to put it. A comment was the only
+  // record, and a comment is what rots. So the not-knowing is now DATA:
+  // `openQuestion` pins the status the question was raised against, and the sweep
+  // fails if the row is ruled without the question being retired in the same
+  // edit. The row cannot drift to resolved; it can only be decided.
+  "constraints/relative-date-phrase": { status: "LEFT_BEHIND", step: "input",  evidence: "harold-5: 'this Thursday' not parsed -- still literally true; but see the note above: the NEED is now served by the date picker and the summit day strip, and which of the two this row means is unruled",
+    openQuestion: { raisedAgainst: "LEFT_BEHIND", asked: "2026-07-30",
+      question: "Does this row mean the PHRASE (nothing parses 'this Thursday' -- LEFT_BEHIND stands) or the NEED (plan a trip for a named future day -- served twice, by the datetime-local picker and the summit day strip)? The row sits on `constraints` while its evidence is a sentence about parsing, and there is a `phrasing` axis. Deciding it may mean splitting it into two rows, one per axis." } },
   "purpose/meet-flight":              { status: "PARTIAL",     step: "decide", evidence: "harold-3: landing time != meeting time (bags/passport/walk-out unmodelled)" },
   "constraints/needs-food-en-route":  { status: "PARTIAL",     step: "decide", evidence: "harold-4: gap mechanic shows which change has slack; no POI claim" },
   "constraints/needs-toilet-en-route":{ status: "PARTIAL",     step: "decide", evidence: "harold-4: same gap mechanic, same missing POI residual" },

@@ -270,5 +270,35 @@ for (const [k, d] of Object.entries(ledger.dispositions)) {
   }
 }
 
+/* Open questions: the third staleness shape, made durable.
+   The first two shapes decay by SHIPPING -- an adjudication cites an absence the
+   app later fills (stale pessimistic, silent), a specimen asserts a failure the
+   app later fixes (stale optimistic, loud). This one decays by NOBODY DECIDING.
+   A row whose axis makes its subject ambiguous can be read as rotted or as fresh
+   at will, and the reading nobody writes down is the reading that wins later.
+   Asked 2026-07-30, the operator's answer was "I do not know right now" -- an
+   honest state with nowhere to live except a comment, and comments rot silently.
+   So it is data now, and these checks keep it loud until it is actually decided. */
+{
+  const open = Object.entries(ADJUDICATIONS).filter(([, a]) => a.openQuestion);
+  chk("control: the open-question checks have something to check",
+    open.length > 0, "no row carries openQuestion -- if the last one was decided, delete these checks deliberately");
+  for (const [key, a] of open) {
+    const q = a.openQuestion;
+    chk(`open question on ${key} names what it was raised against`,
+      typeof q.raisedAgainst === "string" && typeof q.question === "string" && typeof q.asked === "string",
+      JSON.stringify(q));
+    /* The load-bearing one. Ruling the row while leaving the question behind
+       would leave a decided row still advertising itself as undecided -- and the
+       reverse, silently flipping the status, is exactly the drift this whole
+       file exists to catch. Retiring the question and changing the status must
+       be the SAME edit. */
+    chk(`${key} has not been ruled without retiring its open question`,
+      a.status === q.raisedAgainst,
+      `status is ${a.status} but the question was raised against ${q.raisedAgainst} -- if you decided this, delete openQuestion in the same edit`);
+    console.log(`  OPEN  ${key} (asked ${q.asked}, still ${a.status}): ${q.question}`);
+  }
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
