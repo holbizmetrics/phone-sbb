@@ -38,7 +38,7 @@ const runTry = (mode, withNote) => new Function("MODE", "WITHNOTE", `
   };
   ${grab("tryConns")}
   const note = { failed:false, ok:false };
-  return tryConns("q", WITHNOTE ? note : undefined).then(cs => ({ cs, failed: note.failed, ok: note.ok }));
+  return tryConns("q", WITHNOTE ? note : undefined).then(cs => ({ cs, failed: note.failed, ok: note.ok, err: note.err }));
 `)(mode, withNote);
 
 // CONTROL: the stub must actually be able to throw, or every case below is vacuous.
@@ -72,6 +72,11 @@ chk("an empty-but-answered result RAISES the answered flag", (await runTry("empt
 chk("a failed request does NOT raise the answered flag", (await runTry("throw", true)).ok === false);
 
 // --- renderSmart: does the flag reach the words on screen? ---
+/* The harness carries the REAL errBox, never a stub. A stub here would have let
+   the smart path keep its own hardcoded sentence forever -- which is precisely
+   what happened in the field: errBox knew about 429 and this screen never called
+   it, so every check below passed while the app told the operator to check a
+   connection that was fine. */
 const render = (reqFailed, modeHint) => new Function("REQFAILED", "MODEHINT", `
   let out = "";
   const $ = () => ({ set innerHTML(v){ out = v; }, get innerHTML(){ return out; } });
@@ -81,6 +86,7 @@ const render = (reqFailed, modeHint) => new Function("REQFAILED", "MODEHINT", `
   const modeWhyEmpty = () => MODEHINT ? '<div class="emptywhy">only tram<button onclick="clearModes()">Show every mode</button></div>' : "";
   const viaName = "", viaNote = () => "", viaWhyEmpty = () => "";
   const pgStuck = "", pgObserve = () => {}, pgNote = () => "", pgWhyEmpty = () => "", pgBarHTML = () => "";
+  ${grab("errBox")}
   ${grab("renderSmart")}
   renderSmart([], [], null, false, REQFAILED);
   return out;
@@ -95,6 +101,32 @@ chk("an outage offers a retry", /again/i.test(outage), outage);
 chk("a genuine empty result still reads as no connections", /No connections found/.test(genuine), genuine);
 chk("a genuine empty result may still mention the station names", /station names/i.test(genuine), genuine);
 chk("the two states are not the same words", outage !== genuine);
+
+/* The gap this suite had. Every check above passes a BOOLEAN, and a boolean can
+   only ever produce one sentence -- so the suite proved the outage branch said
+   something, never that it said the RIGHT thing for the failure that actually
+   occurred. Field report 2026-07-30, Zurich -> Luzern via Buchrain on the
+   operator's phone: the screen read "check your connection" while his connection
+   was fine and the service was refusing us. Measured the same hour: 40 requests
+   to transport.opendata.ch, 23 returned HTTP 429 "Too many requests this minute".
+   A refusal and a dead network are different facts and must not share words. */
+const limited = render(new Error("HTTP 429"));
+chk("a rate limit NAMES the rate limit", /rate-limiting/i.test(limited), limited);
+chk("a rate limit does NOT blame the connection", !/check your connection/i.test(limited), limited);
+chk("a rate limit is still not a 'no'", /not a &quot;no&quot;|not a "no"/.test(limited), limited);
+chk("a rate limit is not the same screen as an unreachable network", limited !== outage, limited);
+chk("PLANTED: a network death still blames the connection -- that advice is right THERE",
+  /check your connection/i.test(outage), outage);
+const http503 = render(new Error("HTTP 503"));
+chk("a server error names its status rather than guessing", /503/.test(http503), http503);
+chk("a server error does not blame the connection either", !/check your connection/i.test(http503), http503);
+/* A reason can only reach this screen if tryConns keeps it. That is one line in
+   another function, and nothing above would notice it going back to `return []`. */
+chk("tryConns hands the REASON up, not just the fact of failure",
+  (await runTry("throw", true)).err instanceof Error,
+  "note.err is dropped -- renderSmart can only print a generic sentence again");
+chk("...and the reason it hands up is the one that was thrown",
+  /HTTP 429/.test(String((await runTry("throw", true)).err)));
 
 /* The mode filter is the one thing on this screen you can be stuck BEHIND, and
    it is remembered across reloads. So the way out of it must survive the failure
@@ -136,6 +168,14 @@ chk("hub sweeps deliberately pass no note (but still the signal)", !/via\[\]=[^`
     calls.every(c => (c.match(/direct\.failed/g) || []).length ===
                      (c.match(/direct\.failed && !direct\.ok/g) || []).length),
     "one failed twin would override an answered query's definite verdict");
+  /* Caught by mutation, 2026-07-30: reverting either call site to the bare
+     boolean `direct.failed && !direct.ok` left both checks above green, because
+     both only ever asked whether the GUARD was right. The guard decides WHETHER
+     to report a failure; the payload decides whether the screen can say which
+     failure it was. A boolean here is the original defect restored in full. */
+  chk("both render phases pass the REASON, not just a yes/no",
+    calls.every(c => /direct\.err/.test(c)),
+    "found: " + JSON.stringify(calls));
 }
 chk("no catch block blames the station names any more", !/Check the station names and try again/.test(src),
   "a network error still tells you to check a name that is correct");

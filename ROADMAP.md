@@ -378,6 +378,41 @@ and the row sits on the `constraints` axis while its evidence is a sentence abou
 whose axis makes its subject ambiguous can be read as rotted or fresh at will. That is a third
 staleness shape, and ruling it is the operator's call, not mine.
 
+### 2026-07-30 (later) — the app blamed the passenger's connection for the server's refusal
+
+Second field report the same evening: the operator's phone showed **"We could not reach the
+timetable — check your connection"** while his connection was demonstrably fine. I first blamed an
+airplane-mode glyph in his status bar; he corrected me — my own requests were going out over that
+same connection at that same moment — and he was right.
+
+Measured instead of guessed: **40 requests to transport.opendata.ch, 17 returned 200 and 23 returned
+HTTP 429**, `Rate limit error from timetable.search.ch: Too many requests this minute`. (I had been
+bursting curl against that API from the same IP while he field-tested, so I was plausibly the cause
+of his 429 — worth recording, because a diagnostic that competes with the thing being diagnosed is
+its own hazard.)
+
+The bug this exposed is not the wording. `errBox()` **already handled 429 correctly**, with a comment
+naming this exact reasoning — and never ran on the screen that mattered. Smart mode routes through
+`tryConns`, whose `catch(e){ note.failed=true; return []; }` recorded *that* a request died and threw
+away *why*; `renderSmart` then printed its own hardcoded sentence. Three copies of that sentence
+existed. One knew about rate limits; the copies did not; copies drift.
+
+- **`tryConns` keeps the error** (`note.err=e`). The comment above it already described fixing this
+  class once — for the empty-array case — while still discarding the reason one line down.
+- **`renderSmart` takes `reqErr`, not `reqFailed`**, and delegates to `errBox`. A boolean can only
+  ever produce one sentence, and the sentence it produced was false.
+- **`errBox(e, unknown, again)`** — the per-screen words are now parameters, so the departures board
+  (the third copy, which **no suite had ever looked at**) delegates instead of duplicating.
+- Suites: `outage-not-verdict.mjs` 23 → 36, `wander.mjs` 12 → 18. **1019 checks green** across four
+  timezones. **6 of 6 mutations caught** (`~/tmp/mut-errbox.py`).
+
+Two method notes, both self-inflicted and both worth keeping. The existing wiring checks asserted the
+*guard* (`direct.failed && !direct.ok`) and not the *payload*, so reverting a call site to the bare
+boolean — the original defect, in full — left them green; caught only by mutation, now asserted
+directly. And my first `wander.mjs` slice ran backwards and produced `""`, on which the
+delegation check failed honestly but the "no hardcoded sentence" check **passed vacuously** — a
+negative assertion over a region is worthless unless something proves the region exists.
+
 ## Regression summary — the "does it add or destroy?" answer
 
 | Item | Risk |

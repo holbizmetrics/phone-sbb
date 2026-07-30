@@ -1327,12 +1327,23 @@ let jrnAbort = null;
 /* api() throws Error("HTTP 429") etc., but the catch blocks used to discard it
    and print the generic "check your connection" line -- the one situation where
    that advice is wrong (the network is FINE, the service refused us). Rate-limit
-   and server errors need different advice than a dead connection. */
-function errBox(e){
+   and server errors need different advice than a dead connection.
+
+   Field report 2026-07-30: this function was RIGHT and never ran on the screen
+   that mattered. Smart mode routes through tryConns, which caught the error,
+   set a boolean and dropped the reason on the floor -- so renderSmart printed
+   its own hardcoded "check your connection" while the operator's connection was
+   demonstrably fine (measured: 40 requests, 23 came back HTTP 429 "Too many
+   requests this minute"). A correct message on a path nobody walks is not a
+   correct message. Every failure branch now ends here; `unknown` and `again`
+   are the only per-screen words, so a new screen cannot fork the advice. */
+function errBox(e, unknown, again){
+  const what  = unknown || "whether this journey runs";
+  const retry = again   || "tap Search again";
   const m=/^HTTP (\d+)/.exec((e&&e.message)||"");
-  if(m&&m[1]==="429") return `<div class="err">The timetable service is rate-limiting us &#8212; too many searches for now.<br>This is not a &quot;no&quot;, and not your connection: wait a minute, then search again.</div>`;
-  if(m) return `<div class="err">The timetable service answered with an error (HTTP ${m[1]}), so we do not know whether this journey runs.<br>This is not a &quot;no&quot; &#8212; try again in a moment.</div>`;
-  return `<div class="err">We could not reach the timetable, so we do not know whether this journey runs.<br>This is not a &quot;no&quot; &#8212; check your connection and tap Search again.</div>`;
+  if(m&&m[1]==="429") return `<div class="err">The timetable service is rate-limiting us &#8212; too many searches for now.<br>This is not a &quot;no&quot;, and not your connection: wait a minute, then ${retry}.</div>`;
+  if(m) return `<div class="err">The timetable service answered with an error (HTTP ${m[1]}), so we do not know ${what}.<br>This is not a &quot;no&quot; &#8212; try again in a moment.</div>`;
+  return `<div class="err">We could not reach the timetable, so we do not know ${what}.<br>This is not a &quot;no&quot; &#8212; check your connection and ${retry}.</div>`;
 }
 function planJourney(){ return smart ? smartPlan() : plainPlan(); }
 
@@ -1592,9 +1603,14 @@ async function plainPlan(){
    the timetable" just because its slower twin timed out. The wide query is the
    likeliest request in the app to fail -- bus-filtered, limit 16, it is a 1 MB
    14-second response -- so all-or-nothing was guaranteed to fire eventually. */
+/* ...and recording the FAILURE without its REASON was the same defect one layer
+   up. `note.failed=true` says a request died; it cannot say the service refused
+   us, which is the one case where "check your connection" is false. Keep the
+   error itself -- it is the only place that fact exists, and discarding it here
+   forced every screen downstream to invent an explanation. */
 async function tryConns(qs, note, signal){
   try{ const d=await api("/connections?"+qs, signal); if(note) note.ok=true; return d.connections||[]; }
-  catch(e){ if(note) note.failed=true; return []; }
+  catch(e){ if(note){ note.failed=true; note.err=e; } return []; }
 }
 function connSig(c){ return (c.from?.departure||"")+"|"+(c.to?.arrival||"")+"|"+(c.duration||""); }
 function changeDetails(c){
@@ -2202,13 +2218,13 @@ async function smartPlan(){
     const nRaw=rawBase.length+rawWide.length, nKept=base.length+wide.length;
     const baseline = base[0] ? annotate(base[0]) : null;
     if(base.length||wide.length) rememberRoute(fromName,toName);   // a real result -- now it is worth a chip
-    renderSmart(base, wide.slice(), baseline, true, direct.failed && !direct.ok, nKept, nRaw);
+    renderSmart(base, wide.slice(), baseline, true, (direct.failed && !direct.ok) ? (direct.err||true) : null, nKept, nRaw);
 
     // Phase 2 -- hub routes fill in when they arrive; any past the cap are dropped silently
     const rawHubs = (await Promise.allSettled(hubJobs)).flatMap(r=>r.status==="fulfilled"?r.value:[]);
     if(gen!==jrnGen) return;                                       // superseded
     const hubResults = catFilter(rawHubs);
-    renderSmart(base, wide.concat(hubResults), baseline, false, direct.failed && !direct.ok,
+    renderSmart(base, wide.concat(hubResults), baseline, false, (direct.failed && !direct.ok) ? (direct.err||true) : null,
                 nKept+hubResults.length, nRaw+rawHubs.length);
     fillJourneyLastHome(gen);   // after the settled render: the slot exists now, and gen bars a stale paint
   }catch(e){
@@ -2218,7 +2234,12 @@ async function smartPlan(){
 }
 
 // score + pin + paint a candidate set; called twice (fast base-only, then full sweep)
-function renderSmart(base, swept, baseline, searching, reqFailed, nKept, nRaw){
+/* reqErr, not reqFailed: a boolean could only ever produce one sentence, and the
+   sentence it produced blamed the passenger's connection for the service's
+   refusal. It carries the thrown error when the direct query died unanswered,
+   and null otherwise -- still falsy at the branch, so the "one answered query is
+   a definite answer" rule above is unchanged. */
+function renderSmart(base, swept, baseline, searching, reqErr, nKept, nRaw){
   const seen=new Set(), all=[];
   base.concat(swept).forEach(c=>{ const s=connSig(c); if(!seen.has(s)){ seen.add(s); all.push(annotate(c)); } });
   if(!all.length){
@@ -2231,9 +2252,8 @@ function renderSmart(base, swept, baseline, searching, reqFailed, nKept, nRaw){
        the whole time. Whether the request landed is unknown; that you set a
        filter is not. */
     if(!searching) pgObserve([]);
-    if(!searching) $("jrnOut").innerHTML = reqFailed
-      ? `<div class="err">We could not reach the timetable, so we do not know whether this journey runs.<br>`
-        + `This is not a &quot;no&quot; &#8212; check your connection and tap Search again.</div>${modeWhyEmpty()}${nRaw?catWhyEmpty():""}`
+    if(!searching) $("jrnOut").innerHTML = reqErr
+      ? errBox(reqErr) + `${modeWhyEmpty()}${nRaw?catWhyEmpty():""}`
       : `<div class="empty"><div class="big">&#9940;</div>No connections found.${sunWhyEmpty()||((viaName||pgStuck)?"":"<br>Check the station names.")}${viaWhyEmpty()}${pgWhyEmpty()}${modeWhyEmpty()}${nRaw?catWhyEmpty():""}</div>`;
     return;
   }
@@ -3330,7 +3350,7 @@ async function runWander(){
     board=d.stationboard||[];
   }catch(e){
     if(run!==wanRun) return;
-    out.innerHTML=`<div class="err">We could not reach the timetable, so we do not know what leaves from here.<br>This is not a &quot;no&quot; &#8212; check your connection and try again.</div>`;
+    out.innerHTML=errBox(e, "what leaves from here", "try again");
     return;
   }
   const cands=wanCandidates(board, now, deadline);

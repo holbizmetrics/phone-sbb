@@ -67,5 +67,42 @@ chk("pane exists", src.includes('id="vWan"'));
 chk("setTab knows all three panes", /wan:\["tabWan","vWan"\]/.test(src));
 chk("boot prefills the wander station", /iWan"\)\.value=last/.test(src));
 
+/* The board's failure branch. It had its own hardcoded "check your connection"
+   sentence -- the third copy in the app, and the only one no suite had ever
+   looked at. Copies drift: errBox learned about HTTP 429 and these copies did
+   not, so on 2026-07-30 the operator was told to check a connection that was
+   demonstrably fine while the service returned 429 on 23 of 40 requests. The
+   fix is that there is no copy left to drift, and these checks are what make
+   that a property rather than a coincidence. */
+const wanStart = src.indexOf("async function runWander");
+const wanErr = wanStart < 0 ? "" : src.slice(wanStart, src.indexOf("\nfunction ", wanStart));
+/* This control is not decoration. The first draft sliced BACKWARDS -- runWander
+   sits after wanCandidates, not before it -- and produced "". The delegation
+   check then failed honestly, but the "no hardcoded sentence" check PASSED, on
+   an empty string, because absence of a slice looks exactly like absence of the
+   defect. A negative assertion over an unbounded region is vacuous unless
+   something proves the region exists. */
+chk("control: extracted the wander runner, not an empty slice",
+  wanErr.includes("stationboard") && wanErr.length > 200, `len=${wanErr.length}`);
+chk("the board failure delegates to errBox", /out\.innerHTML=errBox\(e,/.test(wanErr), wanErr.slice(-200));
+chk("...and keeps no hardcoded failure sentence of its own",
+  wanErr.length > 200 && !/could not reach the timetable/i.test(wanErr), wanErr.slice(-200));
+
+// behaviour, not just wiring: the same three failures, worded for THIS screen
+const ebSrc = src.slice(src.indexOf("function errBox"), src.indexOf("function planJourney"));
+const ebCtx = {}; vm.createContext(ebCtx);
+new vm.Script(ebSrc + "\nthis.errBox = errBox;").runInContext(ebCtx);
+const boardErr = e => ebCtx.errBox(e, "what leaves from here", "try again");
+chk("a rate limit on the board names the limit, not the connection",
+  /rate-limiting/i.test(boardErr(new Error("HTTP 429"))) &&
+  !/check your connection/i.test(boardErr(new Error("HTTP 429"))), boardErr(new Error("HTTP 429")));
+chk("PLANTED: a dead network on the board still says check your connection",
+  /check your connection/i.test(boardErr(new Error("boom"))), boardErr(new Error("boom")));
+chk("...and says what is unknown in THIS screen's words, not the journey's",
+  /what leaves from here/.test(boardErr(new Error("boom"))) &&
+  !/whether this journey runs/.test(boardErr(new Error("boom"))), boardErr(new Error("boom")));
+chk("PLANTED: the default wording is still the journey's, so the parameter is real",
+  /whether this journey runs/.test(ebCtx.errBox(new Error("boom"))), ebCtx.errBox(new Error("boom")));
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
