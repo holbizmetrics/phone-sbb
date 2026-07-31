@@ -126,6 +126,18 @@ export const ADJUDICATIONS = {
   // Second shared residual: when nothing matches at all (control `qxzvwqbbzz`,
   // 0 rows) wireAC just hides the dropdown. No word is said. So the two ways
   // this axis fails a passenger are a list of dentists, and silence.
+  //
+  // BOTH WERE FIXED THE SAME DAY, AND NO STATUS BELOW CHANGES. The probe was
+  // re-run after the fix (it measures the API, not the app, so the pre-fix
+  // numbers reproduce and the file now carries `stations_available` /
+  // `shown_after_fix` alongside them). What the fix bought is honesty, not
+  // coverage: for 8 of the 28 specimens -- including `Zürich Hauptbahnhof`,
+  // `Zurich Airport`, `ZH HB`, `8001` -- the id-filter leaves NOTHING, so the
+  // passenger now reads "No station matches" where they used to be offered
+  // seven businesses. That is strictly better and still LEFT_BEHIND/PARTIAL:
+  // the app stopped lying about these queries, it did not learn to answer them.
+  // Nothing that previously worked regressed -- every specimen with a real stop
+  // in its top 7 still has one.
 
   // 4 of 4 clean: Zurigo -> Zürich HB, Geneva -> Genève, Lucerne -> Luzern,
   // Bâle -> Basel SBB, each rank 1 with zero non-stations in the visible seven.

@@ -35,7 +35,9 @@
      }
     ],
     "shown_nonstation": 7,
-    "top_is_station": false
+    "top_is_station": false,
+    "stations_available": 0,
+    "shown_after_fix": []
    },
    "Zürich Flughafen": {
     "kept": 10,
@@ -70,7 +72,16 @@
      }
     ],
     "shown_nonstation": 1,
-    "top_is_station": true
+    "top_is_station": true,
+    "stations_available": 6,
+    "shown_after_fix": [
+     "Zürich Flughafen",
+     "Zürich Flughafen, Bahnhof",
+     "Zürich Flughafen, Fracht",
+     "Zürich Flughafen, OPC",
+     "Zürich Flughafen, Werft",
+     "Zürich Flughafen, REGA"
+    ]
    },
    "Zürich": {
     "kept": 10,
@@ -105,7 +116,17 @@
      }
     ],
     "shown_nonstation": 0,
-    "top_is_station": true
+    "top_is_station": true,
+    "stations_available": 10,
+    "shown_after_fix": [
+     "Zürich HB",
+     "Zürich Oerlikon",
+     "Zürich Hardbrücke",
+     "Zürich Stadelhofen",
+     "Zürich Flughafen",
+     "Zürich Altstetten",
+     "Zürich, Central"
+    ]
    }
   },
   "misspelled-station": {
@@ -142,7 +163,16 @@
      }
     ],
     "shown_nonstation": 1,
-    "top_is_station": true
+    "top_is_station": true,
+    "stations_available": 6,
+    "shown_after_fix": [
+     "Zürich HB",
+     "Zürich, Bahnhofstrasse/HB",
+     "Zürich, Bahnhofplatz/HB",
+     "Zürich, Sihlquai/HB",
+     "Zürich, Sihlpost/HB",
+     "Zürich, Bahnhofquai/HB"
+    ]
    },
    "Luzren": {
     "kept": 9,
@@ -177,7 +207,17 @@
      }
     ],
     "shown_nonstation": 0,
-    "top_is_station": true
+    "top_is_station": true,
+    "stations_available": 9,
+    "shown_after_fix": [
+     "Luzern",
+     "Luzern, Bahnhof",
+     "Luzern, Kantonalbank",
+     "Luzern, Pilatusplatz",
+     "Luzern, Schwanenplatz",
+     "Luzern Allmend/Messe",
+     "Luzern, Luzernerhof"
+    ]
    },
    "Genve": {
     "kept": 7,
@@ -212,7 +252,9 @@
      }
     ],
     "shown_nonstation": 7,
-    "top_is_station": false
+    "top_is_station": false,
+    "stations_available": 0,
+    "shown_after_fix": []
    },
    "Basel SBB ": {
     "kept": 10,
@@ -247,7 +289,12 @@
      }
     ],
     "shown_nonstation": 5,
-    "top_is_station": true
+    "top_is_station": true,
+    "stations_available": 2,
+    "shown_after_fix": [
+     "Basel SBB",
+     "Basel, Bahnhof SBB"
+    ]
    }
   },
   "colloquial-place": {
@@ -284,7 +331,17 @@
      }
     ],
     "shown_nonstation": 0,
-    "top_is_station": true
+    "top_is_station": true,
+    "stations_available": 10,
+    "shown_after_fix": [
+     "Winterthur, Hauptbahnhof",
+     "Solothurn, Hauptbahnhof",
+     "Bern, Hauptbahnhof",
+     "Rorschach, Hauptbahnhof Süd",
+     "München, Hauptbahnhof Nord",
+     "Karlsruhe, Hauptbahnhof",
+     "Karlsruhe, Hauptbahnhof Süd"
+    ]
    },
    "Bern Bahnhof": {
     "kept": 10,
@@ -319,7 +376,17 @@
      }
     ],
     "shown_nonstation": 0,
-    "top_is_station": true
+    "top_is_station": true,
+    "stations_available": 10,
+    "shown_after_fix": [
+     "Bern, Bahnhof",
+     "Bern Europaplatz, Bahnhof",
+     "Bern Wankdorf, Bahnhof",
+     "Bern Brünnen Westside, Bahnhof",
+     "Bern Bümpliz Süd, Bahnhof",
+     "Bern Bümpliz Nord, Bahnhof",
+     "Bern Weissenbühl, Bahnhof"
+    ]
    },
    "Zürich Hauptbahnhof": {
     "kept": 10,
@@ -354,7 +421,9 @@
      }
     ],
     "shown_nonstation": 7,
-    "top_is_station": false
+    "top_is_station": false,
+    "stations_available": 0,
+    "shown_after_fix": []
    }
   },
   "landmark-not-station": {
@@ -391,7 +460,13 @@
      }
     ],
     "shown_nonstation": 4,
-    "top_is_station": true
+    "top_is_station": true,
+    "stations_available": 3,
+    "shown_after_fix": [
+     "Klein Matterhorn",
+     "Zermatt (Matterhorn Talstat.)",
+     "Zermatt, Matterhorn Talstation"
+    ]
    },
    "Rheinfall": {
     "kept": 10,
@@ -426,7 +501,14 @@
      }
     ],
     "shown_nonstation": 3,
-    "top_is_station": true
+    "top_is_station": true,
+    "stations_available": 4,
+    "shown_after_fix": [
+     "Neuhausen Rheinfall",
+     "Schloss Laufen am Rheinfall",
+     "Rheinfall Schlössli Wörth",
+     "Schloss Laufen, Rheinfall"
+    ]
    },
    "Bundeshaus": {
     "kept": 8,
@@ -461,7 +543,9 @@
      }
     ],
     "shown_nonstation": 7,
-    "top_is_station": false
+    "top_is_station": false,
+    "stations_available": 0,
+    "shown_after_fix": []
    },
    "Jet d'Eau": {
     "kept": 10,
@@ -496,7 +580,9 @@
      }
     ],
     "shown_nonstation": 7,
-    "top_is_station": false
+    "top_is_station": false,
+    "stations_available": 0,
+    "shown_after_fix": []
    }
   },
   "foreign-language": {
@@ -533,7 +619,17 @@
      }
     ],
     "shown_nonstation": 0,
-    "top_is_station": true
+    "top_is_station": true,
+    "stations_available": 10,
+    "shown_after_fix": [
+     "Zürich HB",
+     "Zürich Oerlikon",
+     "Zürich Hardbrücke",
+     "Zürich Stadelhofen",
+     "Zürich Flughafen",
+     "Zürich Altstetten",
+     "Zürich, Central"
+    ]
    },
    "Geneva": {
     "kept": 10,
@@ -568,7 +664,17 @@
      }
     ],
     "shown_nonstation": 0,
-    "top_is_station": true
+    "top_is_station": true,
+    "stations_available": 10,
+    "shown_after_fix": [
+     "Genève",
+     "Genève, Bel-Air",
+     "Genève, gare Cornavin",
+     "Genève-Champel",
+     "Genève-Eaux-Vives",
+     "Genève-Aéroport",
+     "Genève-Sécheron"
+    ]
    },
    "Lucerne": {
     "kept": 10,
@@ -603,7 +709,17 @@
      }
     ],
     "shown_nonstation": 0,
-    "top_is_station": true
+    "top_is_station": true,
+    "stations_available": 10,
+    "shown_after_fix": [
+     "Luzern",
+     "Luzern, Bahnhof",
+     "Luzern, Kantonalbank",
+     "Luzern, Pilatusplatz",
+     "Luzern, Schwanenplatz",
+     "Luzern Allmend/Messe",
+     "Luzern, Luzernerhof"
+    ]
    },
    "Bâle": {
     "kept": 10,
@@ -638,7 +754,17 @@
      }
     ],
     "shown_nonstation": 0,
-    "top_is_station": true
+    "top_is_station": true,
+    "stations_available": 10,
+    "shown_after_fix": [
+     "Basel SBB",
+     "Basel Bad Bf",
+     "Basel, Bahnhof SBB",
+     "Basel, Schifflände",
+     "Basel, Bankverein",
+     "Basel, Aeschenplatz",
+     "Basel, Markthalle"
+    ]
    }
   },
   "abbreviation": {
@@ -675,7 +801,9 @@
      }
     ],
     "shown_nonstation": 7,
-    "top_is_station": false
+    "top_is_station": false,
+    "stations_available": 0,
+    "shown_after_fix": []
    },
    "ZRH": {
     "kept": 10,
@@ -710,7 +838,9 @@
      }
     ],
     "shown_nonstation": 7,
-    "top_is_station": false
+    "top_is_station": false,
+    "stations_available": 0,
+    "shown_after_fix": []
    },
    "SG": {
     "kept": 10,
@@ -745,7 +875,17 @@
      }
     ],
     "shown_nonstation": 0,
-    "top_is_station": true
+    "top_is_station": true,
+    "stations_available": 10,
+    "shown_after_fix": [
+     "Wil SG",
+     "Rapperswil SG",
+     "St. Margrethen SG",
+     "Gossau SG",
+     "Altstätten SG",
+     "Buchs SG",
+     "Wil SG, Bahnhof"
+    ]
    },
    "BS": {
     "kept": 10,
@@ -780,7 +920,17 @@
      }
     ],
     "shown_nonstation": 0,
-    "top_is_station": true
+    "top_is_station": true,
+    "stations_available": 8,
+    "shown_after_fix": [
+     "Biel/Bienne, Waldrain/Crêt-Bs",
+     "Wiezikon b.Sirnach, Weingarten",
+     "Wiezikon b.Sirnach, Wies",
+     "Wiezikon b.Sirnach, Widenacker",
+     "Biberach (Riss), BSZ",
+     "Biberach (Riss), Polizei/BSZ",
+     "Biberach (Riss), Erlenweg/BSZ"
+    ]
    }
   },
   "zip-code": {
@@ -817,7 +967,9 @@
      }
     ],
     "shown_nonstation": 7,
-    "top_is_station": false
+    "top_is_station": false,
+    "stations_available": 0,
+    "shown_after_fix": []
    },
    "6003": {
     "kept": 10,
@@ -852,7 +1004,9 @@
      }
     ],
     "shown_nonstation": 7,
-    "top_is_station": false
+    "top_is_station": false,
+    "stations_available": 0,
+    "shown_after_fix": []
    },
    "3000": {
     "kept": 10,
@@ -887,7 +1041,17 @@
      }
     ],
     "shown_nonstation": 0,
-    "top_is_station": true
+    "top_is_station": true,
+    "stations_available": 10,
+    "shown_after_fix": [
+     "Bern",
+     "Bern, Bahnhof",
+     "Bern, Zytglogge",
+     "Bern, Hirschengraben",
+     "Bern Wankdorf",
+     "Bern Europaplatz",
+     "Bern, Bärenplatz"
+    ]
    }
   },
   "ambiguous-city": {
@@ -924,7 +1088,17 @@
      }
     ],
     "shown_nonstation": 0,
-    "top_is_station": true
+    "top_is_station": true,
+    "stations_available": 10,
+    "shown_after_fix": [
+     "Basel SBB",
+     "Basel Bad Bf",
+     "Basel, Bahnhof SBB",
+     "Basel, Schifflände",
+     "Basel, Bankverein",
+     "Basel, Aeschenplatz",
+     "Basel, Markthalle"
+    ]
    },
    "Baden": {
     "kept": 10,
@@ -959,7 +1133,17 @@
      }
     ],
     "shown_nonstation": 0,
-    "top_is_station": true
+    "top_is_station": true,
+    "stations_available": 10,
+    "shown_after_fix": [
+     "Baden",
+     "Baden, Bahnhof West",
+     "Baden, Lindenplatz",
+     "Baden, Trafo",
+     "Baden, Stein",
+     "Baden, Schulhausplatz",
+     "Baden, Bahnhof Ost"
+    ]
    },
    "Neuchâtel": {
     "kept": 10,
@@ -994,7 +1178,17 @@
      }
     ],
     "shown_nonstation": 0,
-    "top_is_station": true
+    "top_is_station": true,
+    "stations_available": 10,
+    "shown_after_fix": [
+     "Neuchâtel",
+     "Neuchâtel Place Pury Littorail",
+     "Neuchâtel Port-de-Serrières",
+     "Neuchâtel Evole",
+     "Neuchâtel Champ-Bougin",
+     "Neuchâtel Serrières Ruau",
+     "Neuchâtel-Serrières"
+    ]
    }
   },
   "_control-no-match": {
@@ -1002,7 +1196,9 @@
     "kept": 0,
     "shown": [],
     "shown_nonstation": 0,
-    "top_is_station": false
+    "top_is_station": false,
+    "stations_available": 0,
+    "shown_after_fix": []
    }
   }
  },

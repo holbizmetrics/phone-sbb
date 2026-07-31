@@ -542,6 +542,21 @@ and confirms it really does let a dentist through. Total now **1066**.
 three ways the error path can quietly go wrong again (thrown-as-no-match, 429 unnamed, query
 unescaped).
 
+**What the fix actually bought — measured, and it is not what it looks like.** The probe was re-run
+against the live API afterwards (it measures the API, not the app, so the pre-fix numbers reproduce
+and the evidence file now carries both views). For **8 of the 28 specimens the id-filter leaves
+nothing at all** — `Zürich Hauptbahnhof`, `Zurich Airport`, `Genve`, `Bundeshaus`, `Jet d'Eau`,
+`ZH HB`, `ZRH`, `8001`, `6003`. Type the full proper name of the biggest station in the country and
+you now read *"No station matches Zürich Hauptbahnhof."*
+
+That is the honest outcome and it is still a failure: **the app stopped lying about those queries,
+it did not learn to answer them.** No status in `axes.mjs` changes. Nothing that worked regressed —
+every specimen that had a real stop in its top 7 still has one, and `Zürich`, `Zuerich HB`, `Zurigo`,
+`Bâle`, `3000` all answer as before. The remaining work on this axis is a *fallback*: when the
+id-filter empties the list, the raw rows still carry coordinates, so the nearest real stop to the
+matched business is computable — the GPS path already does exactly that. Unruled; nobody has decided
+it is worth the call.
+
 ## Regression summary — the "does it add or destroy?" answer
 
 | Item | Risk |

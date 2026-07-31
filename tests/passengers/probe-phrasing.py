@@ -46,14 +46,21 @@ def get(path):
 
 def rows(q):
     d = get("/locations?type=station&query=" + urllib.parse.quote(q))
-    # exactly what app.js locations() keeps: name-truthy, no id filter
-    kept = [s for s in (d.get("stations") or []) if s.get("name")]
-    shown = kept[:7]                       # exactly what wireAC renders
+    # This probe measures the API, not the app -- so both the pre-fix and the
+    # post-fix view are computable from one call, and re-running after the fix
+    # reproduces the pre-fix numbers rather than overwriting them.
+    kept = [s for s in (d.get("stations") or []) if s.get("name")]      # old locations(): name only
+    shown = kept[:7]                                                    # what wireAC rendered
+    real = [s for s in kept if s.get("id")]                             # new locations(): id && name
     return {
         "kept": len(kept),
         "shown": [{"name": s["name"], "id": s.get("id")} for s in shown],
         "shown_nonstation": sum(1 for s in shown if not s.get("id")),
         "top_is_station": bool(shown and shown[0].get("id")),
+        # post-fix: what the passenger is offered now. 0 means the query now
+        # gets "No station matches" -- still LEFT_BEHIND, but honestly so.
+        "stations_available": len(real),
+        "shown_after_fix": [s["name"] for s in real[:7]],
     }
 
 
@@ -68,7 +75,8 @@ for axis, queries in SPECIMENS.items():
         r = ev["axes"][axis][q]
         print(f"  {axis:24s} {q!r:24s} kept={r.get('kept')} "
               f"non-station-in-top-7={r.get('shown_nonstation')} "
-              f"top-is-station={r.get('top_is_station')}", flush=True)
+              f"top-is-station={r.get('top_is_station')} "
+              f"| after-fix={r.get('shown_after_fix')}", flush=True)
         time.sleep(1.2)
 
 # What the app does DOWNSTREAM with a name that is not a stop: the autocomplete
