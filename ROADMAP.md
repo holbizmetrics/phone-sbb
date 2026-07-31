@@ -522,6 +522,26 @@ was vacuously true; caught by checking, and it now uses the `covered` Set.
 `tests/mutations/mut-phrasing.py`, **4 of 4 caught**, M4 being the one that proves the replacement
 control can still come back negative. Suite total **1047 green**.
 
+### …and then the fix, same session
+
+Ruled by the operator: *filter the non-stations, and say when nothing matches.* Both are one line.
+`locations()` now filters `x.id && x.name` — the rule `nearbyStops()` had all along — and the empty
+branch calls `nearMsg` instead of closing the box in silence.
+
+The third line was not asked for and is the one that matters most. `wireAC`'s `catch` used to be
+covered by the same silence, so a **dead request rendered exactly like a real "no such station"**.
+It now says something different on purpose, and names a 429 as a rate limit rather than as a broken
+lookup. That is last night's bug one screen over: an absence of data presented as data.
+
+**The fix shipped green without being run.** Right after the edit the suite still read **1047 —
+the same number as before**, which is this session's own defect class pointed at itself: nothing in
+1047 checks touched the changed code. Hence `tests/station-lookup.mjs`, **19 checks**, every positive
+paired with a negative twin, including a PLANTED control that rebuilds the pre-fix name-only filter
+and confirms it really does let a dentist through. Total now **1066**.
+`tests/mutations/mut-station-lookup.py`, **5 of 5 caught**: both shipped defects put back, plus the
+three ways the error path can quietly go wrong again (thrown-as-no-match, 429 unnamed, query
+unescaped).
+
 ## Regression summary — the "does it add or destroy?" answer
 
 | Item | Risk |

@@ -148,10 +148,22 @@ async function api(path, signal){
   return r.json();
 }
 const locCache = new Map();
+/* `type=station` is a request, not a guarantee: this endpoint also answers with
+   businesses, hotels, street addresses and city quarters, and those come back
+   with `id: null`. Filtering on name alone rendered them as tappable suggestions
+   WITH THE STATION GLYPH -- measured 2026-07-31 across 28 specimens
+   (tests/passengers/probe-phrasing.py), 9 of which showed seven non-stations and
+   nothing else: "Zürich Hauptbahnhof" offered a bookshop and a nail salon,
+   "Bundeshaus" seven companies, "8001" city quarters. It did not even fail
+   loudly downstream -- /connections?from=Bundeshaus plans you from an SRG office.
+
+   nearbyStops(), thirty lines below, has always filtered `x.id && x.name` under a
+   comment saying a street address is not somewhere a train stops. That rule was
+   right the whole time; it just never covered the path everybody actually uses. */
 async function locations(q){
   if(locCache.has(q)) return locCache.get(q);
   const d = await api("/locations?type=station&query="+encodeURIComponent(q));
-  const s = (d.stations||[]).filter(x=>x.name);
+  const s = (d.stations||[]).filter(x=>x.id&&x.name);
   locCache.set(q,s); return s;
 }
 /* coordinates-to-stop (cross-vendor finding #4, the cheap one): the API's
@@ -174,7 +186,16 @@ function wireAC(inpId, acId, fieldId, onPick){
     if(q.length<2){ ac.classList.remove("show"); return; }
     try{
       const s=await locations(q);
-      if(!s.length){ ac.classList.remove("show"); return; }
+      /* Hiding the dropdown was the app saying nothing at all. With the
+         non-stations now filtered out, "nothing matched" got commoner and more
+         honest at the same time, and an empty box that just closes reads as if
+         the app is still thinking. Say it.
+
+         The catch branch says something DIFFERENT on purpose: a lookup that
+         threw is not a lookup that found nothing, and rendering a dead request
+         as "no station matches" would be last night's 429 bug in a new costume
+         -- an absence of data presented as data. */
+      if(!s.length){ nearMsg(ac, `No station matches &#8220;${esc(q)}&#8221;.`); return; }
       ac.innerHTML = s.slice(0,7).map(x=>
         `<div data-n="${esc(x.name)}"><span>&#9906;</span><span>${esc(x.name)}</span></div>`).join("");
       ac.dataset.q=q;                  // which query these rows answer -- acEnter checks it
@@ -183,7 +204,12 @@ function wireAC(inpId, acId, fieldId, onPick){
         inp.value=el.dataset.n; ac.classList.remove("show");
         field.classList.add("has"); onPick(el.dataset.n);
       });
-    }catch(e){ ac.classList.remove("show"); }
+    }catch(e){
+      const m=/^HTTP (\d+)/.exec((e&&e.message)||"");
+      nearMsg(ac, m&&m[1]==="429"
+        ? "Too many searches for now &#8212; wait a moment and type again."
+        : `Station lookup failed &#8212; this is not a &#8220;no match&#8221;, try again in a moment.`);
+    }
   },300);
   inp.addEventListener("input", run);
   inp.addEventListener("focus", ()=>{ if(inp.value.trim().length>=2) run(); });
