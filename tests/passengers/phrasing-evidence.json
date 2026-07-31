@@ -1,0 +1,1019 @@
+{
+ "_measured": "2026-07-31",
+ "axes": {
+  "hb-airport-conflation": {
+   "Zurich Airport": {
+    "kept": 10,
+    "shown": [
+     {
+      "name": "Hotel ibis budget Zurich Airport, Glattbrugg, Flughofstr. 45",
+      "id": null
+     },
+     {
+      "name": "Zurich Airport Transfer, Kloten, Industriestr. 14",
+      "id": null
+     },
+     {
+      "name": "Hotel Novotel Zurich Airport Messe, Glattpark (Opfikon), Lindbergh-Platz 1",
+      "id": null
+     },
+     {
+      "name": "HILTON ZURICH AIRPORT, Opfikon, Hohenbühlstr. 10",
+      "id": null
+     },
+     {
+      "name": "JET HOTEL ZURICH AIRPORT, Rümlang, Hofwisenstr. 4",
+      "id": null
+     },
+     {
+      "name": "Hyatt Regency Zürich Airport The Circle, Kloten, The Circle 41",
+      "id": null
+     },
+     {
+      "name": "Mövenpick Hotel Zürich-Airport, Glattbrugg, Walter Mittelholzerstr. 8",
+      "id": null
+     }
+    ],
+    "shown_nonstation": 7,
+    "top_is_station": false
+   },
+   "Zürich Flughafen": {
+    "kept": 10,
+    "shown": [
+     {
+      "name": "Zürich Flughafen",
+      "id": "8503016"
+     },
+     {
+      "name": "Zürich Flughafen, Bahnhof",
+      "id": "8573205"
+     },
+     {
+      "name": "Zürich Flughafen, Fracht",
+      "id": "8588553"
+     },
+     {
+      "name": "Zürich Flughafen, OPC",
+      "id": "8580301"
+     },
+     {
+      "name": "Zürich Flughafen, Werft",
+      "id": "8573213"
+     },
+     {
+      "name": "Zürich Flughafen, REGA",
+      "id": "8591031"
+     },
+     {
+      "name": "Zürich, Flughafenstr. ",
+      "id": null
+     }
+    ],
+    "shown_nonstation": 1,
+    "top_is_station": true
+   },
+   "Zürich": {
+    "kept": 10,
+    "shown": [
+     {
+      "name": "Zürich HB",
+      "id": "8503000"
+     },
+     {
+      "name": "Zürich Oerlikon",
+      "id": "8503006"
+     },
+     {
+      "name": "Zürich Hardbrücke",
+      "id": "8503020"
+     },
+     {
+      "name": "Zürich Stadelhofen",
+      "id": "8503003"
+     },
+     {
+      "name": "Zürich Flughafen",
+      "id": "8503016"
+     },
+     {
+      "name": "Zürich Altstetten",
+      "id": "8503001"
+     },
+     {
+      "name": "Zürich, Central",
+      "id": "8588078"
+     }
+    ],
+    "shown_nonstation": 0,
+    "top_is_station": true
+   }
+  },
+  "misspelled-station": {
+   "Zuerich HB": {
+    "kept": 10,
+    "shown": [
+     {
+      "name": "Zürich HB",
+      "id": "8503000"
+     },
+     {
+      "name": "Zürich, Bahnhofstrasse/HB",
+      "id": "8591067"
+     },
+     {
+      "name": "Zürich, Bahnhofplatz/HB",
+      "id": "8587348"
+     },
+     {
+      "name": "Zürich, Sihlquai/HB",
+      "id": "8591368"
+     },
+     {
+      "name": "Zürich, Sihlpost/HB",
+      "id": "8591367"
+     },
+     {
+      "name": "Zürich, Bahnhofquai/HB",
+      "id": "8587349"
+     },
+     {
+      "name": "Zürich, HB ",
+      "id": null
+     }
+    ],
+    "shown_nonstation": 1,
+    "top_is_station": true
+   },
+   "Luzren": {
+    "kept": 9,
+    "shown": [
+     {
+      "name": "Luzern",
+      "id": "8505000"
+     },
+     {
+      "name": "Luzern, Bahnhof",
+      "id": "8508450"
+     },
+     {
+      "name": "Luzern, Kantonalbank",
+      "id": "8589801"
+     },
+     {
+      "name": "Luzern, Pilatusplatz",
+      "id": "8573022"
+     },
+     {
+      "name": "Luzern, Schwanenplatz",
+      "id": "8573054"
+     },
+     {
+      "name": "Luzern Allmend/Messe",
+      "id": "8508321"
+     },
+     {
+      "name": "Luzern, Luzernerhof",
+      "id": "8573055"
+     }
+    ],
+    "shown_nonstation": 0,
+    "top_is_station": true
+   },
+   "Genve": {
+    "kept": 7,
+    "shown": [
+     {
+      "name": "Medi Groupe Sàrl, Genève, Rue Emile-Yung 1",
+      "id": null
+     },
+     {
+      "name": "Bonizzi Alberto AG, Zürich, Schweizergasse 21",
+      "id": null
+     },
+     {
+      "name": "Kanne René AG, Rüschlikon, Loostr. 13",
+      "id": null
+     },
+     {
+      "name": "Walker Crosweller & Co Ltd., Greifensee, Tumigerstr. 42",
+      "id": null
+     },
+     {
+      "name": "Mahler, Louis (-Baume), Kriens, St. Niklausengasse 15",
+      "id": null
+     },
+     {
+      "name": "Siegfried, Walter, Thalwil, Tannsteinweg 17",
+      "id": null
+     },
+     {
+      "name": "Pneu Gobat AG, Kriens, Langsägestr. 4",
+      "id": null
+     }
+    ],
+    "shown_nonstation": 7,
+    "top_is_station": false
+   },
+   "Basel SBB ": {
+    "kept": 10,
+    "shown": [
+     {
+      "name": "Basel SBB",
+      "id": "8500010"
+     },
+     {
+      "name": "Basel, Bahnhof SBB",
+      "id": "8578143"
+     },
+     {
+      "name": "MediaMarkt Basel SBB, Basel, Güterstr. 115",
+      "id": null
+     },
+     {
+      "name": "Fracht AG, Basel, Birsigstr. 79",
+      "id": null
+     },
+     {
+      "name": "PHYSIOZENTRUM Basel SBB, Basel, Centralbahnstr. 7",
+      "id": null
+     },
+     {
+      "name": "Caffè Spettacolo Basel SBB, Basel, Güterstr. 115",
+      "id": null
+     },
+     {
+      "name": "SBB AG, Basel, Centralbahnstr. 20",
+      "id": null
+     }
+    ],
+    "shown_nonstation": 5,
+    "top_is_station": true
+   }
+  },
+  "colloquial-place": {
+   "Hauptbahnhof": {
+    "kept": 10,
+    "shown": [
+     {
+      "name": "Winterthur, Hauptbahnhof",
+      "id": "8506899"
+     },
+     {
+      "name": "Solothurn, Hauptbahnhof",
+      "id": "8572373"
+     },
+     {
+      "name": "Bern, Hauptbahnhof",
+      "id": "8507785"
+     },
+     {
+      "name": "Rorschach, Hauptbahnhof Süd",
+      "id": "8591810"
+     },
+     {
+      "name": "München, Hauptbahnhof Nord",
+      "id": "1101018"
+     },
+     {
+      "name": "Karlsruhe, Hauptbahnhof",
+      "id": "1105460"
+     },
+     {
+      "name": "Karlsruhe, Hauptbahnhof Süd",
+      "id": "1105461"
+     }
+    ],
+    "shown_nonstation": 0,
+    "top_is_station": true
+   },
+   "Bern Bahnhof": {
+    "kept": 10,
+    "shown": [
+     {
+      "name": "Bern, Bahnhof",
+      "id": "8576646"
+     },
+     {
+      "name": "Bern Europaplatz, Bahnhof",
+      "id": "8580939"
+     },
+     {
+      "name": "Bern Wankdorf, Bahnhof",
+      "id": "8590129"
+     },
+     {
+      "name": "Bern Brünnen Westside, Bahnhof",
+      "id": "8582262"
+     },
+     {
+      "name": "Bern Bümpliz Süd, Bahnhof",
+      "id": "8589226"
+     },
+     {
+      "name": "Bern Bümpliz Nord, Bahnhof",
+      "id": "8579523"
+     },
+     {
+      "name": "Bern Weissenbühl, Bahnhof",
+      "id": "8595931"
+     }
+    ],
+    "shown_nonstation": 0,
+    "top_is_station": true
+   },
+   "Zürich Hauptbahnhof": {
+    "kept": 10,
+    "shown": [
+     {
+      "name": "Zürich, Hauptbahnhof ",
+      "id": null
+     },
+     {
+      "name": "Zürich, Hauptbahnhof Zuerich ",
+      "id": null
+     },
+     {
+      "name": "Orell Füssli Zürich Hauptbahnhof, Zürich, Bahnhofplatz 1",
+      "id": null
+     },
+     {
+      "name": "My Nice Nails | Zürich Hauptbahnhof, Zürich, Zollstr. 59",
+      "id": null
+     },
+     {
+      "name": "Einkaufszentrum ShopVille-Zürich Hauptbahnhof, Zürich, Heinrichstr. 267",
+      "id": null
+     },
+     {
+      "name": "Kaimug Box Shopville Zürich Hauptbahnhof, Zürich, ShopVille-Zürich Hauptbahnhof",
+      "id": null
+     },
+     {
+      "name": "Store ShopVille-Zürich Hauptbahnhof, Zürich, Museumstr. 1",
+      "id": null
+     }
+    ],
+    "shown_nonstation": 7,
+    "top_is_station": false
+   }
+  },
+  "landmark-not-station": {
+   "Matterhorn": {
+    "kept": 10,
+    "shown": [
+     {
+      "name": "Klein Matterhorn",
+      "id": "8530210"
+     },
+     {
+      "name": "Zermatt (Matterhorn Talstat.)",
+      "id": "8530206"
+     },
+     {
+      "name": "Zermatt, Matterhorn Talstation",
+      "id": "8594562"
+     },
+     {
+      "name": "Zermatt, Matterhorn Glacier Paradise ",
+      "id": null
+     },
+     {
+      "name": "Zermatt, Matterhorn Konditionstraining ",
+      "id": null
+     },
+     {
+      "name": "Matterhorn Fleisch AG, Zermatt, Spissstr. 60",
+      "id": null
+     },
+     {
+      "name": "Matterhorn Gotthard Bahn, Brig, Bahnhofplatz 7",
+      "id": null
+     }
+    ],
+    "shown_nonstation": 4,
+    "top_is_station": true
+   },
+   "Rheinfall": {
+    "kept": 10,
+    "shown": [
+     {
+      "name": "Neuhausen Rheinfall",
+      "id": "8518924"
+     },
+     {
+      "name": "Schloss Laufen am Rheinfall",
+      "id": "8506039"
+     },
+     {
+      "name": "Rheinfall Schlössli Wörth",
+      "id": "8530649"
+     },
+     {
+      "name": "Schloss Laufen, Rheinfall",
+      "id": "8582052"
+     },
+     {
+      "name": "Dachsen, Rheinfallweg ",
+      "id": null
+     },
+     {
+      "name": "Dachsen, Rheinfallstr. ",
+      "id": null
+     },
+     {
+      "name": "Neuhausen am Rheinfall, Rheinfallstr. ",
+      "id": null
+     }
+    ],
+    "shown_nonstation": 3,
+    "top_is_station": true
+   },
+   "Bundeshaus": {
+    "kept": 8,
+    "shown": [
+     {
+      "name": "SRG SSR, Bern, Giacomettistr. 1",
+      "id": null
+     },
+     {
+      "name": "SRG SSR Bundeshaus, Bern, Bundesgasse 8-12",
+      "id": null
+     },
+     {
+      "name": "Iten-Arnold Elektro AG, Unterägeri, Gewerbestr. 20",
+      "id": null
+     },
+     {
+      "name": "Antikschreinerei Max Büchi, Bern, Freiburgstr. 405",
+      "id": null
+     },
+     {
+      "name": "Läderbutigg Bärn, Bern, Speichergasse 16",
+      "id": null
+     },
+     {
+      "name": "Hotel Kreuz Bern, Bern, Zeughausgasse 41",
+      "id": null
+     },
+     {
+      "name": "Amstutz, Peter (-Daetwyler), Sursee, Münsterstr. 17",
+      "id": null
+     }
+    ],
+    "shown_nonstation": 7,
+    "top_is_station": false
+   },
+   "Jet d'Eau": {
+    "kept": 10,
+    "shown": [
+     {
+      "name": "Hubert Etter et Fils SA, Vuadens, Route Principale 89",
+      "id": null
+     },
+     {
+      "name": "Pharmacie Populaire Jet d'eau, Genève, Rue des Eaux-Vives 22",
+      "id": null
+     },
+     {
+      "name": "Restaurant Pizzeria du Jet d'Eau, Genève, Rue des Eaux-Vives 90",
+      "id": null
+     },
+     {
+      "name": "Chantier Naval du Jet d'Eau - Caillat & Fils Sàrl, Vernier, Route de Peney 135",
+      "id": null
+     },
+     {
+      "name": "Société coopérative le jet d'eau, Genève, Chemin Dr-Adolphe-Pasteur 25",
+      "id": null
+     },
+     {
+      "name": "Cabinet du Jet d'Eau, Genève, Rue du 31-Décembre 8",
+      "id": null
+     },
+     {
+      "name": "Société coopérative d'habitation le Jet d'Eau, Thônex, Chemin Edouard-Olivet 8",
+      "id": null
+     }
+    ],
+    "shown_nonstation": 7,
+    "top_is_station": false
+   }
+  },
+  "foreign-language": {
+   "Zurigo": {
+    "kept": 10,
+    "shown": [
+     {
+      "name": "Zürich HB",
+      "id": "8503000"
+     },
+     {
+      "name": "Zürich Oerlikon",
+      "id": "8503006"
+     },
+     {
+      "name": "Zürich Hardbrücke",
+      "id": "8503020"
+     },
+     {
+      "name": "Zürich Stadelhofen",
+      "id": "8503003"
+     },
+     {
+      "name": "Zürich Flughafen",
+      "id": "8503016"
+     },
+     {
+      "name": "Zürich Altstetten",
+      "id": "8503001"
+     },
+     {
+      "name": "Zürich, Central",
+      "id": "8588078"
+     }
+    ],
+    "shown_nonstation": 0,
+    "top_is_station": true
+   },
+   "Geneva": {
+    "kept": 10,
+    "shown": [
+     {
+      "name": "Genève",
+      "id": "8501008"
+     },
+     {
+      "name": "Genève, Bel-Air",
+      "id": "8587387"
+     },
+     {
+      "name": "Genève, gare Cornavin",
+      "id": "8587057"
+     },
+     {
+      "name": "Genève-Champel",
+      "id": "8516272"
+     },
+     {
+      "name": "Genève-Eaux-Vives",
+      "id": "8516273"
+     },
+     {
+      "name": "Genève-Aéroport",
+      "id": "8501026"
+     },
+     {
+      "name": "Genève-Sécheron",
+      "id": "8516283"
+     }
+    ],
+    "shown_nonstation": 0,
+    "top_is_station": true
+   },
+   "Lucerne": {
+    "kept": 10,
+    "shown": [
+     {
+      "name": "Luzern",
+      "id": "8505000"
+     },
+     {
+      "name": "Luzern, Bahnhof",
+      "id": "8508450"
+     },
+     {
+      "name": "Luzern, Kantonalbank",
+      "id": "8589801"
+     },
+     {
+      "name": "Luzern, Pilatusplatz",
+      "id": "8573022"
+     },
+     {
+      "name": "Luzern, Schwanenplatz",
+      "id": "8573054"
+     },
+     {
+      "name": "Luzern Allmend/Messe",
+      "id": "8508321"
+     },
+     {
+      "name": "Luzern, Luzernerhof",
+      "id": "8573055"
+     }
+    ],
+    "shown_nonstation": 0,
+    "top_is_station": true
+   },
+   "Bâle": {
+    "kept": 10,
+    "shown": [
+     {
+      "name": "Basel SBB",
+      "id": "8500010"
+     },
+     {
+      "name": "Basel Bad Bf",
+      "id": "8500090"
+     },
+     {
+      "name": "Basel, Bahnhof SBB",
+      "id": "8578143"
+     },
+     {
+      "name": "Basel, Schifflände",
+      "id": "8588780"
+     },
+     {
+      "name": "Basel, Bankverein",
+      "id": "8500237"
+     },
+     {
+      "name": "Basel, Aeschenplatz",
+      "id": "8500073"
+     },
+     {
+      "name": "Basel, Markthalle",
+      "id": "8500193"
+     }
+    ],
+    "shown_nonstation": 0,
+    "top_is_station": true
+   }
+  },
+  "abbreviation": {
+   "ZH HB": {
+    "kept": 10,
+    "shown": [
+     {
+      "name": "Zahnarzt Zürich HB ShopVille | Notfall Zahnarzt | swiss smile, Zürich, Museumstr. 1",
+      "id": null
+     },
+     {
+      "name": "Medbase Apotheke Zürich HB, Zürich, Museumstr. 1",
+      "id": null
+     },
+     {
+      "name": "Zahnarzt Zürich Bahnhofplatz HB | ZURICHDENTAL®, Zürich, Bahnhofplatz 12",
+      "id": null
+     },
+     {
+      "name": "Zahnarztpraxis Dr. Barbara Lehmann | Zahnarzt Zürich HB, Zürich, Bahnhofstr. 80",
+      "id": null
+     },
+     {
+      "name": "Autop Zürich HB, Zürich, Sihlquai 41",
+      "id": null
+     },
+     {
+      "name": "PHYSIOZENTRUM Zürich HB, Zürich, Bahnhofplatz 3",
+      "id": null
+     },
+     {
+      "name": "Atelier Grünenwald - Polsterei am HB Zürich, Zürich, Tellstr. 38",
+      "id": null
+     }
+    ],
+    "shown_nonstation": 7,
+    "top_is_station": false
+   },
+   "ZRH": {
+    "kept": 10,
+    "shown": [
+     {
+      "name": "Kieferorthopädie ZRH, Kloten, Kalchengasse 1",
+      "id": null
+     },
+     {
+      "name": "SimFlight ZRH GmbH, Kloten, Härdlenstr. 50",
+      "id": null
+     },
+     {
+      "name": "Malca-Amit ZRH GmbH, Kloten, Bimenzältenstr. 75",
+      "id": null
+     },
+     {
+      "name": "ZRH Clothing Co., Adliswil, Albisstr. 77",
+      "id": null
+     },
+     {
+      "name": "ZRH Invest AG, Dübendorf, Sonnentalstr. 15",
+      "id": null
+     },
+     {
+      "name": "Awesome Rental Cars GmbH, Stetten, Im Stetterfeld 1",
+      "id": null
+     },
+     {
+      "name": "Taxi Bulle ABA, Bulle, Place de la Gare 3",
+      "id": null
+     }
+    ],
+    "shown_nonstation": 7,
+    "top_is_station": false
+   },
+   "SG": {
+    "kept": 10,
+    "shown": [
+     {
+      "name": "Wil SG",
+      "id": "8506206"
+     },
+     {
+      "name": "Rapperswil SG",
+      "id": "8503110"
+     },
+     {
+      "name": "St. Margrethen SG",
+      "id": "8506314"
+     },
+     {
+      "name": "Gossau SG",
+      "id": "8506210"
+     },
+     {
+      "name": "Altstätten SG",
+      "id": "8506319"
+     },
+     {
+      "name": "Buchs SG",
+      "id": "8509404"
+     },
+     {
+      "name": "Wil SG, Bahnhof",
+      "id": "8573602"
+     }
+    ],
+    "shown_nonstation": 0,
+    "top_is_station": true
+   },
+   "BS": {
+    "kept": 10,
+    "shown": [
+     {
+      "name": "Biel/Bienne, Waldrain/Crêt-Bs",
+      "id": "8593384"
+     },
+     {
+      "name": "Wiezikon b.Sirnach, Weingarten",
+      "id": "8506678"
+     },
+     {
+      "name": "Wiezikon b.Sirnach, Wies",
+      "id": "8578604"
+     },
+     {
+      "name": "Wiezikon b.Sirnach, Widenacker",
+      "id": "8595946"
+     },
+     {
+      "name": "Biberach (Riss), BSZ",
+      "id": "1101786"
+     },
+     {
+      "name": "Biberach (Riss), Polizei/BSZ",
+      "id": "1105209"
+     },
+     {
+      "name": "Biberach (Riss), Erlenweg/BSZ",
+      "id": "1105210"
+     }
+    ],
+    "shown_nonstation": 0,
+    "top_is_station": true
+   }
+  },
+  "zip-code": {
+   "8001": {
+    "kept": 10,
+    "shown": [
+     {
+      "name": "Zürich, Altstadt ",
+      "id": null
+     },
+     {
+      "name": "Zürich, Rathaus (Quartier) ",
+      "id": null
+     },
+     {
+      "name": "Zürich, Lindenhof ",
+      "id": null
+     },
+     {
+      "name": "Zürich, City ",
+      "id": null
+     },
+     {
+      "name": "Zürich, Grossmünster ",
+      "id": null
+     },
+     {
+      "name": "Zürich, Prediger ",
+      "id": null
+     },
+     {
+      "name": "Zürich, Oberdorf ",
+      "id": null
+     }
+    ],
+    "shown_nonstation": 7,
+    "top_is_station": false
+   },
+   "6003": {
+    "kept": 10,
+    "shown": [
+     {
+      "name": "Luzern, Hirschmatt - Kleinstadt ",
+      "id": null
+     },
+     {
+      "name": "Luzern, Bruch - Gibraltar ",
+      "id": null
+     },
+     {
+      "name": "Luzern, Baselstrasse - Bernstrasse ",
+      "id": null
+     },
+     {
+      "name": "Luzern, Bleicherstr. ",
+      "id": null
+     },
+     {
+      "name": "Luzern, Hirschmatt West ",
+      "id": null
+     },
+     {
+      "name": "Luzern, Neuweg ",
+      "id": null
+     },
+     {
+      "name": "Luzern, Hirschmatt Ost ",
+      "id": null
+     }
+    ],
+    "shown_nonstation": 7,
+    "top_is_station": false
+   },
+   "3000": {
+    "kept": 10,
+    "shown": [
+     {
+      "name": "Bern",
+      "id": "8507000"
+     },
+     {
+      "name": "Bern, Bahnhof",
+      "id": "8576646"
+     },
+     {
+      "name": "Bern, Zytglogge",
+      "id": "8507110"
+     },
+     {
+      "name": "Bern, Hirschengraben",
+      "id": "8579896"
+     },
+     {
+      "name": "Bern Wankdorf",
+      "id": "8516161"
+     },
+     {
+      "name": "Bern Europaplatz",
+      "id": "8504108"
+     },
+     {
+      "name": "Bern, Bärenplatz",
+      "id": "8588989"
+     }
+    ],
+    "shown_nonstation": 0,
+    "top_is_station": true
+   }
+  },
+  "ambiguous-city": {
+   "Basel": {
+    "kept": 10,
+    "shown": [
+     {
+      "name": "Basel SBB",
+      "id": "8500010"
+     },
+     {
+      "name": "Basel Bad Bf",
+      "id": "8500090"
+     },
+     {
+      "name": "Basel, Bahnhof SBB",
+      "id": "8578143"
+     },
+     {
+      "name": "Basel, Schifflände",
+      "id": "8588780"
+     },
+     {
+      "name": "Basel, Bankverein",
+      "id": "8500237"
+     },
+     {
+      "name": "Basel, Aeschenplatz",
+      "id": "8500073"
+     },
+     {
+      "name": "Basel, Markthalle",
+      "id": "8500193"
+     }
+    ],
+    "shown_nonstation": 0,
+    "top_is_station": true
+   },
+   "Baden": {
+    "kept": 10,
+    "shown": [
+     {
+      "name": "Baden",
+      "id": "8503504"
+     },
+     {
+      "name": "Baden, Bahnhof West",
+      "id": "8578914"
+     },
+     {
+      "name": "Baden, Lindenplatz",
+      "id": "8572387"
+     },
+     {
+      "name": "Baden, Trafo",
+      "id": "8590197"
+     },
+     {
+      "name": "Baden, Stein",
+      "id": "8580638"
+     },
+     {
+      "name": "Baden, Schulhausplatz",
+      "id": "8572580"
+     },
+     {
+      "name": "Baden, Bahnhof Ost",
+      "id": "8590190"
+     }
+    ],
+    "shown_nonstation": 0,
+    "top_is_station": true
+   },
+   "Neuchâtel": {
+    "kept": 10,
+    "shown": [
+     {
+      "name": "Neuchâtel",
+      "id": "8504221"
+     },
+     {
+      "name": "Neuchâtel Place Pury Littorail",
+      "id": "8504398"
+     },
+     {
+      "name": "Neuchâtel Port-de-Serrières",
+      "id": "8504509"
+     },
+     {
+      "name": "Neuchâtel Evole",
+      "id": "8530708"
+     },
+     {
+      "name": "Neuchâtel Champ-Bougin",
+      "id": "8530709"
+     },
+     {
+      "name": "Neuchâtel Serrières Ruau",
+      "id": "8530710"
+     },
+     {
+      "name": "Neuchâtel-Serrières",
+      "id": "8504220"
+     }
+    ],
+    "shown_nonstation": 0,
+    "top_is_station": true
+   }
+  },
+  "_control-no-match": {
+   "qxzvwqbbzz": {
+    "kept": 0,
+    "shown": [],
+    "shown_nonstation": 0,
+    "top_is_station": false
+   }
+  }
+ },
+ "downstream": {
+  "Bundeshaus": {
+   "connections": 1,
+   "from_resolved_to": "SRG SSR, Bern, Giacomettistr. 1"
+  },
+  "SRG SSR Bundeshaus, Bern, Bundesgasse 8-12": {
+   "connections": 1,
+   "from_resolved_to": "3011 Bern, Bundesgasse 8"
+  }
+ }
+}

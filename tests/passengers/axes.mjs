@@ -100,6 +100,111 @@ export const ADJUDICATIONS = {
   "constraints/arrive-by-time":        { status: "SERVED",      step: "plan",   evidence: "feature: segArr + isArrivalTime=1 on the query, and the earlier/later pager walks arrivals on their own axis rather than silently becoming a departure question (pager.mjs)" },
   "phrasing/exact-station-names":     { status: "SERVED",      step: "input",  evidence: "feature: the baseline the whole suite exercises" },
   "conditions/normal":                { status: "SERVED",      step: "plan",   evidence: "feature: the baseline the whole suite exercises" },
+
+  // ---- phrasing axis, adjudicated 2026-07-31 (9 rows, the whole worklist) ----
+  //
+  // Measured, not reasoned: `tests/passengers/probe-phrasing.py` ->
+  // `phrasing-evidence.json`, 28 specimens + a no-match control, run serially
+  // against the live API. The app does NO fuzzy matching of its own -- wireAC
+  // hands the raw box text to /locations?type=station&query= and renders the
+  // top 7 -- so on this axis the API's answer IS the app's answer.
+  //
+  // THE MEASUREMENT THAT MATTERS is not "did it return something". Everything
+  // returns something; that is the trap. It is **is the row a place a train
+  // stops?** Real stops carry an `id`; businesses, hotels, street addresses and
+  // city quarters come back `id: null`. `locations()` filters only `x.name`, so
+  // those rows are rendered as tappable suggestions WITH THE STATION GLYPH.
+  // In 9 of 28 specimens all seven visible rows are non-stations. The same file
+  // already knows better: `nearbyStops` filters `x.id && x.name` under a comment
+  // saying "a street address is not somewhere a train stops" -- the GPS path
+  // learned it, the typed path never did. Downstream it does not even fail
+  // loudly: /connections?from=Bundeshaus returns a journey starting at
+  // "SRG SSR, Bern, Giacomettistr. 1", so the app silently plans you from a
+  // company office. That defect is shared by every PARTIAL and LEFT_BEHIND row
+  // below and is the single fix that would move most of them.
+  //
+  // Second shared residual: when nothing matches at all (control `qxzvwqbbzz`,
+  // 0 rows) wireAC just hides the dropdown. No word is said. So the two ways
+  // this axis fails a passenger are a list of dentists, and silence.
+
+  // 4 of 4 clean: Zurigo -> Zürich HB, Geneva -> Genève, Lucerne -> Luzern,
+  // Bâle -> Basel SBB, each rank 1 with zero non-stations in the visible seven.
+  // The API carries the exonyms; the app inherits them for free.
+  "phrasing/foreign-language":        { status: "SERVED",      step: "input",  evidence: "probe-phrasing 2026-07-31: Zurigo/Geneva/Lucerne/Bâle all resolve to the right station at rank 1, 0 non-stations in the rendered 7" },
+
+  // gps-here is the one value on this axis the app answers itself rather than
+  // delegating, and it is the one that is properly built: nearMe() on all three
+  // location fields, nearbyStops() dropping id-less rows, distance in metres per
+  // row, and four DISTINCT failure messages (no geolocation API / permission
+  // denied / no fix / lookup threw) that each name the fallback instead of
+  // leaving an empty box. tests/near-me.mjs, 21 checks green.
+  "phrasing/gps-here":                { status: "SERVED",      step: "input",  evidence: "feature: nearMe + nearbyStops (id-filtered, distance shown, 4 distinct failure messages each naming the fallback), tests/near-me.mjs 21 checks" },
+
+  // All three resolve to a real station at rank 1, and for Basel the two
+  // candidates sit adjacent in the list (Basel SBB, then Basel Bad Bf). PARTIAL
+  // rather than SERVED because the app adds NOTHING to the disambiguation it is
+  // handed: nothing says Bad Bf is the German-network station across town, which
+  // is the single most expensive station mix-up in the country, and pressing
+  // Enter without choosing silently takes row 1 (acEnter). The list disambiguates
+  // by spelling; the passenger who does not already know the difference is not
+  // helped by it.
+  "phrasing/ambiguous-city":          { status: "PARTIAL",     step: "input",  evidence: "probe-phrasing: Basel/Baden/Neuchâtel all rank-1 stations, Basel SBB and Basel Bad Bf adjacent; residual = nothing explains WHICH is which (Bad Bf is the German-network station) and Enter silently takes row 1" },
+
+  // Typo tolerance exists but is shape-dependent. Umlaut transliteration
+  // ("Zuerich HB" -> Zürich HB) and letter transposition ("Luzren" -> Luzern)
+  // both recover at rank 1. A DROPPED letter does not: "Genve" returns seven
+  // rows, all of them businesses, and Genève is not among them -- so the passenger
+  // who fat-fingers one character out of a station name gets a shop directory
+  // with train glyphs next to it.
+  "phrasing/misspelled-station":      { status: "PARTIAL",     step: "input",  evidence: "probe-phrasing: umlaut transliteration (Zuerich HB) and transposition (Luzren) both recover at rank 1; residual = a dropped letter does not -- 'Genve' returns 7 rows, all businesses, no Genève" },
+
+  // Better served than the raw lookup suggests, because the app ships two things
+  // of its own here: a quick chip for Zürich HB -> Zürich Flughafen, and
+  // looksLikeAirport(), which warns on the flight screen when the destination
+  // does not look like an airport station at all. The German name resolves at
+  // rank 1 and bare "Zürich" resolves to Zürich HB, which is the defensible
+  // default. The residual is the English form: "Zurich Airport" returns seven
+  // hotels and zero stations, so the very traveller most likely to type English
+  // -- the one catching a flight out of a country they do not live in -- gets a
+  // hotel list, and the airport warning never fires because they never reached a
+  // station name at all.
+  "phrasing/hb-airport-conflation":   { status: "PARTIAL",     step: "input",  evidence: "feature: HB->Flughafen quick chip + looksLikeAirport() warning on the flight screen; probe-phrasing: 'Zürich Flughafen' rank 1, bare 'Zürich' -> Zürich HB; residual = English 'Zurich Airport' returns 7 hotels and 0 stations" },
+
+  // Two of three colloquial forms work: "Bern Bahnhof" -> Bern, Bahnhof, and
+  // bare "Hauptbahnhof" returns a clean list of real Hauptbahnhof stops
+  // (Winterthur, Solothurn, Bern). The third is the sharp one: "Zürich
+  // Hauptbahnhof" -- the full, correct, everyday German name of the largest
+  // station in the country -- returns seven rows of which NONE is a station.
+  // Two even read as stop names ("Zürich, Hauptbahnhof") but carry id: null;
+  // the rest are a bookshop, a nail salon and a shopping centre.
+  "phrasing/colloquial-place":        { status: "PARTIAL",     step: "input",  evidence: "probe-phrasing: 'Bern Bahnhof' and bare 'Hauptbahnhof' both resolve to real stops; residual = 'Zürich Hauptbahnhof', the ordinary German name of the country's biggest station, returns 7 rows and not one is a station (two are id-less look-alikes)" },
+
+  // Splits cleanly by KIND of landmark. Landmarks that are themselves transport
+  // destinations resolve, because the railway named a stop after them: Matterhorn
+  // -> Klein Matterhorn + Zermatt Matterhorn Talstation; Rheinfall -> Neuhausen
+  // Rheinfall. Urban landmarks do not, because no stop carries their name and the
+  // search falls through to the business register: Bundeshaus -> 7 companies
+  // (top hit an SRG office), Jet d'Eau -> 7 companies (a pharmacy, a pizzeria, a
+  // boatyard). A tourist asking for the seat of the federal parliament is offered
+  // a pharmacy.
+  "phrasing/landmark-not-station":    { status: "PARTIAL",     step: "input",  evidence: "probe-phrasing: landmarks the railway named a stop after resolve (Matterhorn -> Klein Matterhorn/Zermatt Talstation, Rheinfall -> Neuhausen Rheinfall); urban landmarks fall through to the business register -- Bundeshaus and Jet d'Eau each return 7 companies, 0 stations" },
+
+  // LEFT_BEHIND, and the two apparent successes are why it needs saying out loud.
+  // "ZH HB" returns seven dental practices; "ZRH", the IATA code the whole world
+  // uses for that airport, returns seven companies. "SG" and "BS" DO return
+  // stations -- but as accidental substring matches on the canton suffix (Wil SG,
+  // Rapperswil SG) and on "Crêt-Bs", not because anything understood them as
+  // abbreviations. Scoring those two as working would be reading a coincidence as
+  // a capability. Nothing in the app or the API expands an abbreviation.
+  "phrasing/abbreviation":            { status: "LEFT_BEHIND", step: "input",  evidence: "probe-phrasing: 'ZH HB' -> 7 dental practices, 'ZRH' (the IATA code) -> 7 companies, 0 stations each; 'SG'/'BS' return stations only as accidental canton-suffix substring matches (Wil SG, Crêt-Bs), which is a coincidence and not expansion" },
+
+  // LEFT_BEHIND. "8001" and "6003" return city QUARTERS -- Zürich Altstadt,
+  // Luzern Hirschmatt -- which carry id: null and are not stops. "3000" appears
+  // to work only because Bern's main station is called "Bern": the postcode was
+  // never parsed, the string matched a station name. One accidental hit out of
+  // three is not postcode support, and a Swiss postcode is a thing people
+  // genuinely type when they know an address but not the nearest stop.
+  "phrasing/zip-code":                { status: "LEFT_BEHIND", step: "input",  evidence: "probe-phrasing: '8001'/'6003' return id-less city quarters (Zürich Altstadt, Luzern Hirschmatt), not stops; '3000' resolves only because Bern's station is literally named 'Bern' -- the postcode is never parsed" },
 };
 
 export function adjudicate(axis, value) {

@@ -459,6 +459,69 @@ worth more than the tidying:
 Same shape as the rate-limit bug fixed the night before, one level up: a correct instrument that
 silently reports the wrong thing because nobody checked the context it was running in.
 
+---
+
+### 2026-07-31 — the `phrasing` axis, all nine rows, and the dentists in the dropdown
+
+The sweep went **19/50 → 28/50 adjudicated**; `phrasing` is now the only axis with no unruled value.
+Measured rather than reasoned: `tests/passengers/probe-phrasing.py` → `phrasing-evidence.json`,
+28 specimens plus a no-match control, run **serially with a 1.2 s delay** because this is the API
+that rate-limited us the night before and a burst would have both poisoned the result and degraded
+the live app.
+
+**The app does no fuzzy matching of its own.** `wireAC` hands the raw box text to
+`/locations?type=station&query=` and renders the top 7, so on this axis the API's answer *is* the
+app's answer. Which makes the measured property easy to get wrong: it is not *"did it return
+something"* — everything returns something, and that is the trap. It is **is the row a place a train
+stops?** Real stops carry an `id`; businesses, hotels, street addresses and city quarters come back
+`id: null`.
+
+`locations()` filters on `x.name` alone, so those rows render as tappable suggestions **with the
+station glyph next to them**. In 9 of 28 specimens *all seven visible rows* are non-stations:
+
+| you type | you are offered |
+|---|---|
+| `Zürich Hauptbahnhof` | a bookshop, a nail salon, a shopping centre — 0 stations |
+| `Bundeshaus` | an SRG office and six other companies |
+| `ZRH` | seven firms in Kloten |
+| `8001` | Zürich city *quarters*, none of them a stop |
+| `Zurich Airport` | seven hotels |
+
+And it does not fail loudly downstream: `/connections?from=Bundeshaus` returns a journey starting at
+*"SRG SSR, Bern, Giacomettistr. 1"*. The app silently plans you from a company office.
+
+**The same file already knows better.** `nearbyStops`, the GPS path, filters `x.id && x.name` under a
+comment reading *"a street address is not somewhere a train stops."* The typed path — the default,
+the one everybody uses — never got the lesson. That is the third session running that this shape has
+turned up: **a correct rule, present in the file, absent from the path the user is on.**
+
+Second shared residual: when *nothing* matches (control `qxzvwqbbzz`, 0 rows) `wireAC` just hides the
+dropdown. No word is said. So the two ways this axis fails a passenger are a list of dentists, and
+silence.
+
+Rulings: `foreign-language` and `gps-here` **SERVED** (exonyms come free from the API; `nearMe` is the
+one value the app answers itself and the one that is properly built — id-filtered, distances, four
+distinct failure messages each naming the fallback). `ambiguous-city`, `misspelled-station`,
+`hb-airport-conflation`, `colloquial-place`, `landmark-not-station` **PARTIAL**. `abbreviation` and
+`zip-code` **LEFT_BEHIND** — and both of those had a tempting false positive: `SG`/`BS` do return
+stations, but as accidental substring matches on the canton suffix (`Wil SG`, `Crêt-Bs`), and `3000`
+resolves only because Bern's station is literally called *Bern*. Scoring those as working would be
+reading a coincidence as a capability. All seven non-SERVED rows are `undecided` in the disposition
+ledger, which is the truth: they were measured the same hour and nobody has ruled on what to do.
+
+**The sweep caught its own control rotting — the 2026-07-30 repair missed one.** That night, three
+checks were found using a live unadjudicated row as their hard-coded stand-in, and were fixed by
+discovering the premise at run time. A fourth of the same shape survived: the reduction control named
+`phrasing/zip-code` as its example of "a genuinely unchecked key", so it went red the hour that row
+was adjudicated — not because the reducer regressed, but because **a control that dies when you do
+the work is measuring the work, not the property.** It now names a synthetic key that can never be
+adjudicated, plus a guard that the key really is absent from all three sources rather than assuming
+it. The first draft of *that* guard indexed `refusals.refusals` — an array — with a string key, so it
+was vacuously true; caught by checking, and it now uses the `covered` Set.
+
+`tests/mutations/mut-phrasing.py`, **4 of 4 caught**, M4 being the one that proves the replacement
+control can still come back negative. Suite total **1047 green**.
+
 ## Regression summary — the "does it add or destroy?" answer
 
 | Item | Risk |

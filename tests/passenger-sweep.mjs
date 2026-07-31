@@ -245,8 +245,24 @@ for (const [k, d] of Object.entries(ledger.dispositions)) {
     reduceFinding("constraints/step-free", ctx));
   chk("a ledger-parked key reduces to its ledger row",
     /ledger row \(parked-with-reason\)/.test(reduceFinding("constraints/needs-food-en-route", ctx) || ""));
+  /* This control used to name a REAL unadjudicated row (phrasing/zip-code) as
+     its example of "genuinely unchecked". It went red the hour that row was
+     adjudicated -- not because the reducer regressed, but because the control
+     was reading the live corpus for its fixture, so it could only survive while
+     the worklist stayed unfinished. A control that dies when you do the work is
+     measuring the work, not the property. The key below cannot ever be
+     adjudicated, and the guard proves it is still absent from all three sources
+     rather than assuming it. */
+  const SYNTHETIC = "phrasing/__never-adjudicated-control";
+  /* `refusals.refusals` is an ARRAY of rows whose `covers` lists the keys, not a
+     map keyed by them -- so the first draft of this guard indexed an array with a
+     string, got undefined, and passed no matter what. `covered` is the Set the
+     rest of the file already reduces it to. */
+  chk("control-of-the-control: the synthetic key really is unknown to all three sources",
+    !ADJUDICATIONS[SYNTHETIC] && !covered.has(SYNTHETIC) && !ledger.dispositions[SYNTHETIC],
+    SYNTHETIC);
   chk("a genuinely unchecked key does NOT reduce -- NEW-CANDIDATE stays reachable",
-    reduceFinding("phrasing/zip-code", ctx) === null, String(reduceFinding("phrasing/zip-code", ctx)));
+    reduceFinding(SYNTHETIC, ctx) === null, String(reduceFinding(SYNTHETIC, ctx)));
 }
 
 // ---- generator determinism + committed population freshness ----

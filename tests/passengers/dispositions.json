@@ -7,6 +7,15 @@
     "purpose/meet-flight":               { "state": "undecided" },
     "constraints/needs-food-en-route":   { "state": "parked-with-reason", "reason": "POI claim deferred on Overpass cost (reviewer triage 2026-07-28 13:12); gap mechanic already serves the slack half" },
     "constraints/needs-toilet-en-route": { "state": "parked-with-reason", "reason": "same Overpass-cost parking as needs-food" },
-    "conditions/delay-50min":            { "state": "parked-with-reason", "reason": "replan-from-here SHIPPED, so the row went LEFT_BEHIND -> PARTIAL (2026-07-29, forced by the absence-rot check). What is parked is only the residual: whether the app should offer the replan unprompted instead of waiting to be asked" }
-  }
+    "conditions/delay-50min":            { "state": "parked-with-reason", "reason": "replan-from-here SHIPPED, so the row went LEFT_BEHIND -> PARTIAL (2026-07-29, forced by the absence-rot check). What is parked is only the residual: whether the app should offer the replan unprompted instead of waiting to be asked" },
+
+    "phrasing/ambiguous-city":           { "state": "undecided" },
+    "phrasing/misspelled-station":       { "state": "undecided" },
+    "phrasing/hb-airport-conflation":    { "state": "undecided" },
+    "phrasing/colloquial-place":         { "state": "undecided" },
+    "phrasing/landmark-not-station":     { "state": "undecided" },
+    "phrasing/abbreviation":             { "state": "undecided" },
+    "phrasing/zip-code":                 { "state": "undecided" }
+  },
+  "comment-phrasing-2026-07-31": "The seven phrasing rows were adjudicated together on 2026-07-31 and are all genuinely undecided: they were measured the same hour and nobody has ruled on what to do about them. Recording them as parked-with-reason would be inventing a decision nobody took. Six of the seven share ONE root cause -- locations() renders API rows with id:null (businesses, addresses, city quarters) as tappable station suggestions, while nearbyStops() in the same file already filters exactly those out -- so one fix moves most of this block at once. See the phrasing header in axes.mjs and tests/passengers/phrasing-evidence.json."
 }
