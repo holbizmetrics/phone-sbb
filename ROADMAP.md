@@ -404,7 +404,7 @@ existed. One knew about rate limits; the copies did not; copies drift.
 - **`errBox(e, unknown, again)`** — the per-screen words are now parameters, so the departures board
   (the third copy, which **no suite had ever looked at**) delegates instead of duplicating.
 - Suites: `outage-not-verdict.mjs` 23 → 36, `wander.mjs` 12 → 18. **1019 checks green** across four
-  timezones. **6 of 6 mutations caught** (`~/tmp/mut-errbox.py`).
+  timezones. **6 of 6 mutations caught** (`tests/mutations/mut-errbox.py`).
 
 Two method notes, both self-inflicted and both worth keeping. The existing wiring checks asserted the
 *guard* (`direct.failed && !direct.ok`) and not the *payload*, so reverting a call site to the bare
@@ -433,6 +433,31 @@ deciding rather than through shipping. The other two decay by shipping in opposi
 adjudication cites an absence the app later fills (stale **pessimistic**, and silent); a specimen
 asserts a failure the app later fixes (stale **optimistic**, and loud, because it asserts something
 falsifiable).
+
+### 2026-07-31 — the mutation scores lived on one phone, and one of them only worked abroad
+
+Closeout scan: every mutation-score claim in this file cited `~/tmp/mut-*.py` — a path on the
+operator's phone that no reviewer can open. Seven batteries had accumulated there. The strongest
+evidence in the document rested on an instrument outside the repo, which is the artifact-locus
+failure, not a filing preference. They now live in `tests/mutations/` and the citations point there.
+
+Moving them was not bookkeeping — **two of the seven did not survive the move**, and both rots are
+worth more than the tidying:
+
+- **`mut-via-tz.py` scored 9/9 abroad and 8/1 here.** Its fixture mutation re-points the pager
+  fixture to *the runner's* zone; on a machine already set to `Europe/Zurich` that substitutes
+  Zurich for Zurich — a literal no-op, which reads on the console as a suite gap. Under UTC,
+  Kolkata or New York it bites and the script reads 9/9. **A timezone mutation run inside the
+  timezone it is about measures nothing, and the machine guaranteed to be in that timezone is the
+  one this app is built on.** The zone is pinned per-mutation now, so the score means the same
+  thing wherever it runs. The earlier "9 of 9" was environment-dependent and never said so.
+- **`mut-t2.py` crashed with a bare `FileNotFoundError`** because `sw.js` only exists on the
+  unmerged `t2-service-worker` branch. It now exits non-zero with the reason and the command to
+  run it on the right branch. An instrument that cannot run must say *why* — "broken script" and
+  "you are on the wrong branch" are different facts, and only one of them is actionable.
+
+Same shape as the rate-limit bug fixed the night before, one level up: a correct instrument that
+silently reports the wrong thing because nobody checked the context it was running in.
 
 ## Regression summary — the "does it add or destroy?" answer
 
