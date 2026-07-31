@@ -24,13 +24,12 @@ APP = ROOT / "app.js"
 SUITE = "tests/station-lookup.mjs"
 
 MUTS = [
-    ("M1 locations() goes back to filtering on name alone (the shipped defect)",
-     "  const s = (d.stations||[]).filter(x=>x.id&&x.name);\n  locCache.set(q,s);",
-     "  const s = (d.stations||[]).filter(x=>x.name);\n  locCache.set(q,s);"),
+    ("M1 locRows() goes back to filtering on name alone (the shipped defect)",
+     "stations: all.filter(x=>x.id)", "stations: all"),
 
     ("M2 the empty case goes back to hiding the box and saying nothing",
-     'if(!s.length){ nearMsg(ac, `No station matches &#8220;${esc(q)}&#8221;.`); return; }',
-     'if(!s.length){ ac.classList.remove("show"); return; }'),
+     'if(!alt.length){ nearMsg(ac, `No station matches &#8220;${esc(q)}&#8221;.`); return; }',
+     'if(!alt.length){ ac.classList.remove("show"); return; }'),
 
     ("M3 a thrown lookup is reported with the no-match wording (the 429 bug again)",
      '`Station lookup failed &#8212; this is not a &#8220;no match&#8221;, try again in a moment.`',
@@ -43,7 +42,23 @@ MUTS = [
     ("M5 the query reaches the DOM unescaped",
      'nearMsg(ac, `No station matches &#8220;${esc(q)}&#8221;.`)',
      'nearMsg(ac, `No station matches &#8220;${q}&#8221;.`)'),
+
+    # --- the fallback, whose whole defence is that the guess is VISIBLE ---
+    ("M6 the fallback stops naming the town it guessed",
+     "The closest address match is in ${esc(town)} &#8212; stations there:",
+     "Did you mean one of these? &#8212; stations:"),
+
+    ("M7 townOf guesses a town off a row that is not an address",
+     "if(p.length>=3 && p[p.length-2]) return p[p.length-2];",
+     "if(p.length>=2 && p[p.length-2]) return p[p.length-2];"),
+
+    ("M8 a town that could not be read is looked up anyway (null as a query)",
+     "town ? await locations(town) : []", "await locations(town)"),
+
+    ("M9 acEnter goes back to selecting message rows (Enter dies on a no-match)",
+     'querySelectorAll("div[data-n]")', 'querySelectorAll("div")'),
 ]
+
 
 
 def run():

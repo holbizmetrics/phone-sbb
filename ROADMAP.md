@@ -557,6 +557,41 @@ id-filter empties the list, the raw rows still carry coordinates, so the nearest
 matched business is computable — the GPS path already does exactly that. Unruled; nobody has decided
 it is worth the call.
 
+### The fallback — and the premise I got wrong
+
+Ruled: build it. **The premise was false and I had not checked it.** The sentence above ("the raw
+rows still carry coordinates") was written from plausibility, not measurement. They do not: every
+discarded row comes back `coordinate: {x: null, y: null}` — **0 of 85 rows across all 9 queries**,
+and on every `type=` the endpoint accepts (`station`, `address`, `poi`, `all`, none). There is no
+coordinate to feed the GPS path with. The fallback as specified is unbuildable from this vendor.
+
+What *is* there is the address string itself, formatted `NAME, TOWN, STREET NR`. So `townOf()` reads
+the town off the second-to-last comma field and the app offers **that town's stations**. Measured
+over the nine queries: seven yield a town, and of those seven — `Zürich Hauptbahnhof`→Zürich HB,
+`ZH HB`→Zürich HB, `Genve`→Genève, `Bundeshaus`→Bern are right; `Zurich Airport`→Glattbrugg and
+`ZRH`→Kloten are the airport's neighbouring towns, defensible; **`Jet d'Eau`→Vuadens is simply
+wrong**, 200 km from the fountain. The two postcodes yield no town at all and still say "no match".
+
+**One wrong guess in seven is why the heading names the town.** The dropdown reads *"No station
+called 'Jet d'Eau'. The closest address match is in Vuadens — stations there:"* — a passenger
+rejects that in a glance. The same guess with the town hidden would be the defect the id-filter was
+added to remove, wearing a new costume. `mut-station-lookup.py` **M6** exists to keep that line
+honest: strip the town from the heading and the suite goes red.
+
+**A regression I shipped that morning, caught the same day.** `acEnter` selected
+`querySelectorAll("div")`. Once the dropdown carried message rows, the message became row 0 with no
+`data-n`, so **Enter on a no-match did nothing** — where before the message existed the box was
+hidden and Enter fell through to searching the literal typed text. Now `div[data-n]`, with a PLANTED
+check that the old selector really does swallow the Enter.
+
+**And one line deleted for being untestable.** A `town !== q` guard looked prudent and was dead:
+`locCache` answers a repeated string without a request, so removing it changed neither output nor
+traffic, and the mutation that deleted it survived the entire suite. An untestable line that
+protects nothing is worse than no line — it reads like a defence. The `town ?` guard is real and M8
+proves it.
+
+`tests/station-lookup.mjs` **38 checks**, `mut-station-lookup.py` **9 of 9 caught**, suite **1085**.
+
 ## Regression summary — the "does it add or destroy?" answer
 
 | Item | Risk |

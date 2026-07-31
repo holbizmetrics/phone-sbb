@@ -160,11 +160,33 @@ const locCache = new Map();
    nearbyStops(), thirty lines below, has always filtered `x.id && x.name` under a
    comment saying a street address is not somewhere a train stops. That rule was
    right the whole time; it just never covered the path everybody actually uses. */
-async function locations(q){
+async function locRows(q){
   if(locCache.has(q)) return locCache.get(q);
   const d = await api("/locations?type=station&query="+encodeURIComponent(q));
-  const s = (d.stations||[]).filter(x=>x.id&&x.name);
-  locCache.set(q,s); return s;
+  const all = (d.stations||[]).filter(x=>x.name);
+  const r = { stations: all.filter(x=>x.id), dropped: all.filter(x=>!x.id) };
+  locCache.set(q,r); return r;
+}
+// The contract every caller already relies on: rows that are places a train
+// stops. `dropped` exists for exactly one consumer -- the fallback below.
+async function locations(q){ return (await locRows(q)).stations; }
+
+/* The town the passenger probably meant, read off the rows the id-filter threw
+   away. Those come back formatted "NAME, TOWN, STREET NR" ("SRG SSR, Bern,
+   Giacomettistr. 1"), so the town is the second-to-last comma field.
+
+   This is a GUESS, and it is only defensible because the caller prints the town
+   it inferred. Measured 2026-07-31 over the nine queries the id-filter empties:
+   seven yield a town, and one of those seven is plainly wrong -- "Jet d'Eau"
+   matches a business in Vuadens, 200 km from the fountain in Geneva. A wrong
+   guess the passenger can SEE and reject is a suggestion; the same guess with
+   the town hidden would be the defect this whole filter was added to remove. */
+function townOf(rows){
+  for(const r of rows||[]){
+    const p = r.name.split(",").map(x=>x.trim());
+    if(p.length>=3 && p[p.length-2]) return p[p.length-2];
+  }
+  return null;
 }
 /* coordinates-to-stop (cross-vendor finding #4, the cheap one): the API's
    /locations?x=&y= has answered "nearest stop to here" since day one -- unused
@@ -195,12 +217,32 @@ function wireAC(inpId, acId, fieldId, onPick){
          threw is not a lookup that found nothing, and rendering a dead request
          as "no station matches" would be last night's 429 bug in a new costume
          -- an absence of data presented as data. */
-      if(!s.length){ nearMsg(ac, `No station matches &#8220;${esc(q)}&#8221;.`); return; }
-      ac.innerHTML = s.slice(0,7).map(x=>
+      let rows=s, head="";
+      if(!s.length){
+        /* The id-filter empties this list for 9 of 28 measured queries -- every
+           landmark, postcode and abbreviation the timetable only knows as an
+           address. Saying "no station matches Zürich Hauptbahnhof" is honest and
+           useless. The discarded rows still name a TOWN, so offer that town's
+           stations, under a heading that says whose guess this is: a passenger
+           who sees "Vuadens" after typing "Jet d'Eau" rejects it in a glance. */
+        /* There WAS a `town!==q` guard here. It was dead: locCache answers a
+           repeat of the same string without a request, so removing it changed
+           neither the output nor the traffic, and a mutation that deleted it
+           survived the whole suite. An untestable line that protects nothing is
+           worse than no line -- it reads like a defence. The `town ?` guard is
+           real: without it a null town is looked up as a query. */
+        const town = townOf((await locRows(q)).dropped);
+        const alt = town ? await locations(town) : [];
+        if(!alt.length){ nearMsg(ac, `No station matches &#8220;${esc(q)}&#8221;.`); return; }
+        head = `<div class="nearmsg">No station called &#8220;${esc(q)}&#8221;. `
+             + `The closest address match is in ${esc(town)} &#8212; stations there:</div>`;
+        rows = alt;
+      }
+      ac.innerHTML = head + rows.slice(0,7).map(x=>
         `<div data-n="${esc(x.name)}"><span>&#9906;</span><span>${esc(x.name)}</span></div>`).join("");
       ac.dataset.q=q;                  // which query these rows answer -- acEnter checks it
       ac.classList.add("show");
-      [...ac.children].forEach(el=>el.onclick=()=>{
+      [...ac.children].filter(el=>el.dataset.n).forEach(el=>el.onclick=()=>{
         inp.value=el.dataset.n; ac.classList.remove("show");
         field.classList.add("has"); onPick(el.dataset.n);
       });
@@ -3543,7 +3585,13 @@ function tickClock(){
 function acEnter(inpId, acId, onPick){
   const inp=$(inpId), ac=$(acId);
   inp.addEventListener("keydown", e=>{
-    const rows=[...ac.querySelectorAll("div")], open=ac.classList.contains("show");
+    /* `div[data-n]`, not `div`: the dropdown also carries message rows now (the
+       no-match line, the town-fallback heading), and those are not selectable.
+       Matching every div made rows[0] a heading whose dataset.n is undefined, so
+       Enter on a no-match did NOTHING -- where before the message existed it fell
+       through to searching the literal typed text. Regression shipped and caught
+       the same day, 2026-07-31. */
+    const rows=[...ac.querySelectorAll("div[data-n]")], open=ac.classList.contains("show");
     if(e.key==="ArrowDown"||e.key==="ArrowUp"){
       if(!open||!rows.length) return;
       e.preventDefault();
