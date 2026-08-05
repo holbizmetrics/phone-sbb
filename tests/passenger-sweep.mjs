@@ -23,13 +23,18 @@ const chk = (n, c, d = "") => { if (c) { pass++; console.log("  ok   " + n); } e
 const UNADJ = (() => {
   for (const axis of Object.keys(AXES))
     for (const value of AXES[axis])
-      if (!ADJUDICATIONS[`${axis}/${value}`]) return { axis, value };
-  return null;
+      if (!ADJUDICATIONS[`${axis}/${value}`]) return { axis, value, discovered: true };
+  // 2026-08-05: the table is FULLY ruled (the last 22 were adjudicated), so
+  // there is no live specimen left to discover -- the failure message this
+  // block used to emit asked for "a new specimen", and this is it. Synthetic
+  // on purpose: adjudicate() answers UNADJUDICATED for any value it has never
+  // heard of, which is exactly the contract the checks below pin. If a future
+  // edit un-rules a real value, discovery takes over again automatically.
+  return { axis: "who", value: "__unruled-probe__", discovered: false };
 })();
-chk("control: the table still has an unruled value to test UNADJUDICATED with",
-  !!UNADJ, "every axis value is now adjudicated -- these checks need a new specimen");
-chk("control: ...and it really is unruled", UNADJ && adjudicate(UNADJ.axis, UNADJ.value).status === "UNADJUDICATED",
-  UNADJ ? JSON.stringify(adjudicate(UNADJ.axis, UNADJ.value)) : "no specimen");
+chk(`control: the UNADJUDICATED specimen (${UNADJ.discovered ? "discovered" : "synthetic"} ${UNADJ.axis}/${UNADJ.value}) really is unruled`,
+  adjudicate(UNADJ.axis, UNADJ.value).status === "UNADJUDICATED",
+  JSON.stringify(adjudicate(UNADJ.axis, UNADJ.value)));
 
 // ---- specimen #1: Harold (bus msg 87102361, adjudicated by hand vs 1625cbe) ----
 const harold = { who: "business-traveller", purpose: "meet-flight",

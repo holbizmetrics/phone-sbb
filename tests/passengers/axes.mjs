@@ -210,6 +210,91 @@ export const ADJUDICATIONS = {
   // a capability. Nothing in the app or the API expands an abbreviation.
   "phrasing/abbreviation":            { status: "LEFT_BEHIND", step: "input",  evidence: "probe-phrasing: 'ZH HB' -> 7 dental practices, 'ZRH' (the IATA code) -> 7 companies, 0 stations each; 'SG'/'BS' return stations only as accidental canton-suffix substring matches (Wil SG, Crêt-Bs), which is a coincidence and not expansion" },
 
+  // ---- the remaining 22, adjudicated 2026-08-05 (who 8, purpose 7, ----
+  // ---- conditions 5, constraints 2 -- the whole worklist)           ----
+  //
+  // Method as before: measured where the axis is measurable, repo evidence
+  // where the app itself is the answer. `tests/passengers/probe-conditions.py`
+  // -> `conditions-evidence.json`, serial against the live API, with two
+  // lessons the probe itself taught:
+  //
+  // (1) THE CONTROL FIRED, at the instrument. A date 450 days past any
+  // published timetable returns 4 plausible connections dated that day, so
+  // "the API honoured the requested date" discriminates NOTHING -- every
+  // schedule claim below rests on a sharper discriminator instead: SN night
+  // trains that exist only Fri/Sat nights (weekend), and Jeûne genevois, a
+  // Geneva-only Thursday holiday on Sunday service, vs the previous Thursday
+  // (holiday: different departure pattern on the same corridor).
+  //
+  // (2) The naive midnight specimen (23:55) rolled PAST the last train and
+  // came back as next-morning connections -- which is exactly what the app
+  // renders with no day marker, so the failed probe measured the app defect.
+
+  // The feed is calendar-aware at week grain: Sat-night 02:00 returns SN
+  // night trains, the same query on a Wed night rolls to the 05:02 first S.
+  // The app passes the date straight through (swissQS + the picker).
+  "conditions/weekend-schedule":      { status: "SERVED",      step: "plan",   evidence: "probe-conditions 2026-08-05: Zürich HB->Winterthur Sat 02:00 returns SN night trains (02:05/02:08/02:35), Wed 02:00 rolls to the 05:02 first S -- weekend grain is real, and the app passes date through unmodified" },
+  // Holiday grain proven by a holiday only ONE canton keeps: Jeûne genevois
+  // (Thu 2026-09-10) serves a different TPG departure pattern than the
+  // previous Thursday on the same corridor. Dec 25 also answers, but the
+  // past-horizon control shows that alone would prove nothing.
+  "conditions/holiday-schedule":      { status: "SERVED",      step: "plan",   evidence: "probe-conditions: Genève Bel-Air->Palettes 06:00 on Jeûne genevois (2026-09-10) returns a different service pattern than the plain Thursday before it; date-honouring alone was disqualified by the past-horizon control (450d out still answers)" },
+  // The API side is right: 23:15 returns the real 23:32 -> 00:31 crosser with
+  // full ISO dates. The app side is the gap: cards render hhmm() only, so a
+  // cross-midnight arrival carries no day marker, and a 23:55 query comes
+  // back as NEXT-MORNING cards indistinguishable from tonight's. The night
+  // board and jlh cover the stranded case; the quiet day-roll is uncovered.
+  "conditions/midnight-crossing":     { status: "PARTIAL",     step: "decide", evidence: "probe-conditions: 23:15 Zürich->Bern returns the 23:32->00:31 crosser, ISO dates intact; residual = cards render times with no day marker (hhmm, app.js), so a rolled 23:55 query shows tomorrow-morning cards that read as tonight" },
+  // The app ships weather, not disruptions: per-card both-ends forecast at the
+  // right HOURS, thunderstorm codes, a 7-day outlook that says "thunderstorm --
+  // not the day for it", a second-forecast link. What it cannot say is that
+  // the LINE is closed: no disruption feed anywhere (grep: 0).
+  "conditions/storm-weather":         { status: "PARTIAL",     step: "decide", evidence: "feature: both-ends per-card forecast (wx chips at departure/arrival hour), thunderstorm codes, day-outlook veto line, second-forecast link (app.js Open-Meteo stack); residual = no service-disruption source, so the app can say the sky is bad but never that the line is down" },
+  // Verified against a REAL Ersatzverkehr (Luzern-Vitznau came back category
+  // EV, operator SBB-EV) and the rib names the replaced stretch because "a bus
+  // somewhere on this journey" is not actionable. Warning survives missing
+  // endpoint names. tests/vehicle.mjs pins it.
+  "conditions/replacement-bus":       { status: "SERVED",      step: "ride",   evidence: "feature: EV category gets its own loud rib naming the replaced stretch (vehicleRibs, verified live: Luzern-Vitznau EV/SBB-EV), warning kept even when endpoints are absent; tests/vehicle.mjs" },
+
+  // The change-slack half is served (gap mechanic + prognosis-first platform
+  // rows including the ARRIVAL platform); nothing claims lifts, ramps or
+  // luggage space, and the step-free class is a decided refusal.
+  "constraints/heavy-luggage":        { status: "PARTIAL",     step: "decide", evidence: "feature: gap mechanic shows which change has slack (harold-4 class) and pfrow shows departure AND arrival platform, prognosis first; residual = no lift/ramp/luggage-space claim -- the physical half falls under the step-free refusal's data gap" },
+  // Measured, not assumed: the API silently IGNORES its bike param (app.js
+  // 1050, tested alongside direct/accessibility/sleeper), the mode filter
+  // cannot express it, and nothing in the app claims bike carriage. A cyclist
+  // gets no signal at all -- not even a refusal.
+  "constraints/bike-carriage":        { status: "LEFT_BEHIND", step: "plan",   evidence: "measured (app.js transport-mode filter comment): the API ignores bike= silently; no UI, no claim, no caveat anywhere -- a passenger with a bike cannot even find out that the app cannot answer" },
+
+  // who: ruled by each persona's DISTINGUISHING need, same move as
+  // parent-pram/wheelchair-user -> step-free. Three fare-class personas
+  // (halbtax, seven25-age teens, student discounts) go REFUSED under the
+  // fares policy -- covers extended in refusals.json 2026-08-05, flagged to
+  // the operator rather than silently: extending a decided refusal to new
+  // values is a policy edit, made because the defining need is literally
+  // discount PRICES, the thing policy-w30 refuses to claim.
+  "who/commuter":                     { status: "SERVED",      step: "input",  evidence: "feature: route history -- 6 direction-distinct routes recorded automatically, one tap fills both ends and re-plans (route-history.mjs); arrive-by walks its own axis (pager.mjs)" },
+  "who/night-shift-worker":           { status: "SERVED",      step: "decide", evidence: "feature: night board ('still moving tonight', 04:30 cutoff, honest empty verdict naming what it cannot see) + jlh last-way-home line and per-card rib + stranding rib; SN night-net rides the proven weekend feed" },
+  "who/hiker":                        { status: "SERVED",      step: "plan",   evidence: "feature: wander tab whose candidate filter requires ride out + real dwell + ride BACK inside the budget (tests/wander.mjs plants negatives on every clause), summit day strip, golden-hour, scenic badges, 7-day outlook" },
+  "who/business-traveller":           { status: "SERVED",      step: "plan",   evidence: "feature: arrive-by on its own axis, prognosis-first platform rows with change warnings, train-sub-category filter (train-class.mjs), meet-in-the-middle for the client-city case (meet.mjs)" },
+  "who/tourist-foreign":              { status: "PARTIAL",     step: "input",  evidence: "feature: exonyms resolve (phrasing/foreign-language SERVED), device-zone echo under the times when the phone is abroad (tzecho), tz-input Swiss boundary fixed 2026-07-30; residual = English 'Zurich Airport' returns hotels (phrasing row) and fares/tickets are a decided refusal" },
+  "who/retiree-halbtax":              { status: "REFUSED",     step: "decide", evidence: "policy-w30 fares class, covers extended 2026-08-05: the persona's defining need is discounted PRICES, which the app refuses to claim; zone names shipped instead" },
+  "who/teen":                         { status: "REFUSED",     step: "decide", evidence: "policy-w30 fares class, covers extended 2026-08-05: seven25/discount fares are the distinguishing need; the night-home half is separately served (night board, jlh)" },
+  "who/student":                      { status: "REFUSED",     step: "decide", evidence: "policy-w30 fares class, covers extended 2026-08-05: same discount-fare need as retiree-halbtax/teen" },
+
+  "purpose/work-commute":             { status: "SERVED",      step: "plan",   evidence: "feature: same substrate as who/commuter -- route history one-tap re-plan + arrive-by pager; the daily pair is literally the feature's design case (route-history.mjs)" },
+  "purpose/day-trip":                 { status: "SERVED",      step: "plan",   evidence: "feature: wander cards are out/dwell/back with a slow-return warning (return >150% of outbound is named on the card), summit day strip turns a weekday into one tap, 7-day outlook vetoes the day" },
+  "purpose/hospital-appointment":     { status: "SERVED",      step: "plan",   evidence: "feature: arrive-by walks arrivals on their own axis (segArr + isArrivalTime=1, pager.mjs), tight-change ribs warn where the slack is thin, platform prognosis first -- the be-there-by-10 case is the arrive-by design case" },
+  "purpose/concert":                  { status: "SERVED",      step: "decide", evidence: "feature: the need is the way HOME after -- jlh top line + per-card rib, night board with honest empty verdict, stranding rib (journey-anchor.mjs, last-home.mjs)" },
+  "purpose/shopping":                 { status: "SERVED",      step: "plan",   evidence: "baseline: an ordinary daytime return journey exercises nothing this table has not already ruled -- weekend schedule SERVED (measured), route history for the habitual trip; no shopping-specific claim is made or needed" },
+  "purpose/visiting-friend":          { status: "SERVED",      step: "plan",   evidence: "feature: share-route deep links built for exactly this exchange (WhatsApp-first, stale-clock and ghost-plan hygiene, share-route.mjs) + meet-in-the-middle with fairness math (meet.mjs) + route history for the repeat visit" },
+  // Corridor-dependent, and the probe caught it: Milano and Paris answer
+  // same-day with 4 rows each; München answered an 08:00 ask with 16:05 as
+  // the FIRST offer, then rows on the NEXT TWO DAYS -- which the card
+  // renderer shows with no day marker (the midnight-crossing residual,
+  // compounding). No through-fare claim (fares refused).
+  "purpose/international-connection": { status: "PARTIAL",     step: "plan",   evidence: "probe-conditions: Zürich->Milano and ->Paris clean (n=4 same-day); ->München returns 16:05 for an 08:00 ask then next-day rows, rendered without a day marker; residual = uneven cross-border coverage with no caveat in the app, and fares are a decided refusal" },
+
   // LEFT_BEHIND. "8001" and "6003" return city QUARTERS -- Zürich Altstadt,
   // Luzern Hirschmatt -- which carry id: null and are not stops. "3000" appears
   // to work only because Bern's main station is called "Bern": the postcode was

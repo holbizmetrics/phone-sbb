@@ -15,7 +15,15 @@
     "phrasing/colloquial-place":         { "state": "undecided" },
     "phrasing/landmark-not-station":     { "state": "undecided" },
     "phrasing/abbreviation":             { "state": "undecided" },
-    "phrasing/zip-code":                 { "state": "undecided" }
+    "phrasing/zip-code":                 { "state": "undecided" },
+
+    "conditions/midnight-crossing":      { "state": "undecided" },
+    "conditions/storm-weather":          { "state": "undecided" },
+    "constraints/heavy-luggage":         { "state": "undecided" },
+    "constraints/bike-carriage":         { "state": "undecided" },
+    "who/tourist-foreign":               { "state": "undecided" },
+    "purpose/international-connection":  { "state": "undecided" }
   },
+  "comment-2026-08-05": "The six rows above were adjudicated together on 2026-08-05 (the last 22 axis values) and are genuinely undecided -- measured or repo-grounded the same day, no decision yet taken on any. Two share one candidate fix: midnight-crossing and international-connection both come down to cards rendering hhmm() with no day marker, so one day-boundary tag on the card would move both. bike-carriage is the sharpest: the passenger cannot even learn that the app cannot answer -- a one-line honest caveat OR a refusals.json entry (policy call, operator's) would each be better than the current silence.",
   "comment-phrasing-2026-07-31": "The seven phrasing rows were adjudicated together on 2026-07-31 and are all genuinely undecided: they were measured the same hour and nobody has ruled on what to do about them. Recording them as parked-with-reason would be inventing a decision nobody took. Six of the seven share ONE root cause -- locations() renders API rows with id:null (businesses, addresses, city quarters) as tappable station suggestions, while nearbyStops() in the same file already filters exactly those out -- so one fix moves most of this block at once. See the phrasing header in axes.mjs and tests/passengers/phrasing-evidence.json."
 }

@@ -7,8 +7,9 @@
     { "id": "occupancy",  "covers": ["conditions/crowded"],
       "decided": "2026-W30", "why": "occupancy forecasts are unverifiable marketing-grade data",
       "policy_ref": { "file": "UNSOLVED-GAPS.md", "section": "4.1 Occupancy" } },
-    { "id": "fares",      "covers": ["constraints/cheapest-fare"],
+    { "id": "fares",      "covers": ["constraints/cheapest-fare", "who/retiree-halbtax", "who/teen", "who/student"],
       "decided": "2026-W30", "why": "prices unverifiable; zone NAMES shipped instead (checkable), validity claims refused",
+      "covers_extended": "2026-08-05: the three fare-class personas added -- their DEFINING need (halbtax/seven25/student discounts) is exactly the price claim this refusal declines. Same move as step-free covering parent-pram/wheelchair-user. Flagged to the operator in the sweep report; revert by removing the three who/ values if the personas are ruled to mean something else.",
       "policy_ref": { "file": "UNSOLVED-GAPS.md", "section": "4.2 Fares" } }
   ]
 }
