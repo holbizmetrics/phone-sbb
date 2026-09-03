@@ -13,12 +13,13 @@
 //     which is always 0. The suite runs, prints FAIL, and the step passes.
 //     (Imported class: a green signal is only worth its denominator.)
 import fs from "fs";
+import { fileURLToPath } from "url";   // .pathname is "/D:/..." on Windows; fs cannot open it
 
 let pass = 0, fail = 0;
 const chk = (n, c, d = "") => { if (c) { pass++; console.log("  ok   " + n); } else { fail++; console.log("  FAIL " + n + " :: " + d); } };
 
 const read = f => {
-  const p = new URL("../.github/workflows/" + f, import.meta.url).pathname;
+  const p = fileURLToPath(new URL("../.github/workflows/" + f, import.meta.url));
   try { return fs.readFileSync(p, "utf8"); }
   catch { throw new Error("HARNESS FAILED -- workflow not readable: " + p); }
 };
@@ -76,7 +77,7 @@ chk("control: the extracted steps really are the suite runners",
   }
   // Control: the glob's denominator is the real one -- every suite lives where
   // the glob looks, so "all of tests/*.mjs" is genuinely all of them.
-  const dir = new URL("../tests/", import.meta.url).pathname;
+  const dir = fileURLToPath(new URL("../tests/", import.meta.url));
   const onDisk = fs.readdirSync(dir).filter(f => f.endsWith(".mjs"));
   chk("control: there are suites on disk for the glob to find", onDisk.length >= 20, String(onDisk.length));
   chk("this suite is itself inside the glob's reach", onDisk.includes("workflow-parity.mjs"), "");

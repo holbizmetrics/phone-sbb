@@ -7,6 +7,7 @@
 // The rule: if a function paints state restored from localStorage, the boot
 // block has to call it. This asserts exactly that, and nothing else.
 import fs from "fs";
+import { fileURLToPath } from "url";   // .pathname is "/D:/..." on Windows; fs cannot open it
 import { src, APP } from "./_src.mjs";
 console.log("reading " + APP);
 
@@ -79,7 +80,7 @@ for (const [fn, state, deps] of [["renderFavs", "let favs=[];", []],
   const hits = src.split("\n").filter(l => l === STAMP).length;
   chk("the app carries exactly one BUILD-STAMP line", hits === 1, "found " + hits);
 
-  const ymlPath = new URL("../.github/workflows/deploy.yml", import.meta.url).pathname;
+  const ymlPath = fileURLToPath(new URL("../.github/workflows/deploy.yml", import.meta.url));
   const yml = fs.readFileSync(ymlPath, "utf8");
   // The workflow is YAML-in-shell-in-double-quotes; drop the escaping to compare.
   const bare = yml.replace(/\\(.)/g, "$1");

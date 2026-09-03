@@ -3,6 +3,7 @@
 // The generated population is the net; these specimens prove the net has no
 // holes where we already know the fish are.
 import fs from "fs";
+import { fileURLToPath } from "url";   // .pathname is "/D:/..." on Windows; fs cannot open it
 import { scoreScenario, shrink, reduceFinding } from "./passengers/rubric.mjs";
 import { ADJUDICATIONS, AXES, adjudicate } from "./passengers/axes.mjs";
 import { generate } from "./passengers/generate.mjs";
@@ -119,7 +120,7 @@ chk("every adjudication carries evidence -- ground truth is never bare",
 for (const r of refusals.refusals) {
   chk(`refusal '${r.id}' carries a policy_ref`, !!(r.policy_ref?.file && r.policy_ref?.section), JSON.stringify(r.policy_ref));
   if (r.policy_ref?.file) {
-    const p = new URL("../" + r.policy_ref.file, import.meta.url).pathname;
+    const p = fileURLToPath(new URL("../" + r.policy_ref.file, import.meta.url));
     const exists = fs.existsSync(p);
     chk(`refusal '${r.id}' policy file exists: ${r.policy_ref.file}`, exists, p);
     if (exists)
@@ -140,7 +141,7 @@ for (const r of refusals.refusals) {
 // suite is called in this repo -- so "no replan-from-here" resolves against
 // tests/replan-from-here.mjs, while "no data source" (prose) matches nothing.
 {
-  const suites = fs.readdirSync(new URL("./", import.meta.url).pathname).filter(f => f.endsWith(".mjs"));
+  const suites = fs.readdirSync(fileURLToPath(new URL("./", import.meta.url))).filter(f => f.endsWith(".mjs"));
   const staleCites = ev => [...ev.matchAll(/\bno ([a-z]+(?:-[a-z]+)+)\b/g)]
     .map(m => m[1]).filter(f => suites.includes(f + ".mjs"));
 
@@ -270,7 +271,7 @@ for (const [k, d] of Object.entries(ledger.dispositions)) {
   const a = JSON.stringify(generate(20260728, 50)), b = JSON.stringify(generate(20260728, 50));
   chk("same seed, same population (reproducible)", a === b);
   chk("different seed, different population", JSON.stringify(generate(7, 50)) !== a);
-  const popPath = new URL("./passengers/population.json", import.meta.url).pathname;
+  const popPath = fileURLToPath(new URL("./passengers/population.json", import.meta.url));
   chk("population.json is committed", fs.existsSync(popPath));
   if (fs.existsSync(popPath)) {
     const onDisk = JSON.parse(fs.readFileSync(popPath, "utf8"));

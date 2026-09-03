@@ -46,7 +46,7 @@ const ctx = {
   // guard, not about filtering, so the stub passes everything through -- but it
   // has to EXIST, or plainPlan throws before it ever reaches api().
   catSel: [], catFilter: cs => cs, catFilterNote: () => "", catWhyEmpty: () => "",
-  connCard: c => `CARD:${c.tag}`, wondersExpanderHTML: () => "",
+  connCard: c => `CARD:${c.tag}`, wondersExpanderHTML: () => "", toiletsExpanderHTML: () => "",   // both expanders are stubbed: they are DOM, not the race under test
   smartPlan: () => { throw new Error("smart path must not run in this test"); },
 };
 vm.createContext(ctx);

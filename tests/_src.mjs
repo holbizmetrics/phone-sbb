@@ -15,7 +15,10 @@
 import fs from "fs";
 import path from "path";
 
-export const APP = process.env.APP_HTML || new URL("../index.html", import.meta.url).pathname;
+import { fileURLToPath } from "url";
+
+// fileURLToPath, not .pathname: on Windows .pathname is "/D:/..." and fs cannot open it.
+export const APP = process.env.APP_HTML || fileURLToPath(new URL("../index.html", import.meta.url));
 const dir = path.dirname(APP);
 
 const inline = (m, ref, open, close) => {

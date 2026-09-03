@@ -110,6 +110,10 @@ Turn the toggle off any time for the plain, single-list view.
   are one glance apart. Climb and descent are counted separately: a journey
   down off a summit *descends*, and saying "climbs" there was worse than
   saying nothing.
+- **Toilets near here** — under the departure board and under a planned journey:
+  public toilets within 500 m from OpenStreetMap, nearest first, with fee,
+  wheelchair access and opening hours when the map knows them. An absent tag stays
+  absent; "the map lists none" is said as that, not as "there are none".
 - **Natural wonders near your destination** — peaks, glaciers, waterfalls,
   caves and viewpoints from OpenStreetMap, with a Wikipedia summary where a
   confident match exists.
@@ -232,7 +236,7 @@ Works identically on desktop and phone.
   | [transport.opendata.ch](https://transport.opendata.ch/) | departures, journeys, every intermediate stop, platforms, live prognosis |
   | [Open-Meteo](https://open-meteo.com/) forecast | weather at the departure and arrival hour |
   | Open-Meteo elevation | terrain height along the route |
-  | [Overpass](https://overpass-api.de/) / OpenStreetMap | peaks, glaciers, waterfalls, caves, viewpoints |
+  | [Overpass](https://overpass-api.de/) / OpenStreetMap | peaks, glaciers, waterfalls, caves, viewpoints, public toilets |
   | Wikipedia REST + geosearch | what that place is |
   | [data.sbb.ch](https://data.sbb.ch/) tarifverbundkarte + haltestelle-haltekante | which Tarifverbund each stop sits in (precomputed offline, shipped inline) |
 
@@ -258,6 +262,7 @@ node tests/mode-filter.mjs      # transport-mode filter — runs anywhere, no br
 node tests/route-history.mjs    # route chips — runs anywhere, no browser
 node tests/golden-hour.mjs      # arrive-before-sunset — runs anywhere, no browser
 node tests/enroute.mjs          # where to get off — runs anywhere, no browser
+node tests/toilets.mjs          # toilets near here — runs anywhere, no browser
 node tests/summit.mjs           # is it worth going up — runs anywhere, no browser
 node tests/storage-full.mjs     # a full phone must not kill the app — runs anywhere
 node tests/board-refresh.mjs    # the 30s refresh keeps its rows — runs anywhere

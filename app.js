@@ -395,8 +395,12 @@ async function loadBoard(name, quiet){
       restoreOpenDep();
     }else{
       const rows = lastBoard.map((j,i)=>depRow(j,i)).join("");
+      // toilets near THIS station: the board is where you are standing, which is
+      // the one place the question is urgent. The stationboard reply carries the
+      // coordinate, so this costs nothing until tapped.
       $("depOut").innerHTML = boardHeadHTML(disp) +
-        (rows || `<div class="empty"><div class="big">&#9788;</div>No departures right now.</div>`);
+        (rows || `<div class="empty"><div class="big">&#9788;</div>No departures right now.</div>`) +
+        toiletsExpanderHTML(d.station);
       wireBoardHead(disp);
       restoreOpenDep();
     }
@@ -1648,7 +1652,7 @@ async function plainPlan(){
     jrnConns = cs;   // render order == the ci the leg buttons index back into
     pgObserve(cs);   // did the step actually move? decided BEFORE the bar is built
     $("jrnOut").innerHTML = shareBarHTML() + pgNote() + viaNote() + catFilterNote(kept.length, raw.length)
-      + cs.map((c,i)=>connCard(c,i)).join("") + wondersExpanderHTML(cs[0].to?.station);
+      + cs.map((c,i)=>connCard(c,i)).join("") + toiletsExpanderHTML(cs[0].to?.station) + wondersExpanderHTML(cs[0].to?.station);
     if(weather) fillWeather();
   }catch(e){
     if(gen!==jrnGen) return;                                       // superseded
@@ -1904,7 +1908,10 @@ async function loadWonders(btn,lat,lon){
   const els=await overpass(lat,lon);
   // "we could not ask OSM" is not "OSM says there is nothing here" -- saying the
   // second when the first is true tells you a mountain range is empty.
-  if(els===null){ body.innerHTML=`<div class="wempty">Could not reach the map data just now. That is not the same as nothing being here &#8212; tap again to retry.</div>`; return; }
+  // On failure the panel must also UN-load itself: until 2026-09-03 the "tap again
+  // to retry" below was a promise the `loaded` flag above made impossible to keep
+  // within one render (the second tap returned at the first line).
+  if(els===null){ wrap.dataset.loaded=""; btn.classList.remove("open"); body.innerHTML=`<div class="wempty">Could not reach the map data just now. That is not the same as nothing being here &#8212; tap again to retry.</div>`; return; }
   const seen=new Set(), list=[];
   els.forEach(e=>{
     const t=e.tags||{};
@@ -1921,6 +1928,69 @@ async function loadWonders(btn,lat,lon){
   body.innerHTML=top.map((w,i)=>wonderCard(w,i)).join("");
   enrichWonders(top, body);   // Wikipedia layer fills in after
 }
+/* ---- Public toilets (OSM amenity=toilets) -- same Overpass client, same honesty rules ----
+   Operator ask 2026-09-03. The passenger ledger had parked "needs-toilet-en-route" on Overpass
+   cost; this is tap-to-load, so it costs nothing until asked, and it answers "near THIS
+   station", not the en-route residual (that row is left to the sweep's own judgment).
+   Sources considered: OSM via the client already here (CORS-open, carries fee / wheelchair /
+   opening_hours / access tags); the official opentransportdata.swiss "Toilets - Accessibility
+   (v2)" CSVs (per-stop wheelchair data, daily) are a second signal once their columns are
+   known -- not wired. */
+function overpassToilets(lat,lon){
+  return overpassQuery("wc:"+lat+","+lon,
+    `[out:json][timeout:25];(`
+    +`node(around:500,${lat},${lon})[amenity=toilets];`
+    +`way(around:500,${lat},${lon})[amenity=toilets];`
+    +`);out center 30;`);
+}
+// pure: OSM tags -> the one line under a toilet's name. Says only what the tags say;
+// an absent tag is absent, never "free" or "accessible" by default.
+function toiletMeta(t){
+  t=t||{};
+  const bits=[];
+  if(t.fee==="yes") bits.push(t.charge?"fee "+t.charge:"fee");
+  else if(t.fee==="no") bits.push("free");
+  if(t.wheelchair==="yes") bits.push("wheelchair ✓");
+  else if(t.wheelchair==="limited") bits.push("wheelchair limited");
+  else if(t.wheelchair==="no") bits.push("no wheelchair access");
+  if(t.changing_table==="yes") bits.push("changing table");
+  if(t.access==="customers") bits.push("customers only");
+  else if(t.access==="private") bits.push("private");
+  if(t.opening_hours) bits.push(t.opening_hours);
+  return bits.join(" · ");
+}
+function toiletName(t){ t=t||{}; return t.name || (t.operator ? t.operator+" toilets" : "Public toilets"); }
+function toiletsExpanderHTML(place){
+  if(!place||!place.coordinate) return "";
+  const lat=place.coordinate.x, lon=place.coordinate.y;   // transport.opendata.ch: x is LATITUDE
+  if(lat==null||lon==null) return "";
+  return `<div class="wonders"><button class="wtoggle" onclick="loadToilets(this,${lat},${lon})">`
+    +`${CP(0x1F6BB)} Toilets near ${esc(place.name||"here")}<span class="wchev">&#9662;</span>`
+    +`</button><div class="wbody"></div></div>`;
+}
+async function loadToilets(btn,lat,lon){
+  const wrap=btn.closest(".wonders"), body=wrap.querySelector(".wbody");
+  if(wrap.dataset.loaded) return;
+  wrap.dataset.loaded="1"; btn.classList.add("open");
+  body.innerHTML=`<div class="wloading">searching within 500&#8201;m&#8230;</div>`;
+  const els=await overpassToilets(lat,lon);
+  if(els===null){ wrap.dataset.loaded=""; btn.classList.remove("open"); body.innerHTML=`<div class="wempty">Could not reach the map data just now. That is not the same as there being no toilets &#8212; tap again to retry.</div>`; return; }
+  const list=[];
+  els.forEach(e=>{
+    const la=e.lat??e.center?.lat, lo=e.lon??e.center?.lon;
+    if(la==null||lo==null) return;
+    list.push({t:e.tags||{}, dist:haversineKm(+lat,+lon,la,lo), lat:la, lon:lo});
+  });
+  list.sort((a,b)=>a.dist-b.dist);
+  const top=list.slice(0,6);
+  if(!top.length){ body.innerHTML=`<div class="wempty">OpenStreetMap lists no toilets within 500&#8201;m. Larger stations usually have them even when the map does not say so &#8212; ask at the counter.</div>`; return; }
+  body.innerHTML=top.map(w=>`<div class="wcard"><div class="wmain"><span class="wemoji">${CP(0x1F6BB)}</span><span class="wname">${esc(toiletName(w.t))}</span>`
+    +`<span class="wmeta">${Math.round(w.dist*1000)}&#8201;m</span>`
+    +`<a class="wpin" href="https://www.google.com/maps/search/?api=1&query=${w.lat},${w.lon}" target="_blank" rel="noopener" title="Open in Maps">${CP(0x1F4CD)}</a></div>`
+    +(toiletMeta(w.t)?`<div class="wrich">${esc(toiletMeta(w.t))}</div>`:"")
+    +`</div>`).join("");
+}
+
 function wonderCard(w,i){
   // coord-based Maps link (NOT name) so the pin lands on the exact wonder, never a same-named place elsewhere
   const pin = (w.lat!=null&&w.lon!=null)
@@ -2371,7 +2441,7 @@ function renderSmart(base, swept, baseline, searching, reqErr, nKept, nRaw){
     + (searching?`<div class="shint">&#8987; searching wider routes&#8230;</div>`
                 :jrnZoneFact()+`<div id="jlh"></div>`)   // route-level facts, settled render only (one request per search, not per phase)
     + top.map((c,i)=>connCard(c,i)).join("")
-    + (searching?"":wondersExpanderHTML((base[0]||swept[0])?.to?.station));   // expander only on the settled render
+    + (searching?"":toiletsExpanderHTML((base[0]||swept[0])?.to?.station) + wondersExpanderHTML((base[0]||swept[0])?.to?.station));   // expanders only on the settled render
   if(weather) fillWeather();
 }
 
