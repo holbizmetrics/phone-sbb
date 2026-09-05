@@ -32,7 +32,7 @@ const DEPS = `
   function esc(s){ return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
   function hhmm(iso){ return iso ? String(iso).slice(11,16) : ""; }
   function parseDur(s){ return s || ""; }
-  function catColor(){ return "#456"; }
+  ${grab("catColor")}
 `;
 // stripLiveMarkers is injected FOR REAL, not stubbed: it is the thing under test
 // in the sketch checks below, and a stub would let the live marker through.
@@ -108,8 +108,20 @@ const doc = mkDoc()(mkRows()([DELAYED], () => "<svg class='x'></svg>"),
       !/sktrain/.test(live), live.slice(live.indexOf("sktrain") - 40, live.indexOf("sktrain") + 40));
     chk("...but the rest of the sketch survives -- the stops and lines are facts about the plan",
       /class="stop"/.test(live));
-    chk("the sketch's custom properties are DEFINED in the export -- an undefined var() makes the declaration invalid and the shape falls back to black",
-      /--txt:/.test(live) && /--card:/.test(live) && /--dim:/.test(live), "");
+    /* THE GENERAL INVARIANT, and it replaced a hand-written list of three names that
+       missed six. Any var() the document uses must be defined IN the document -- an
+       undefined one invalidates the whole declaration and the element renders with no
+       colour at all. Enumerating by hand is what shipped an export where every IC and
+       every S-train lost its badge and its polyline while buses were fine, because
+       --grn happened to be on the list and --blue did not. Do not turn this back into
+       a list. */
+    const used = new Set([...live.matchAll(/var\(\s*(--[a-z0-9-]+)\s*\)/gi)].map(m => m[1]));
+    const defined = new Set([...live.matchAll(/(--[a-z0-9-]+)\s*:/gi)].map(m => m[1]));
+    const missing = [...used].filter(v => !defined.has(v));
+    chk("CONTROL -- the document really does use var() colours, so the check below is not vacuous",
+      used.size >= 3, `only ${used.size} var() uses found; the scan broke, not the page`);
+    chk("every var() the exported document uses is DEFINED in it",
+      missing.length === 0, "undefined in the export: " + missing.join(", "));
     chk("...and the label class actually uses them, so carrying them is not decoration",
       /\.sklbl\{fill:var\(--txt\)/.test(live));
   }
@@ -134,6 +146,23 @@ const doc = mkDoc()(mkRows()([DELAYED], () => "<svg class='x'></svg>"),
 {
   const d = mkDoc()([], { from: "A", to: "B" });
   chk("no connections -> the document says so", /No connections were on screen/i.test(d));
+}
+// Every transport category, through the REAL catColor, into a real document.
+{
+  const cats = ["IC", "S", "R", "T", "IR", "B", "FUN"];   // FUN hits the fallback branch
+  const rows = cats.map((cat) => {
+    const c = JSON.parse(JSON.stringify(DELAYED));
+    c.sections[0].journey.category = cat;
+    return mkRows()([c], () => "")[0];
+  });
+  const d = mkDoc()(rows, { from: "A", to: "B" });
+  const used = new Set([...d.matchAll(/var\(\s*(--[a-z0-9-]+)\s*\)/gi)].map(m => m[1]));
+  const defined = new Set([...d.matchAll(/(--[a-z0-9-]+)\s*:/gi)].map(m => m[1]));
+  const missing = [...used].filter(v => !defined.has(v));
+  chk("CONTROL -- all seven categories really do reach the document",
+    cats.every((cat) => d.includes(">" + cat + " 8<") || d.includes(cat)), "");
+  chk("NO transport category loses its colour in the export -- six of catColor's seven branches return a var()",
+    missing.length === 0, "categories rendered colourless: " + missing.join(", "));
 }
 
 // ---- wiring: the button exists and calls the function ----------------------

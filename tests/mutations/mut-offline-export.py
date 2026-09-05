@@ -50,6 +50,15 @@ MUTANTS = [
     ("M5 the save error swallowed",
      'say("Could not save: "+((e && e.message) || "unknown"));',
      '/* swallowed */;'),
+
+    # M6 is the regression that actually shipped for one commit and was found by the
+    # operator opening a real export: the category palette hand-enumerated, missing
+    # the six var() names catColor can return. Every IC and every S-train lost its
+    # badge AND its polyline; buses survived only because --grn was on the list for
+    # an unrelated reason. Puts the short list back.
+    ("M6 the transport-category palette dropped from the exported :root",
+     "+ '   --red:#eb0000; --grn:#22c55e; --amber:#f59e0b; --blue:#3b82f6;\\n'",
+     "+ '   --grn:#22c55e;\\n'"),
 ]
 
 
