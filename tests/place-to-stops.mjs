@@ -75,6 +75,37 @@ const chk = (n, c, d = "") => { if (c) { pass++; console.log("  ok   " + n); } e
   chk("a bare name is NOT offered -- offering it would fail at tap time instead of now",
     pick([{ name: "Bundeshaus" }]) === null);
   chk("two fields is still not an address", pick([{ name: "Foo, Bern" }]) === null);
+
+  /* Two shapes arrive and the right one depends on what was typed. Type an
+     ADDRESS and the API returns the bare address FIRST, then every business
+     registered at it -- so taking the first 3-field row named a random tenant.
+     Measured live 2026-09-05: "Bahnhofstrasse 1 Zürich" came back labelled
+     "Bettwanzen bekämpfen Kanton Zürich" (a bedbug exterminator) and
+     "Giacomettistrasse 1 Bern" as "Schulverlag plus AG". Coordinates right --
+     same building -- but naming a stranger's business back at someone who typed
+     a street is answering a question they did not ask. */
+  {
+    const addressFirst = pick([
+      { name: "Zürich, Sihlfeldstr. 138 " },                       // the bare address
+      { name: "Promusig AG, Zürich, Sihlfeldstr. 138" },           // a tenant of it
+      { name: "Feuz, Beatrice, Zürich, Sihlfeldstr. 138" },        // another tenant
+    ]);
+    chk("a bare address WINS over the businesses registered at it",
+      addressFirst.label === "Sihlfeldstr. 138", JSON.stringify(addressFirst));
+    chk("...and it still geocodes as street-then-town", addressFirst.query === "Sihlfeldstr. 138, Zürich", addressFirst.query);
+    chk("...and a two-field row with NO house number stays un-offerable, which is the row station-lookup pins",
+      pick([{ name: "Zürich, Hauptbahnhof " }]) === null);
+    // The named case must not regress: with no bare-address row, the business is right.
+    chk("CONTROL -- with no bare address present, the business row is still used",
+      pick([{ name: "Promusig AG, Zürich, Sihlfeldstr. 138" }]).label === "Promusig AG");
+  }
+  {
+    const line = new Function(`${grab("placeLine")} return placeLine;`)();
+    chk("a bare address reads as address+town, not the same string twice",
+      line({ label: "Sihlfeldstr. 138", addr: "Sihlfeldstr. 138", town: "Zürich" }) === "Sihlfeldstr. 138, Zürich");
+    chk("...and a named business reads as name+address",
+      line({ label: "Promusig AG", addr: "Sihlfeldstr. 138", town: "Zürich" }) === "Promusig AG, Sihlfeldstr. 138");
+  }
   chk("no rows -> null, not a throw", pick([]) === null && pick(null) === null);
 }
 

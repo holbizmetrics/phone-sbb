@@ -45,8 +45,16 @@ MUTANTS = [
 
     ("M3 a two-field row accepted as an address",
      APP,
-     "    if(parts.length<3) continue;",
-     "    if(parts.length<2) continue;"),
+     "    if(parts.length>=3) seen.push(parts);",
+     "    if(parts.length>=1) seen.push(parts);"),
+
+    # Added after the operator opened a real export and asked why an address query
+    # named a stranger's business. Removing the bare-address branch is the state
+    # this feature actually shipped in for one commit.
+    ("M7 the bare-address row no longer wins over the businesses at that address",
+     APP,
+     "    if(parts.length===2 && /\\d/.test(parts[1]))",
+     "    if(false)"),
 
     # Added after the live run: the unit tests stubbed fetch and were perfectly
     # happy geocoding the row as it arrived, while the real service returned

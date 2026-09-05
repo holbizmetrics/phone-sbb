@@ -34,7 +34,10 @@ const DEPS = `
   function parseDur(s){ return s || ""; }
   function catColor(){ return "#456"; }
 `;
-const mkRows = () => new Function(`${DEPS} ${grab("offlineRows")} return offlineRows;`)();
+// stripLiveMarkers is injected FOR REAL, not stubbed: it is the thing under test
+// in the sketch checks below, and a stub would let the live marker through.
+const mkRows = () => new Function(
+  `${DEPS} ${grab("stripLiveMarkers")} ${grab("offlineRows")} return offlineRows;`)();
 const mkDoc  = () => new Function(`${DEPS} ${grab("offlineDoc")} return offlineDoc;`)();
 
 // A connection whose REAL times differ from its scheduled ones. This is the
@@ -95,6 +98,21 @@ const doc = mkDoc()(mkRows()([DELAYED], () => "<svg class='x'></svg>"),
   chk("the real time is in the document", doc.includes("14:13"));
   chk("the delay is shown", /\+11/.test(doc));
   chk("the sketch is inlined", doc.includes("<svg class='x'></svg>"));
+
+  /* The sketch is lifted out of the live page and brings two problems with it,
+     both found by the operator opening a real export (2026-09-05). */
+  {
+    const live = mkDoc()(mkRows()([DELAYED], () => '<svg><circle class="sktrain-halo" r="9"/>'
+      + '<circle class="sktrain" cx="1" cy="2" r="5"/><circle class="stop" r="3"/></svg>'), { from: "a", to: "b" });
+    chk("the LIVE train-position marker is stripped -- a pulsing dot pinned to where the train was at save time is the exact lie the banner denies",
+      !/sktrain/.test(live), live.slice(live.indexOf("sktrain") - 40, live.indexOf("sktrain") + 40));
+    chk("...but the rest of the sketch survives -- the stops and lines are facts about the plan",
+      /class="stop"/.test(live));
+    chk("the sketch's custom properties are DEFINED in the export -- an undefined var() makes the declaration invalid and the shape falls back to black",
+      /--txt:/.test(live) && /--card:/.test(live) && /--dim:/.test(live), "");
+    chk("...and the label class actually uses them, so carrying them is not decoration",
+      /\.sklbl\{fill:var\(--txt\)/.test(live));
+  }
 
   // The load-bearing one. Anything fetched at open time is exactly what will
   // not be there in a tunnel.

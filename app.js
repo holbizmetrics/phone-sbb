@@ -237,9 +237,31 @@ const placeCache = new Map();
    fewer is a bare name with no address in it and cannot be geocoded, so it is
    not offered rather than being offered and failing later. */
 function placeFromDropped(rows){
+  /* Two shapes arrive, and which one you want depends on what you typed.
+     Type a NAME ("Promusig") and you get one row: "NAME, TOWN, STREET NR".
+     Type an ADDRESS ("Sihlfeldstrasse 138") and you get the bare address FIRST
+     -- "TOWN, STREET NR" -- followed by every business registered at it.
+
+     Taking the first >=3-field row in the address case picks an arbitrary
+     tenant, which is how "Bahnhofstrasse 1 Zürich" came back labelled
+     "Bettwanzen bekämpfen Kanton Zürich" (a bedbug exterminator) and
+     "Giacomettistrasse 1 Bern" came back as "Schulverlag plus AG". The
+     coordinates were right in both -- it is the same building -- but naming a
+     random tenant back at someone who typed a street is the app answering a
+     question they did not ask. Measured 2026-09-05 across four queries.
+
+     So the bare address WINS when present. The discriminator is a digit in the
+     last field: "Zürich, Sihlfeldstr. 138" is an address, "Zürich, Hauptbahnhof"
+     is a two-field row with no house number and stays un-offerable, which is the
+     case station-lookup.mjs already pins. */
+  const seen=[];
   for(const r of rows||[]){
     const parts=(r.name||"").split(",").map(x=>x.trim()).filter(Boolean);
-    if(parts.length<3) continue;
+    if(parts.length===2 && /\d/.test(parts[1]))
+      return { query: parts[1] + ", " + parts[0], label: parts[1], town: parts[0], addr: parts[1] };
+    if(parts.length>=3) seen.push(parts);
+  }
+  for(const parts of seen){
     const town=parts[parts.length-2], addr=parts[parts.length-1];
     /* The geocoded string is "<street nr>, <town>" -- NOT the row as it arrived.
        MEASURED 2026-09-05, not assumed: the full row fails outright.
@@ -255,6 +277,16 @@ function placeFromDropped(rows){
     return { query: addr + ", " + town, label: parts[0], town, addr };
   }
   return null;
+}
+
+/* How a place READS, in one place, because the two shapes differ. A named
+   business wants "Promusig AG, Sihlfeldstr. 138" -- the name plus where it is.
+   A bare address has label === addr, so the same template would render
+   "Sihlfeldstr. 138, Sihlfeldstr. 138"; it wants the town as its second half
+   instead. Getting this wrong is not a crash, it is the app looking careless at
+   the exact moment it is showing off. */
+function placeLine(p){
+  return p.label === p.addr ? p.label + ", " + p.town : p.label + ", " + p.addr;
 }
 
 /* One request, cached. Returns {lat,lon} or null when the geocoder answered and
@@ -303,7 +335,7 @@ async function placeTapped(place, ac, onPick){
      closest stop is not always the best served, and the passenger comparing
      "314 m" against "383 m on a line that actually runs" is making a judgement
      no sort order can make for them. */
-  ac.innerHTML = `<div class="nearmsg">Stops near ${esc(place.label)}, ${esc(place.addr)}:</div>`
+  ac.innerHTML = `<div class="nearmsg">Stops near ${esc(placeLine(place))}:</div>`
     + stops.map(x=>`<div data-n="${esc(x.name)}"><span>&#9906;</span><span>${esc(x.name)}</span>`
         + (x.distance!=null?`<span class="pdist">${Math.round(x.distance)}&#8201;m</span>`:"") + `</div>`).join("");
   [...ac.children].filter(el=>el.dataset.n).forEach(el=>el.onclick=()=>{
@@ -354,7 +386,7 @@ function wireAC(inpId, acId, fieldId, onPick){
         head = `<div class="nearmsg">No station called &#8220;${esc(q)}&#8221;.`
              + (town ? ` The closest address match is in ${esc(town)}.` : "") + `</div>`
              + (pendingPlace ? `<div class="placerow" data-place="1"><span>&#9873;</span>`
-                 + `<span>${esc(pendingPlace.label)}, ${esc(pendingPlace.addr)}`
+                 + `<span>${esc(placeLine(pendingPlace))}`
                  + `<b>find the stops near this address</b></span></div>` : "")
              + (alt.length ? `<div class="nearmsg">&#8230;or a station in ${esc(town)}:</div>` : "");
         rows = alt;
@@ -1629,9 +1661,20 @@ function offlineRows(conns, sketchOf){
         };
       }),
       buffers: (c._chg||[]).map(function(x){ return { at:x.stn, mins:x.b, missed:!!x.missed }; }),
-      sketch: typeof sketchOf === "function" ? (sketchOf(i)||"") : ""
+      sketch: stripLiveMarkers(typeof sketchOf === "function" ? (sketchOf(i)||"") : "")
     };
   });
+}
+
+/* The route sketch carries a marker for where the train IS -- `.sktrain` with a
+   pulsing `.sktrain-halo`. In the live app that is the best thing on the sketch.
+   In a saved file it is a lie with an animation attached: it pins the position
+   the train held at save time and then pulses at you forever, which is precisely
+   what the banner at the top of the document exists to deny. So it is removed on
+   the way out. The stops, the lines and the labels are facts about the plan and
+   they stay; the moving dot is not. */
+function stripLiveMarkers(svg){
+  return (svg||"").replace(/<circle[^>]*class="sktrain(?:-halo)?"[^>]*\/>/g, "");
 }
 
 /* The document half. A complete standalone file: inline CSS, inline SVG, and no
@@ -1665,7 +1708,12 @@ function offlineDoc(rows, meta){
 + '<meta name="viewport" content="width=device-width,initial-scale=1">\n'
 + '<title>'+esc(m.from||"")+' \u2192 '+esc(m.to||"")+' \u2014 saved route</title>\n'
 + '<style>\n'
-+ ' :root{color-scheme:dark}\n'
++ ' :root{color-scheme:dark;\n'
++ '   /* The sketch is lifted out of the live page, and its classes colour themselves\n'
++ '      from these custom properties. Undefined, a var() makes the whole declaration\n'
++ '      invalid and the shape falls back to black -- which is how the first exported\n'
++ '      sketches came out as black blobs on a dark card. Carried, not re-derived. */\n'
++ '   --txt:#e6e6ec; --card:#15151b; --dim:#9a9aa6; --grn:#22c55e; --line:#26262f}\n'
 + ' body{margin:0;padding:16px;font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;\n'
 + '      background:#0b0b0d;color:#e6e6ec;max-width:720px}\n'
 + ' h1{font-size:19px;margin:0 0 2px}\n'
@@ -1686,7 +1734,10 @@ function offlineDoc(rows, meta){
 + ' .cx span{background:#20202a;border-radius:6px;padding:2px 7px}\n'
 + ' .cx .miss{background:#4a1d1d;color:#ffb4b4}\n'
 + ' .sk{margin-top:10px} .sk svg{width:100%;height:auto;display:block;overflow:visible}\n'
-+ ' .sklbl{fill:#e6e6ec;font-size:11px;font-weight:700} .snone{font-size:12px;opacity:.6}\n'
++ ' .sklbl{fill:var(--txt); font-size:11px; font-weight:700; paint-order:stroke;\n'
++ '   stroke:var(--card); stroke-width:3.5px; stroke-linejoin:round}\n'
++ ' .sklbl.chg{fill:var(--dim); font-weight:600}\n'
++ ' .snone{font-size:12px; opacity:.6}\n'
 + ' @media print{body{background:#fff;color:#000}.c{border-color:#bbb;background:#fff}\n'
 + '   .stamp{background:#fff;border-color:#000;color:#000}}\n'
 + '</style></head><body>\n'

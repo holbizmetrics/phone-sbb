@@ -142,7 +142,7 @@ async function typeInto(query, rowsImpl) {
   const locRows = async (q) => { if (!cache.has(q)) cache.set(q, await rowsImpl(q)); return cache.get(q); };
   const locations = async (q) => (await locRows(q)).stations;
   const fn = new Function("$", "debounce", "locations", "locRows", "townOf", "esc", "document", "nearMsg",
-    "placeFromDropped", "placeTapped",
+    "placeFromDropped", "placeTapped", "placeLine",
     `${grab("wireAC")} return wireAC;`)(
       (id) => els[id], (f) => f, locations, locRows,
       new Function(`${grab("townOf")} return townOf;`)(),
@@ -154,7 +154,8 @@ async function typeInto(query, rowsImpl) {
       // behavioural half of that guard (place-to-stops.mjs holds the structural
       // half). If a future edit moves the lookup into the debounced handler,
       // this count stops being zero and the suite goes red.
-      (...a) => { TAPPED.push(a); });
+      (...a) => { TAPPED.push(a); },
+      new Function(`${grab("placeLine")} return placeLine;`)());
   fn("i", "ac", "f", () => {});
   inp.value = query;
   await inp.handlers.input();
