@@ -199,6 +199,27 @@ answer is worse than an absent one:
   time, and **the deploy fails if the stamp doesn't apply** — a version marker
   that quietly stopped updating would be worse than none, because it would be
   believed. A copy you opened yourself says `dev`, which is the truth.
+- **Type a place, not a station.** The timetable's own lookup answers with shops,
+  hotels and street addresses as well as stops; they arrive without an id and are
+  dropped, correctly — a nail salon offered with a station glyph was a real defect.
+  But the dropped row reads `NAME, TOWN, STREET NR`, and until now the only thing
+  taken from it was the *town*. So typing a shop name got you that town's **famous**
+  stations: for a Zürich address, Zürich HB and Oerlikon and Stadelhofen, when the
+  stop you want may be 300 m from the door and on none of those lists. Right town,
+  wrong stations.
+  Now the address is offered as its own row. Tap it and the address is geocoded
+  (Nominatim/OSM), then the timetable is asked which stops are near *those*
+  coordinates — `nearbyStops()`, which has existed since **near me**. Distances are
+  printed rather than sorted-and-chosen: the nearest stop is not always the best
+  served, and comparing "307 m" against "412 m on a line that actually runs" is a
+  judgement no sort order can make for you.
+  **It fires on the tap and never while you type, and that is not politeness.**
+  Nominatim's usage policy forbids autocomplete outright — *"you must not implement
+  such a service"* — and the dropdown that would host it runs on every debounced
+  keystroke, so the forbidden implementation is also the obvious one. Two tests hold
+  that line: a structural one (the dropdown's code must never reach the geocoder)
+  and a behavioural one (a spy that must record zero calls while typing). A mutation
+  that moves the lookup into the keystroke path is planted, and both go red.
 - **Save offline** — next to *Share this route*. Writes the connections currently
   on screen to a single self-contained `.html` file: inline styles, the route
   sketch inlined as SVG, and **zero network references**, which is asserted by a
@@ -284,6 +305,7 @@ node tests/golden-hour.mjs      # arrive-before-sunset — runs anywhere, no bro
 node tests/enroute.mjs          # where to get off — runs anywhere, no browser
 node tests/toilets.mjs          # toilets near here — runs anywhere, no browser
 node tests/offline-export.mjs   # the saved .html is honest and self-contained — 28 checks
+node tests/place-to-stops.mjs   # address → coordinates → nearest stops, tap-only — 25 checks
 node tests/summit.mjs           # is it worth going up — runs anywhere, no browser
 node tests/storage-full.mjs     # a full phone must not kill the app — runs anywhere
 node tests/board-refresh.mjs    # the 30s refresh keeps its rows — runs anywhere

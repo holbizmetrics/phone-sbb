@@ -157,6 +157,12 @@
   .ac div:last-child{border-bottom:0}
   .ac div:active,.ac div.sel{background:var(--bg2)}
   .ac div .t{color:var(--faint); font-size:14px}
+  /* the address row: it is NOT a station, so it must not read like one -- the
+     flag glyph and the second line say what tapping it will do (one geocode),
+     which is also the only place in this app that reaches a third-party map. */
+  .ac .placerow{align-items:flex-start}
+  .ac .placerow b{display:block; font-weight:600; color:var(--blue); font-size:13px; margin-top:2px}
+  .ac .pdist{margin-left:auto; color:var(--faint); font-size:13px; font-variant-numeric:tabular-nums}
 
   .swap{display:flex; justify-content:center; margin:0 0 10px; position:relative; z-index:5}
   .swap button{width:38px; height:38px; border-radius:50%; border:1px solid var(--line); background:var(--card);

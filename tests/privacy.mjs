@@ -17,6 +17,7 @@ const ALLOWED = [
   "overpass-api.de",           // nearby places (OSM)
   "overpass.kumi.systems",     //   -- second mirror, same service
   "wikipedia.org",             // sights
+  "nominatim.openstreetmap.org", // address -> coordinates, ON TAP ONLY (see placeTapped)
 ];
 {
   // every https URL that appears in a FETCHABLE position: template literals and
@@ -27,12 +28,18 @@ const ALLOWED = [
   const unknown = [...new Set(urls)].filter(h =>
     !ALLOWED.some(a => h === a || h.endsWith("." + a.replace(/^www\./, ""))) &&
     !outboundLinks.includes(h));
-  chk("every network host is either one of the four named services or a named tap-to-open link",
+  chk("every network host is either one of the five named services or a named tap-to-open link",
     unknown.length === 0, "unlisted hosts: " + unknown.join(", "));
-  chk("the help text counts what the code does: exactly four services",
-    /exactly four services/.test(src) &&
+  chk("the help text counts what the code does: exactly five services",
+    /exactly five services/.test(src) &&
     /transport\.opendata\.ch/.test(src) && /Open-Meteo/.test(src) &&
-    /Overpass/.test(src) && /Wikipedia/.test(src), "");
+    /Overpass/.test(src) && /Wikipedia/.test(src) && /Nominatim/.test(src), "");
+  /* The count is not decoration. This pin is what turned a fifth service from a
+     silent addition into an edit of the sentence the user reads -- the suite
+     went red on the host list AND on the word "four" the moment the geocoder
+     landed, which is the whole design of this file. */
+  chk("the disclosure says the address lookup is tap-only, since that is the one request carrying something you typed",
+    /never while you type/.test(src) && /if you never tap it, it never runs/.test(src), "");
 }
 
 // ---- no tracker fingerprints ----

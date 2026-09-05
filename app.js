@@ -200,8 +200,120 @@ async function nearbyStops(lat,lon){
 }
 
 /* ---------- autocomplete ---------- */
+/* ---------- a PLACE is not a station, but it has an address ----------
+   The timetable's /locations answers with businesses, hotels and street
+   addresses as well as stops, and those arrive with id:null. locRows() drops
+   them, correctly -- a nail salon offered with a station glyph was a real
+   defect. But the dropped row is not junk: it is formatted "NAME, TOWN,
+   STREET NR", and until now the only thing read out of it was the TOWN.
+
+   That left the app answering the wrong question. Typing a shop name got you
+   the town's FAMOUS stations -- for a Zurich address, Zürich HB and Oerlikon
+   and Stadelhofen -- when the stop you actually want may be 300 m from the door
+   and on none of those lists. Right town, wrong stations.
+
+   So: geocode the address the row already carries, then ask the timetable which
+   stops are near THOSE coordinates, using nearbyStops() which has existed and
+   been used since the near-me feature.
+
+   WHY THIS IS ON A TAP AND NOT ON TYPING, and it is not politeness:
+   Nominatim's usage policy forbids autocomplete outright -- "this is not yet
+   supported by Nominatim and you must not implement such a service" -- with a
+   1 req/s ceiling and a ban for abuse. wireAC's dropdown runs on every
+   debounced keystroke, and the dropped row it reads is computed RIGHT THERE, so
+   geocoding at that point is both the obvious implementation and the forbidden
+   one. It fires on an explicit tap, once, cached -- the same tap-to-load shape
+   the toilets panel already uses for Overpass.
+
+   Identification: a browser cannot set User-Agent from fetch (it is a forbidden
+   header), so we rely on the Referer the deployed page sends, which the policy
+   accepts as the alternative. A copy opened from file:// sends neither; that is
+   a dev-only case and it degrades to a failed lookup, which is reported as one. */
+const NOMINATIM = "https://nominatim.openstreetmap.org/search";
+const placeCache = new Map();
+
+/* The best dropped row to offer, or null. The shape is the same one townOf
+   reads: "NAME, TOWN, STREET NR" -- three comma fields or more. A row with
+   fewer is a bare name with no address in it and cannot be geocoded, so it is
+   not offered rather than being offered and failing later. */
+function placeFromDropped(rows){
+  for(const r of rows||[]){
+    const parts=(r.name||"").split(",").map(x=>x.trim()).filter(Boolean);
+    if(parts.length<3) continue;
+    const town=parts[parts.length-2], addr=parts[parts.length-1];
+    /* The geocoded string is "<street nr>, <town>" -- NOT the row as it arrived.
+       MEASURED 2026-09-05, not assumed: the full row fails outright.
+         "Promusig AG, Zürich, Sihlfeldstr. 138" -> no result
+         "Sihlfeldstr. 138, Zürich"              -> 47.3788, 8.5163 (Promusig itself)
+         "SRG SSR, Bern, Giacomettistr. 1"       -> no result
+         "Giacomettistr. 1, Bern"                -> 46.9437, 7.4736
+       Two specimens, both directions: the business name glued in front of an
+       address defeats the parser every time, and reordering to street-then-town
+       rescues it every time. This was found by RUNNING the chain -- the unit
+       tests stub fetch, so they were green while the live service returned
+       nothing, which is the ships-green-never-runs shape exactly. */
+    return { query: addr + ", " + town, label: parts[0], town, addr };
+  }
+  return null;
+}
+
+/* One request, cached. Returns {lat,lon} or null when the geocoder answered and
+   knew nothing -- and THROWS when the request itself failed. Those are two
+   different next moves for the passenger ("this address is not on the map" vs
+   "try again"), and collapsing them is the absence-rendered-as-data defect this
+   file keeps having to fix. */
+async function geocodePlace(q){
+  if(placeCache.has(q)) return placeCache.get(q);
+  const url = NOMINATIM + "?format=jsonv2&limit=1&q=" + encodeURIComponent(q);
+  const res = await fetch(url);
+  if(!res.ok) throw new Error("HTTP " + res.status);          // caller distinguishes this
+  const d = await res.json();
+  const hit = Array.isArray(d) && d[0] && isFinite(+d[0].lat) && isFinite(+d[0].lon)
+    ? { lat:+d[0].lat, lon:+d[0].lon } : null;
+  placeCache.set(q, hit);                                      // a known-nothing is worth caching too
+  return hit;
+}
+
+/* The tap handler. Deliberately its OWN top-level function and not a closure
+   inside wireAC: tests assert that wireAC's body never calls geocodePlace, which
+   is the structural guard that keeps this off the keystroke path. */
+async function placeTapped(place, ac, onPick){
+  ac.innerHTML = `<div class="nearmsg">Looking up ${esc(place.label)}&#8230;</div>`;
+  ac.classList.add("show");
+  let hit;
+  try{ hit = await geocodePlace(place.query); }
+  catch(e){
+    ac.innerHTML = `<div class="nearmsg">Could not reach the map to place ${esc(place.label)} `
+                 + `&#8212; this is not &#8220;address unknown&#8221;, try again in a moment.</div>`;
+    return;
+  }
+  if(!hit){
+    ac.innerHTML = `<div class="nearmsg">The map does not know ${esc(place.addr)} in ${esc(place.town)}. `
+                 + `Pick a station instead.</div>`;
+    return;
+  }
+  let stops;
+  try{ stops = await nearbyStops(hit.lat, hit.lon); }
+  catch(e){ ac.innerHTML = `<div class="nearmsg">Found the address, but the stop lookup failed &#8212; try again.</div>`; return; }
+  if(!stops.length){
+    ac.innerHTML = `<div class="nearmsg">No stop found near ${esc(place.addr)}.</div>`;
+    return;
+  }
+  /* Nearest first, but the distance is PRINTED rather than decided on: the
+     closest stop is not always the best served, and the passenger comparing
+     "314 m" against "383 m on a line that actually runs" is making a judgement
+     no sort order can make for them. */
+  ac.innerHTML = `<div class="nearmsg">Stops near ${esc(place.label)}, ${esc(place.addr)}:</div>`
+    + stops.map(x=>`<div data-n="${esc(x.name)}"><span>&#9906;</span><span>${esc(x.name)}</span>`
+        + (x.distance!=null?`<span class="pdist">${Math.round(x.distance)}&#8201;m</span>`:"") + `</div>`).join("");
+  [...ac.children].filter(el=>el.dataset.n).forEach(el=>el.onclick=()=>{
+    ac.classList.remove("show"); onPick(el.dataset.n);
+  });
+}
+
 function wireAC(inpId, acId, fieldId, onPick){
   const inp=$(inpId), ac=$(acId), field=$(fieldId);
+  let pendingPlace=null;          // the address row currently on offer, if any
   const run = debounce(async ()=>{
     const q=inp.value.trim();
     field.classList.toggle("has", q.length>0);
@@ -231,11 +343,20 @@ function wireAC(inpId, acId, fieldId, onPick){
            survived the whole suite. An untestable line that protects nothing is
            worse than no line -- it reads like a defence. The `town ?` guard is
            real: without it a null town is looked up as a query. */
-        const town = townOf((await locRows(q)).dropped);
+        const droppedRows = (await locRows(q)).dropped;
+        const town = townOf(droppedRows);
+        /* The address row, offered as a TAP. No request is made here -- see the
+           policy note above placeFromDropped: geocoding inside this debounced
+           handler is exactly the autocomplete use Nominatim forbids. */
+        pendingPlace = placeFromDropped(droppedRows);
         const alt = town ? await locations(town) : [];
-        if(!alt.length){ nearMsg(ac, `No station matches &#8220;${esc(q)}&#8221;.`); return; }
-        head = `<div class="nearmsg">No station called &#8220;${esc(q)}&#8221;. `
-             + `The closest address match is in ${esc(town)} &#8212; stations there:</div>`;
+        if(!alt.length && !pendingPlace){ nearMsg(ac, `No station matches &#8220;${esc(q)}&#8221;.`); return; }
+        head = `<div class="nearmsg">No station called &#8220;${esc(q)}&#8221;.`
+             + (town ? ` The closest address match is in ${esc(town)}.` : "") + `</div>`
+             + (pendingPlace ? `<div class="placerow" data-place="1"><span>&#9873;</span>`
+                 + `<span>${esc(pendingPlace.label)}, ${esc(pendingPlace.addr)}`
+                 + `<b>find the stops near this address</b></span></div>` : "")
+             + (alt.length ? `<div class="nearmsg">&#8230;or a station in ${esc(town)}:</div>` : "");
         rows = alt;
       }
       ac.innerHTML = head + rows.slice(0,7).map(x=>
@@ -245,6 +366,11 @@ function wireAC(inpId, acId, fieldId, onPick){
       [...ac.children].filter(el=>el.dataset.n).forEach(el=>el.onclick=()=>{
         inp.value=el.dataset.n; ac.classList.remove("show");
         field.classList.add("has"); onPick(el.dataset.n);
+      });
+      // the address row: one geocode, on this tap, never on a keystroke
+      const prow=[...ac.children].find(el=>el.dataset.place);
+      if(prow && pendingPlace) prow.onclick=()=>placeTapped(pendingPlace, ac, (n)=>{
+        inp.value=n; field.classList.add("has"); onPick(n);
       });
     }catch(e){
       const m=/^HTTP (\d+)/.exec((e&&e.message)||"");

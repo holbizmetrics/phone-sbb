@@ -90,9 +90,13 @@
       <div class="hnote" id="privacy">
         No account, no ads, no analytics, no cookies. Your favourites, routes and the pinned
         journey live in this browser&#8217;s own storage and never leave the phone. The app talks to
-        exactly four services, each with only what the question needs: station names and times to
+        exactly five services, each with only what the question needs: station names and times to
         <b>transport.opendata.ch</b>, coordinates to <b>Open-Meteo</b> (weather), <b>Overpass/OSM</b>
-        (nearby places), and <b>Wikipedia</b> (sights); links to maps, webcams or a second forecast
+        (nearby places), <b>Wikipedia</b> (sights), and &#8212; only when you tap an address row in the
+        destination list &#8212; that one address to <b>Nominatim/OSM</b> to turn it into coordinates.
+        That last one is the only request that carries a place you typed rather than a station name, it
+        happens once per tap and never while you type, and if you never tap it, it never runs;
+        links to maps, webcams or a second forecast
         open in a new tab &#8212; what you do there is between you and them. Your location is read
         only in the moment you tap &#128205;, and is sent nowhere except that one nearest-stop
         lookup. There is nothing to log in to because there is nothing about you here.

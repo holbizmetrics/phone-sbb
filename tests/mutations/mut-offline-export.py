@@ -60,7 +60,7 @@ def run_suite():
 
 
 def main():
-    original = APP.read_text(encoding="utf-8")
+    original = APP.read_bytes().decode("utf-8")
 
     # Control first: the suite must be GREEN before any mutant, or a red result
     # below proves nothing about the mutant.
@@ -78,7 +78,7 @@ def main():
                 print(f"  ANCHOR  {name}: appears {n} times, expected exactly 1 -- "
                       f"the mutant cannot be placed unambiguously")
                 continue
-            APP.write_text(original.replace(find, replace, 1), encoding="utf-8")
+            APP.write_bytes(original.replace(find, replace, 1).encode("utf-8"))
             rc = run_suite()
             if rc != 0:
                 caught += 1
@@ -86,12 +86,12 @@ def main():
             else:
                 print(f"  SURVIVED {name}  <- the suite does not cover this")
     finally:
-        APP.write_text(original, encoding="utf-8")
+        APP.write_bytes(original.encode("utf-8"))
 
     print(f"\nmutation score: {caught}/{len(MUTANTS)} caught")
     # Restoration is itself checked: a mutation run that leaves the tree dirty
     # is worse than one that never ran.
-    if APP.read_text(encoding="utf-8") != original:
+    if APP.read_bytes().decode("utf-8") != original:
         print("RESTORE FAILED -- app.js is not back to its original content")
         return 1
     print("app.js restored, suite green again" if run_suite() == 0 else "RESTORE LEFT THE SUITE RED")

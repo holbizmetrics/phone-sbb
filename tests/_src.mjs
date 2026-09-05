@@ -32,4 +32,13 @@ const inline = (m, ref, open, close) => {
 
 export const src = fs.readFileSync(APP, "utf8")
   .replace(/<link rel="stylesheet" href="([^"]+)"[^>]*>/g, (m, h) => inline(m, h, "<style>", "</style>"))
-  .replace(/<script src="([^"]+)"><\/script>/g, (m, s) => inline(m, s, "<script>", "</script>"));
+  .replace(/<script src="([^"]+)"><\/script>/g, (m, s) => inline(m, s, "<script>", "</script>"))
+  // Line endings are normalised AFTER assembly, not before. index.html and the
+  // files it references are read separately, so normalising the outer read alone
+  // leaves the inlined script carrying whatever git checked it out as. On Windows
+  // (core.autocrlf) that is CRLF, and four suites compare lines with === or with
+  // anchored regexes -- so they were green in CI on Linux and red on every Windows
+  // clone, for the whole life of the repo. Verified against a pristine clone at
+  // 06ca0ab before anything else was changed. A browser does not care about CR
+  // either, and this file exists to show the tests what the browser sees.
+  .replace(/\r\n/g, "\n");

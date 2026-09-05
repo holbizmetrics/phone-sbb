@@ -142,16 +142,26 @@ async function typeInto(query, rowsImpl) {
   const locRows = async (q) => { if (!cache.has(q)) cache.set(q, await rowsImpl(q)); return cache.get(q); };
   const locations = async (q) => (await locRows(q)).stations;
   const fn = new Function("$", "debounce", "locations", "locRows", "townOf", "esc", "document", "nearMsg",
+    "placeFromDropped", "placeTapped",
     `${grab("wireAC")} return wireAC;`)(
       (id) => els[id], (f) => f, locations, locRows,
       new Function(`${grab("townOf")} return townOf;`)(),
       new Function(`${grab("esc")} return esc;`)(),
-      doc, new Function(`${grab("nearMsg")} return nearMsg;`)());
+      doc, new Function(`${grab("nearMsg")} return nearMsg;`)(),
+      new Function(`${grab("placeFromDropped")} return placeFromDropped;`)(),
+      // A SPY, not the real thing. Typing must never reach the geocoder --
+      // Nominatim forbids autocomplete outright -- and this counter is the
+      // behavioural half of that guard (place-to-stops.mjs holds the structural
+      // half). If a future edit moves the lookup into the debounced handler,
+      // this count stops being zero and the suite goes red.
+      (...a) => { TAPPED.push(a); });
   fn("i", "ac", "f", () => {});
   inp.value = query;
   await inp.handlers.input();
   return ac;
 }
+const TAPPED = [];   // every placeTapped call the harness saw -- must stay empty while typing
+
 // the common case: real stations, nothing discarded
 const only = (stations) => async () => ({ stations, dropped: [] });
 
@@ -206,6 +216,19 @@ const only = (stations) => async () => ({ stations, dropped: [] });
     /No station called .{0,8}Bundeshaus/i.test(fb.innerHTML), fb.innerHTML);
   chk("...and the heading is a message row, not a tappable station",
     /class="nearmsg"/.test(fb.innerHTML) && fb.children.every(c => !/address match/.test(c.dataset.n)), fb.innerHTML);
+  /* NEW 2026-09-05. The dropped row carries a street address, and until now the
+     only thing read out of it was the town -- so a shop name got you the town's
+     FAMOUS stations, which may be nowhere near the door. The address is now
+     offered as its own tappable row. It is deliberately NOT a `data-n` station
+     row: tapping it does not pick a destination, it starts a lookup. */
+  chk("...and the ADDRESS itself is offered as its own row, not just the town",
+    /class="placerow"/.test(fb.innerHTML) && /Giacomettistr\. 1/.test(fb.innerHTML), fb.innerHTML);
+  chk("...which says what tapping it will do, since it is the one row that reaches a third-party map",
+    /find the stops near this address/.test(fb.innerHTML), fb.innerHTML);
+  chk("...and it is NOT a selectable station row -- tapping it looks up, it does not choose",
+    fb.children.every(c => !(c.dataset.n && /Giacomettistr/.test(c.dataset.n))), fb.innerHTML);
+  chk("TYPING NEVER GEOCODES -- Nominatim forbids autocomplete, and this is the behavioural guard",
+    TAPPED.length === 0, `placeTapped was called ${TAPPED.length} time(s) during typing`);
 
   // NEGATIVE TWIN: with no address to read a town off there is nothing to offer,
   // and the app must go back to saying so rather than inventing a town.
@@ -227,8 +250,18 @@ const only = (stations) => async () => ({ stations, dropped: [] });
   });
   chk("a town identical to the query is not looked up a second time",
     calls === 1, `issued ${calls} lookups for the same string`);
-  chk("...and the passenger gets the honest no-match, not an empty fallback",
-    /No station matches/i.test(selfTown.innerHTML) && !/data-n=/.test(selfTown.innerHTML), selfTown.innerHTML);
+  /* CONTRACT CHANGED 2026-09-05, deliberately. This case used to end at "No
+     station matches" because the town lookup came back empty and there was
+     nothing else to say. There is now something else to say: the dropped row
+     carries "Something, Bern, Gasse 1", and that address is offerable even when
+     the town has no stations to list. What must NOT change is that no station
+     row is invented -- so the `data-n` assertion stands unaltered. */
+  chk("...still invents no station row when the town lookup came back empty",
+    !/data-n=/.test(selfTown.innerHTML), selfTown.innerHTML);
+  chk("...and says plainly that what you typed is not a station",
+    /No station called/i.test(selfTown.innerHTML), selfTown.innerHTML);
+  chk("...but now offers the address instead of dead-ending",
+    /class="placerow"/.test(selfTown.innerHTML) && /Gasse 1/.test(selfTown.innerHTML), selfTown.innerHTML);
 
   // ...but a town differing only in CASE is a different question, and is asked.
   const cased = await typeInto("bern", async (q) => q === "bern"
