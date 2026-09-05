@@ -1452,10 +1452,159 @@ function shareRoute(ev){
   } else copy();
 }
 const SHARE_LBL = "&#8599; Share this route";
+
+/* ---------- offline export: ONE self-contained .html, no dependency ----------
+   The case this exists for is not battery, it is NO SIGNAL. Swiss rail is
+   tunnels, and this app is dead without a connection -- it ships no service
+   worker at all (grep: serviceWorker 0, Blob 0, download 0 across every shipped
+   file, while fetch counts 29 in the same scan), so a journey you did not plan
+   before the bars went is one you cannot plan. A saved file opens in any browser
+   with the radio off.
+
+   Two rules the document must obey, both learned elsewhere in this file:
+
+   1. PROGNOSIS FIRST, exactly as connCard does. If the export read the
+      scheduled time while the card showed the real one, the file you carry into
+      the tunnel would disagree with the screen you saved it from -- the same
+      defect connCard's own comment records ("14:02" here, "14:02 +11" there).
+   2. IT MUST NOT LOOK LIVE. A snapshot rendered like the app is a lying
+      artifact: the times stop the moment it is written, and nothing in a static
+      file can know a train was later cancelled. The document stamps when it was
+      made and says outright that it does not update. */
+const OFFLINE_LBL = "&#11015; Save offline";
+
+/* The data half, kept clear of the DOM so a test can run it. Takes the raw
+   connections plus a sketch-producer and returns plain rows -- no globals, no
+   fetch, nothing to stub but the two arguments. */
+function offlineRows(conns, sketchOf){
+  return (conns||[]).map(function(c,i){
+    var dep = (c.from && c.from.prognosis && c.from.prognosis.departure) || (c.from && c.from.departure);
+    var arr = (c.to   && c.to.prognosis   && c.to.prognosis.arrival)     || (c.to   && c.to.arrival);
+    var dly = function(a,b){ return a&&b ? Math.round((new Date(a)-new Date(b))/60000) : 0; };
+    var secs = ((c.sections)||[]).filter(function(x){ return x.journey; });
+    return {
+      dep: dep, arr: arr,
+      depDelay: dly(c.from && c.from.prognosis && c.from.prognosis.departure, c.from && c.from.departure),
+      arrDelay: dly(c.to   && c.to.prognosis   && c.to.prognosis.arrival,     c.to   && c.to.arrival),
+      from: (c.from && c.from.station && c.from.station.name) || "",
+      to:   (c.to   && c.to.station   && c.to.station.name)   || "",
+      duration: c.duration || "",
+      platformDep: (c.from && c.from.prognosis && c.from.prognosis.platform) || (c.from && c.from.platform) || "",
+      platformArr: (c.to   && c.to.prognosis   && c.to.prognosis.platform)   || (c.to   && c.to.platform)   || "",
+      changes: c._chg ? c._chg.length : (c.transfers||0),
+      legs: secs.map(function(x){
+        return {
+          label: ((x.journey.category||"") + (x.journey.number ? " "+x.journey.number : "")).trim() || "\u00b7",
+          col: catColor(x.journey.category),
+          fromName: (x.departure && x.departure.station && x.departure.station.name) || "",
+          toName:   (x.arrival   && x.arrival.station   && x.arrival.station.name)   || "",
+          depTime: (x.departure && x.departure.prognosis && x.departure.prognosis.departure) || (x.departure && x.departure.departure) || "",
+          arrTime: (x.arrival   && x.arrival.prognosis   && x.arrival.prognosis.arrival)     || (x.arrival   && x.arrival.arrival)     || ""
+        };
+      }),
+      buffers: (c._chg||[]).map(function(x){ return { at:x.stn, mins:x.b, missed:!!x.missed }; }),
+      sketch: typeof sketchOf === "function" ? (sketchOf(i)||"") : ""
+    };
+  });
+}
+
+/* The document half. A complete standalone file: inline CSS, inline SVG, and no
+   network reference of any kind -- an external stylesheet or webfont would fail
+   to load in exactly the situation the file was saved for. */
+function offlineDoc(rows, meta){
+  var m = meta || {};
+  var t = function(iso){ return iso ? hhmm(iso) : "\u2014"; };
+  var dtag = function(n){ return n>0 ? ' <span class="d">+'+n+'\u2032</span>' : ""; };
+  var cards = (rows||[]).map(function(r){
+    return '<section class="c">'
+      + '<div class="hd"><span class="t">'+t(r.dep)+dtag(r.depDelay)+'</span>'
+      + '<span class="ar">\u2192</span><span class="t">'+t(r.arr)+dtag(r.arrDelay)+'</span>'
+      + '<span class="du">'+esc(parseDur(r.duration))+' \u00b7 '+r.changes+' change'+(r.changes===1?"":"s")+'</span></div>'
+      + '<div class="ep">'+esc(r.from)+' \u2192 '+esc(r.to)+'</div>'
+      + (r.platformDep ? '<div class="pf">Platform '+esc(r.platformDep)
+          + (r.platformArr ? ' \u00b7 arrives '+esc(r.platformArr) : "") + '</div>' : "")
+      + '<ol class="lg">' + r.legs.map(function(l){
+          return '<li><b style="background:'+esc(l.col)+'">'+esc(l.label)+'</b><span>'
+               + t(l.depTime)+' '+esc(l.fromName)+' \u2192 '+t(l.arrTime)+' '+esc(l.toName)+'</span></li>';
+        }).join("") + '</ol>'
+      + (r.buffers.length ? '<div class="cx">' + r.buffers.map(function(b){
+          return '<span class="'+(b.missed?"miss":"")+'">'+esc(b.at)+' '
+               + (b.missed ? "missed by "+(-b.mins) : b.mins+"\u2032")+'</span>';
+        }).join("") + '</div>' : "")
+      + (r.sketch ? '<div class="sk">'+r.sketch+'</div>' : "")
+      + '</section>';
+  }).join("");
+  return '<!doctype html>\n'
++ '<html lang="en"><head><meta charset="utf-8">\n'
++ '<meta name="viewport" content="width=device-width,initial-scale=1">\n'
++ '<title>'+esc(m.from||"")+' \u2192 '+esc(m.to||"")+' \u2014 saved route</title>\n'
++ '<style>\n'
++ ' :root{color-scheme:dark}\n'
++ ' body{margin:0;padding:16px;font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;\n'
++ '      background:#0b0b0d;color:#e6e6ec;max-width:720px}\n'
++ ' h1{font-size:19px;margin:0 0 2px}\n'
++ ' .stamp{background:#3a2a12;border:1px solid #6b4c1d;color:#f0d9a8;\n'
++ '        padding:10px 12px;border-radius:10px;margin:12px 0 18px;font-size:13px}\n'
++ ' .stamp b{color:#ffd88a}\n'
++ ' .c{background:#15151b;border:1px solid #26262f;border-radius:12px;padding:12px 14px;margin:0 0 12px}\n'
++ ' .hd{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}\n'
++ ' .t{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}\n'
++ ' .ar{opacity:.55} .du{margin-left:auto;font-size:13px;opacity:.75}\n'
++ ' .d{font-size:13px;color:#ff9f68;font-weight:700}\n'
++ ' .ep{font-size:13px;opacity:.75;margin:2px 0 8px}\n'
++ ' .pf{font-size:13px;margin:0 0 8px}\n'
++ ' .lg{list-style:none;margin:0;padding:0}\n'
++ ' .lg li{display:flex;gap:8px;align-items:baseline;margin:4px 0;font-size:13px}\n'
++ ' .lg b{color:#08080a;padding:1px 7px;border-radius:5px;font-size:12px;white-space:nowrap}\n'
++ ' .cx{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;font-size:12px}\n'
++ ' .cx span{background:#20202a;border-radius:6px;padding:2px 7px}\n'
++ ' .cx .miss{background:#4a1d1d;color:#ffb4b4}\n'
++ ' .sk{margin-top:10px} .sk svg{width:100%;height:auto;display:block;overflow:visible}\n'
++ ' .sklbl{fill:#e6e6ec;font-size:11px;font-weight:700} .snone{font-size:12px;opacity:.6}\n'
++ ' @media print{body{background:#fff;color:#000}.c{border-color:#bbb;background:#fff}\n'
++ '   .stamp{background:#fff;border-color:#000;color:#000}}\n'
++ '</style></head><body>\n'
++ '<h1>'+esc(m.from||"")+' \u2192 '+esc(m.to||"")+'</h1>\n'
++ '<div class="stamp"><b>This is a snapshot, not a live timetable.</b><br>\n'
++ ' Saved '+esc(m.savedAt||"")+(m.tz ? ' ('+esc(m.tz)+')' : "")+'. The times below were the best known\n'
++ ' <em>at that moment</em> and do not update. A train cancelled or re-platformed after this file was\n'
++ ' written will still look fine here \u2014 re-check online once you have signal.</div>\n'
++ (cards || '<p>No connections were on screen when this was saved.</p>')
++ '\n</body></html>';
+}
+
+/* The DOM half: gather what is on screen, build the file, hand it to the browser. */
+function saveOffline(ev){
+  var btn = ev && ev.currentTarget;
+  var say = function(msg){ if(btn){ btn.textContent=msg; setTimeout(function(){ btn.innerHTML=OFFLINE_LBL; },1800); } };
+  if(!jrnConns.length){ say("Nothing to save yet"); return; }
+  var now = new Date();
+  var rows = offlineRows(jrnConns, function(i){ return sketchSVG(i); });
+  var html = offlineDoc(rows, {
+    from: fromName, to: toName,
+    savedAt: now.toLocaleString(),
+    tz: (Intl.DateTimeFormat().resolvedOptions().timeZone || "")
+  });
+  var slug = function(x){ return (x||"route").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,28); };
+  var name = "rail-"+slug(fromName)+"-"+slug(toName)+"-"+now.toISOString().slice(0,10)+".html";
+  try{
+    var url = URL.createObjectURL(new Blob([html], {type:"text/html;charset=utf-8"}));
+    var a = document.createElement("a");
+    a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+    say("Saved \u2713");
+  }catch(e){
+    // Name it. A download that silently does nothing is indistinguishable from a
+    // button that was never wired -- the exact shape this repo keeps catching.
+    say("Could not save: "+((e && e.message) || "unknown"));
+  }
+}
+
 function shareBarHTML(){
   // the pager sits at the FAR LEFT of the row the share button already owns --
   // one bar for "what to do with this list", not a second panel
-  return `<div class="sharebar">${pgBarHTML()}<button type="button" class="shr" onclick="shareRoute(event)">${SHARE_LBL}</button></div>`;
+  return `<div class="sharebar">${pgBarHTML()}<button type="button" class="shr" onclick="shareRoute(event)">${SHARE_LBL}</button>`
+       + `<button type="button" class="shr" onclick="saveOffline(event)" title="Save these connections as one file that works with no signal">${OFFLINE_LBL}</button></div>`;
 }
 
 /* ---------- deep link: ?from=&to=[&via=][&at=][&mode=arr] ----------

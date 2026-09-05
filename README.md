@@ -199,6 +199,18 @@ answer is worse than an absent one:
   time, and **the deploy fails if the stamp doesn't apply** — a version marker
   that quietly stopped updating would be worse than none, because it would be
   believed. A copy you opened yourself says `dev`, which is the truth.
+- **Save offline** — next to *Share this route*. Writes the connections currently
+  on screen to a single self-contained `.html` file: inline styles, the route
+  sketch inlined as SVG, and **zero network references**, which is asserted by a
+  test rather than hoped for. The case is not battery, it is **no signal** —
+  Swiss rail is tunnels, and the app is otherwise dead without a connection. The
+  file opens in any browser with the radio off.
+  It stamps when it was saved and says, at the top, that it is **a snapshot and
+  does not update**. That line is load-bearing: a saved route rendered like the
+  live app would let a train cancelled after saving still read as fine, and a
+  file that lies is worse than no file. Times are taken **prognosis-first**, the
+  same rule the journey card uses, so the file cannot disagree with the screen
+  it was saved from.
 - **Installable** — "Add to Home Screen" for an app-like, full-screen feel.
 - **Dark and light** — dark is the default for everyone and it stays where
   you put it.
@@ -211,6 +223,14 @@ of that and this doesn't try to replace it — it's the thing you reach for in
 the ninety seconds before a train leaves. The zone ribbon is not an exception:
 naming the areas you cross is geography, and it stops one step short of the
 tariff question on purpose.
+
+**"No offline timetable" still holds, and *Save offline* is not an exception to
+it.** A saved file is one plan, frozen: the connections you had on screen, at the
+moment you pressed the button. You cannot look a *new* train up in it, it knows
+nothing that happened afterwards, and it will not answer a question you did not
+already ask. An offline timetable would be a copy of the network you can query
+without signal — that is a different artifact, it is not here, and this button is
+not a step toward it.
 
 ## Run it locally
 
@@ -263,6 +283,7 @@ node tests/route-history.mjs    # route chips — runs anywhere, no browser
 node tests/golden-hour.mjs      # arrive-before-sunset — runs anywhere, no browser
 node tests/enroute.mjs          # where to get off — runs anywhere, no browser
 node tests/toilets.mjs          # toilets near here — runs anywhere, no browser
+node tests/offline-export.mjs   # the saved .html is honest and self-contained — 28 checks
 node tests/summit.mjs           # is it worth going up — runs anywhere, no browser
 node tests/storage-full.mjs     # a full phone must not kill the app — runs anywhere
 node tests/board-refresh.mjs    # the 30s refresh keeps its rows — runs anywhere
