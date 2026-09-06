@@ -1575,7 +1575,10 @@ function errBox(e, unknown, again){
   if(m) return `<div class="err">The timetable service answered with an error (HTTP ${m[1]}), so we do not know ${what}.<br>This is not a &quot;no&quot; &#8212; try again in a moment.</div>`;
   return `<div class="err">We could not reach the timetable, so we do not know ${what}.<br>This is not a &quot;no&quot; &#8212; check your connection and ${retry}.</div>`;
 }
-function planJourney(){ return smart ? smartPlan() : plainPlan(); }
+function planJourney(opts){
+  if(!(opts && opts.keepMeet)) meetInvalidate();   // a new plan supersedes meeting points computed for the old pair
+  return smart ? smartPlan() : plainPlan();
+}
 
 /* ---------- share a route ----------
    What travels is the QUERY, never the result: timetables shift, so the
@@ -1832,6 +1835,26 @@ function applyDeepLink(){
    ever on the button tap -- never on render. */
 const MEET_FB = 4;
 let meetGen = 0, meetAbort = null, meetRows = [];
+let meetFor = null;   // {from,to} the rows on screen were computed for -- the pair, not whatever the fields say now
+
+/* The meeting points are DERIVED from the two fields, and nothing used to retract
+   them when the fields changed: run Meet for Luzern <-> Bern, type Zug into From,
+   plan -- and the Luzern <-> Bern cards stayed on screen with live "my leg / their
+   leg" buttons that would plan legs for a pair you had abandoned. Stale output with
+   actions attached, the same class as the onboard bar's frozen snapshot. Operator
+   named the class from a gut feeling 2026-09-06; this is the site it was true at.
+   Retraction is not silent: the hint names the pair the cards were for, because a
+   panel that simply vanishes is the app saying nothing. */
+function meetInvalidate(){
+  const out=$("meetOut"); if(!out) return;
+  if(!meetRows.length && !out.innerHTML) return;   // nothing on offer, nothing to retract
+  const was=meetFor;
+  meetGen++; if(meetAbort) meetAbort.abort();      // an in-flight meet is for the old pair too
+  meetRows=[]; meetFor=null;
+  out.innerHTML = was
+    ? `<div class="hint">Those meeting points were for ${esc(was.from)} &#8596; ${esc(was.to)} and the route changed &#8212; tap Meet in the middle again.</div>`
+    : "";
+}
 
 function connStops(c){
   // every station the journey actually calls at, with the clock time there.
@@ -1868,14 +1891,17 @@ function meetCardHTML(r, i){
 }
 
 function meetLeg(i, theirs){
-  const r = meetRows[i]; if(!r) return;
+  const r = meetRows[i]; if(!r || !meetFor) return;
   // planning THEIR leg swaps the From field to their origin -- an explicit
-  // tap, and the share bar in the resulting plan is how you send it to them
-  const f = theirs ? toName : fromName;
+  // tap, and the share bar in the resulting plan is how you send it to them.
+  // Origins come from meetFor, the pair the cards were computed for: after
+  // "my leg" the live fields already hold (me -> meeting point), so reading
+  // toName here would plan their leg FROM the meeting point.
+  const f = theirs ? meetFor.to : meetFor.from;
   fromName = f; toName = r.name;
   $("iFrom").value = f; $("iTo").value = r.name;
   $("fFrom").classList.add("has"); $("fTo").classList.add("has");
-  planJourney();
+  planJourney({ keepMeet: true });   // the one caller that is USING the cards, not abandoning them
 }
 
 async function meetMiddle(){
@@ -1956,6 +1982,7 @@ async function meetMiddle(){
     }
     rows.sort((a,b)=>a.gap-b.gap || (new Date(a.together)-new Date(b.together)));
     meetRows = rows.slice(0,3);
+    meetFor = { from: fromName, to: toName };
     out.innerHTML = fbNote + meetRows.map((r,k)=>meetCardHTML(r,k)).join("")
       + `<div class="hint">Fair = closest ride times, both leaving now. Tap a leg to plan it &#8212; the share bar sends it on.</div>`;
   }catch(e){
@@ -2348,6 +2375,7 @@ function layoverWalkM(b){
   return Math.min(1000, Math.round((b-LAYOVER_KEEP)/2*75));
 }
 function lpType(t){
+  if(t.amenity==="toilets")     return {e:CP(0x1F6BB),l:"toilets"};
   if(t.amenity==="cafe")        return {e:CP(0x2615), l:"caf\u00e9"};
   if(t.amenity==="restaurant")  return {e:CP(0x1F37D),l:"restaurant"};
   if(t.amenity==="ice_cream")   return {e:CP(0x1F366),l:"ice cream"};
@@ -2363,6 +2391,13 @@ function layoverSpots(lat,lon,r){
     `[out:json][timeout:12];(`
     +`node(around:${r},${lat},${lon})[amenity~"^(cafe|restaurant|ice_cream)$"][name];`
     +`node(around:${r},${lat},${lon})[shop=bakery][name];`
+    /* Toilets carry no [name] filter: OSM toilets are almost never named, and the
+       filter that keeps the café list honest would silently drop every one of
+       them. A 20-minute change is precisely when a passenger needs one, and this
+       panel already had the coordinate, the walk radius and the Overpass plumbing
+       -- it just never asked. (Found 2026-09-06 when the operator asked where the
+       toilets feature was; the destination expander exists, this moment had none.) */
+    +`node(around:${r},${lat},${lon})[amenity=toilets];`
     +`node(around:${r},${lat},${lon})[tourism~"^(viewpoint|museum)$"][name];`
     +`node(around:${r},${lat},${lon})[historic~"^(castle|monument)$"][name];`
     +`way(around:${r},${lat},${lon})[leisure=park][name];`
@@ -2371,17 +2406,31 @@ function layoverSpots(lat,lon,r){
 function layoverRows(els, lat, lon, r){
   const seen=new Set(), list=[];
   for(const e of els||[]){
-    const t=e.tags||{}; const name=t.name;
-    if(!name || seen.has(name)) continue;
+    const t=e.tags||{};
+    const wc = t.amenity==="toilets";
+    const name = wc ? toiletName(t) : t.name;   // toilets are nameless in OSM; give them the same synthetic name the destination expander uses
+    if(!name) continue;
     const la=e.lat??e.center?.lat, lo=e.lon??e.center?.lon;
     if(la==null||lo==null) continue;
+    /* Named spots dedupe on the name: two "Café Central" rows are one café. Toilets
+       dedupe on the COORDINATE, because every unnamed one shares the synthetic name
+       and name-dedupe would keep whichever Overpass happened to list first -- not
+       the nearest, since dedupe runs before the sort. */
+    const key = wc ? `wc@${(+la).toFixed(5)},${(+lo).toFixed(5)}` : name;
+    if(seen.has(key)) continue;
     const m=haversineKm(+lat,+lon,la,lo)*1000;
     if(m>r) continue;   // "around" is a circle over OSM geometry; re-check against OUR radius
-    seen.add(name);
-    list.push({name, ty:lpType(t), walk:Math.max(1,Math.ceil(m/75))});
+    seen.add(key);
+    list.push({name, ty:lpType(t), walk:Math.max(1,Math.ceil(m/75)), wc});
   }
   list.sort((a,b)=>a.walk-b.walk);
-  return list.slice(0,6);
+  const top=list.slice(0,6);
+  /* The shortlist is six, and six cafés can be nearer than the nearest toilet. On a
+     layover the toilet is the one row that is not optional, so the nearest one is
+     guaranteed a slot: it displaces the last entry rather than being crowded out. */
+  const nearestWc=list.find(x=>x.wc);
+  if(nearestWc && !top.includes(nearestWc)) top[top.length-1]=nearestWc;
+  return top;
 }
 async function layoverPOI(btn,ci,k){
   const x=jrnConns[ci]?._chg?.[k]; if(!x||!x.co) return;
@@ -3043,6 +3092,36 @@ function shortStop(n){
   s=s.split(",")[0].trim();                       // keep the place, drop the address tail
   return s.length>20 ? s.slice(0,19)+"…" : s;
 }
+/* A stop's longer short form: the first TWO comma fields ("Kloten, Bahnhof" ->
+   "Kloten Bahnhof"), for when the one-field form collides with a neighbour. */
+function shortStopLong(n){
+  const p=(n||"").split(",").map(x=>x.trim()).filter(Boolean);
+  const out = p.length>=2 ? p[0]+" "+p[1] : (p[0]||"");
+  return out.length>20 ? out.slice(0,19)+"…" : out;
+}
+/* Which vertices get a label, and what it says. Pulled out of sketchSVG so it can
+   be tested without a DOM, and because it had a bug that only shows on a real
+   route: the origin was deduped against the OTHER labels using its FULL name and
+   only shortened afterwards, so "Kloten, Zum Wilden Mann" and "Kloten, Bahnhof"
+   both passed the collision check and both rendered as "Kloten" -- two identical
+   labels on two different dots, on the operator's own exported route 2026-09-05.
+   Now every name is shortened BEFORE the check, and a collision falls back to the
+   two-field form ("Kloten Bahnhof") so the change station keeps a label that says
+   which Kloten it is. Two legs that genuinely end at the same stop still get one. */
+function sketchMarks(legs){
+  const marks=[{p:legs[0].pts[0], t:shortStop(legs[0].pts[0].name)}];
+  legs.forEach((l,i)=>{
+    const end=l.pts[l.pts.length-1];
+    let name=shortStop(end.name);
+    if(marks.some(m=>m.t===name)){
+      const longer=shortStopLong(end.name);
+      if(longer===name || marks.some(m=>m.t===longer)) return;   // the same stop, one label
+      name=longer;
+    }
+    marks.push({p:end, t:name, change:i<legs.length-1});
+  });
+  return marks;
+}
 function sketchSVG(ci){
   const legs=routePoints(ci);
   if(!legs) return `<div class="snone">No map data for this route.</div>`;
@@ -3068,13 +3147,7 @@ function sketchSVG(ci){
   });
   // Label the MEANINGFUL vertices: origin, every change station, destination.
   // Anonymous dots make a correct shape unreadable -- the changes are the story.
-  const marks=[{p:legs[0].pts[0], t:legs[0].pts[0].name}];
-  legs.forEach((l,i)=>{
-    const end=l.pts[l.pts.length-1];
-    const name=shortStop(end.name);
-    if(!marks.some(m=>m.t===name)) marks.push({p:end, t:name, change:i<legs.length-1});
-  });
-  marks[0].t=shortStop(marks[0].t);
+  const marks=sketchMarks(legs);
   // place each label on the side with room, and anchor so it never runs off-frame
   const placed=[];
   marks.forEach(m=>{

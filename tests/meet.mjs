@@ -56,7 +56,8 @@ const ctx = {
   _routes: [],
 };
 vm.createContext(ctx);
-new vm.Script(fnSrc + "\nthis.meetMiddle=meetMiddle; this.meetLeg=meetLeg; this.connStops=connStops; this.meetRow=meetRow;").runInContext(ctx);
+new vm.Script(fnSrc + "\nthis.meetMiddle=meetMiddle; this.meetLeg=meetLeg; this.connStops=connStops; this.meetRow=meetRow;"
+  + "\nthis.meetInvalidate=meetInvalidate; this._meetState=()=>({rows:meetRows, pair:meetFor});").runInContext(ctx);
 const tick = () => new Promise(r => setTimeout(r, 0));
 const reset = () => { apiCalls = []; out.innerHTML = ""; resolvers = null; };
 
@@ -189,6 +190,73 @@ const T = m => `2026-07-29T14:${String(m).padStart(2, "0")}:00+0200`;
   chk("their leg plans FROM their origin TO the meeting point",
     ctx.fromName === "Bern" && ctx.toName === "Olten" && planned === 1,
     `${ctx.fromName}->${ctx.toName} planned=${planned}`);
+}
+
+// ---- stale meeting points (2026-09-06) ----
+// The cards are DERIVED from the two fields and nothing retracted them when the
+// fields changed: run Meet for A<->B, type C into From, plan -- and the A<->B cards
+// stayed up with live "my leg / their leg" buttons planning legs for a pair you had
+// abandoned. Operator named the class from a gut feeling; this pins the site.
+{
+  reset();
+  ctx.fromName = "Aarau"; ctx.toName = "Bern";
+  ctx._routes = [
+    { q: "from=Aarau&to=Bern", c: conn("Aarau", T(0), "Bern", T(45), [stop("Olten", T(20))]) },
+    { q: "from=Bern&to=Aarau", c: conn("Bern", T(5), "Aarau", T(50), [stop("Olten", T(30))]) },
+  ];
+  await ctx.meetMiddle();
+  chk("control: cards are on screen and the pair is remembered",
+    out.innerHTML.includes("Olten") && ctx._meetState().pair && ctx._meetState().pair.from === "Aarau" && ctx._meetState().pair.to === "Bern",
+    JSON.stringify(ctx._meetState().pair));
+
+  // the route changes underneath the cards
+  ctx.fromName = "Zug";
+  ctx.meetInvalidate();
+  chk("a replan RETRACTS the cards -- they were computed for a pair that no longer exists",
+    !out.innerHTML.includes("Olten") && ctx._meetState().rows.length === 0, out.innerHTML.slice(0, 120));
+  chk("...and says so, NAMING the pair they were for, rather than going silent",
+    out.innerHTML.includes("Aarau") && out.innerHTML.includes("Bern") && /route changed/.test(out.innerHTML), out.innerHTML.slice(0, 160));
+  planned = 0;
+  ctx.meetLeg(0, true);
+  chk("...and the leg buttons are dead after retraction -- no leg is planned for a stale card",
+    planned === 0, "planned=" + planned);
+
+  // negative: nothing on screen -> nothing to retract, no spurious hint
+  reset();
+  ctx.meetInvalidate();
+  chk("retracting when nothing was offered leaves the box empty -- no hint about a pair that never existed",
+    out.innerHTML === "", out.innerHTML);
+}
+
+// ---- my leg, then their leg: the pre-existing bug the same hunch covered ----
+// After "my leg" the live fields hold (me -> meeting point). "their leg" used to read
+// toName for their origin -- which by then was the MEETING POINT -- and plan their
+// leg from Olten to Olten.
+{
+  reset();
+  ctx.fromName = "Aarau"; ctx.toName = "Bern";
+  ctx._routes = [
+    { q: "from=Aarau&to=Bern", c: conn("Aarau", T(0), "Bern", T(45), [stop("Olten", T(20))]) },
+    { q: "from=Bern&to=Aarau", c: conn("Bern", T(5), "Aarau", T(50), [stop("Olten", T(30))]) },
+  ];
+  await ctx.meetMiddle();
+  let lastOpts = undefined;
+  ctx.planJourney = (o) => { planned++; lastOpts = o; };
+  ctx.meetLeg(0, false);
+  chk("my leg: Aarau -> Olten", ctx.fromName === "Aarau" && ctx.toName === "Olten", `${ctx.fromName}->${ctx.toName}`);
+  chk("...and it plans WITHOUT retracting the cards -- this is the one caller that is using them, not abandoning them",
+    lastOpts && lastOpts.keepMeet === true, JSON.stringify(lastOpts));
+  ctx.meetLeg(0, true);
+  chk("their leg AFTER my leg still plans FROM THEIR origin (Bern), not from the meeting point the fields now hold",
+    ctx.fromName === "Bern" && ctx.toName === "Olten", `${ctx.fromName}->${ctx.toName}`);
+}
+
+// ---- wiring: the retraction is on every OTHER replan path ----
+{
+  chk("planJourney retracts meeting points unless told to keep them",
+    /function planJourney\(opts\)\{\s*if\(!\(opts && opts\.keepMeet\)\) meetInvalidate\(\);/.test(src), "");
+  chk("...and meetLeg is the only caller that asks to keep them",
+    (src.match(/keepMeet: true/g) || []).length === 1 && /function meetLeg[\s\S]{0,900}?planJourney\(\{ keepMeet: true \}\)/.test(src), "");
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

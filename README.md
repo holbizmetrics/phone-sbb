@@ -232,6 +232,23 @@ answer is worse than an absent one:
   file that lies is worse than no file. Times are taken **prognosis-first**, the
   same rule the journey card uses, so the file cannot disagree with the screen
   it was saved from.
+- **Toilets during a change.** The layover panel ("step out?" on a long change) asked
+  OpenStreetMap for cafés, bakeries and viewpoints and never for toilets — on the one
+  occasion you most need one. It asks now. OSM toilets are almost never named, so they
+  get their own row rules: no name filter, deduped by position rather than by the
+  synthetic name they all share, and the nearest one is **guaranteed a slot** even when
+  six cafés are closer, because it is the one row on a layover that is not optional.
+- **Meeting points are retracted when the route changes.** *Meet in the middle* results
+  are computed from the two fields, and nothing used to take them down when the fields
+  changed — so the cards for the old pair stayed up with live *my leg / their leg*
+  buttons that would plan legs for a pair you had abandoned. A replan now retracts them
+  and says which pair they were for. The one exception is the leg buttons themselves,
+  which are *using* the cards; and *their leg* now reads the partner's origin from the
+  pair the cards were computed for, not from the field it had just overwritten — before,
+  tapping *my leg* and then *their leg* planned their leg from the meeting point.
+- **Sketch labels no longer collide.** "Kloten, Zum Wilden Mann" and "Kloten, Bahnhof"
+  both rendered as **Kloten** on two different dots; the second now reads *Kloten
+  Bahnhof*. Two legs that genuinely end at the same stop still get one label.
 - **Installable** — "Add to Home Screen" for an app-like, full-screen feel.
 - **Dark and light** — dark is the default for everyone and it stays where
   you put it.
@@ -304,8 +321,9 @@ node tests/route-history.mjs    # route chips — runs anywhere, no browser
 node tests/golden-hour.mjs      # arrive-before-sunset — runs anywhere, no browser
 node tests/enroute.mjs          # where to get off — runs anywhere, no browser
 node tests/toilets.mjs          # toilets near here — runs anywhere, no browser
-node tests/offline-export.mjs   # the saved .html is honest and self-contained — 28 checks
-node tests/place-to-stops.mjs   # address → coordinates → nearest stops, tap-only — 25 checks
+node tests/offline-export.mjs   # the saved .html is honest and self-contained — 35 checks
+node tests/place-to-stops.mjs   # address → coordinates → nearest stops, tap-only — 31 checks
+node tests/sketch-labels.mjs    # which dots get a label and what it says — 10 checks
 node tests/summit.mjs           # is it worth going up — runs anywhere, no browser
 node tests/storage-full.mjs     # a full phone must not kill the app — runs anywhere
 node tests/board-refresh.mjs    # the 30s refresh keeps its rows — runs anywhere
