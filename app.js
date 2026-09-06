@@ -761,6 +761,7 @@ function boardHeadHTML(name){
     <h2>${esc(name)}</h2>
     <button class="rf" id="rf" type="button" title="refresh" aria-label="Refresh departures">&#8635;</button>
     <button class="ngt" id="ngt" type="button" title="What still leaves tonight" aria-label="What still moves from here tonight">&#127769;</button>
+    <button class="spc" id="spc" type="button" title="Special trains this weekend" aria-label="Heritage and special trains from here this weekend">&#128642;</button>
     <button class="star ${on?"on":""}" id="fav" type="button" title="favourite" aria-pressed="${on}" aria-label="${on?"Remove from favourites":"Add to favourites"}">${on?"&#9733;":"&#9734;"}</button>
   </div>`;
 }
@@ -769,6 +770,7 @@ function wireBoardHead(name){
   const fav=$("fav"); if(fav) fav.onclick=()=>toggleFav(name);
   const rf=$("rf"); if(rf) rf.onclick=()=>loadBoard(name);
   const n=$("ngt"); if(n) n.onclick=()=>strandedBoard(name);
+  const s=$("spc"); if(s) s.onclick=()=>specialBoard(name);
 }
 
 /* ---------- stranded-now board ----------
@@ -835,6 +837,96 @@ async function strandedBoard(name){
   }catch(e){
     box.innerHTML=nightWrap(name,
       `<div class="ncav">Could not check (${esc(e&&e.message||"no answer")}) &#8212; an outage, not a &quot;no&quot;. Tap &#127769; to retry.</div>`);
+  }
+}
+/* ---------- special trains this weekend ----------
+   The timetable files heritage runs as EXT, but EXT alone also covers football
+   shuttles and engineering extras -- so a row only counts when its operator is
+   on this allowlist. The list is deliberately small and verified: DVZO checked
+   live against the Bauma stationboard (EXT / operator "DVZO" steam runs to
+   Hinwil). An operator we cannot verify against this API would be a proper
+   noun filled in from plausibility, so it stays off until checked -- the
+   coverage caveat in the UI is the honest price of that. */
+const HERITAGE_OPS=["DVZO"];
+function ymdLocal(d){
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+/* "This weekend" from the rider's clock: on a Sunday only today is left of it;
+   any other day it is the coming Saturday and Sunday (on Saturday that starts
+   today). Local device time, same convention as nightCutoff. */
+function weekendDays(nowMs){
+  const d=new Date(nowMs), dow=d.getDay();
+  if(dow===0) return [ymdLocal(d)];
+  const sat=new Date(nowMs); sat.setDate(d.getDate()+(6-dow));
+  const sun=new Date(sat.getTime()); sun.setDate(sat.getDate()+1);
+  return [ymdLocal(sat), ymdLocal(sun)];
+}
+/* Rows for ONE day: EXT + allowlisted operator, sorted by departure. The count
+   of EXT rows that did NOT match is returned too -- the UI owes the rider that
+   number, because silently dropping them would render the filter as the world. */
+function specialRows(board, day){
+  const rows=[]; let extOther=0;
+  for(const j of board||[]){
+    const dep=j&&j.stop&&j.stop.departure;
+    if(!dep||dep.slice(0,10)!==day) continue;
+    if((j.category||"").toUpperCase()!=="EXT") continue;
+    if(HERITAGE_OPS.includes(j.operator||""))
+      rows.push({dep, num:j.number||j.line||"", op:j.operator||"", to:j.to||""});
+    else extOther++;
+  }
+  rows.sort((a,b)=>new Date(a.dep)-new Date(b.dep));
+  return {rows, extOther};
+}
+/* ---------- special trains this weekend ----------
+   "Is anything special running from here this weekend?" -- steam, museum and
+   heritage runs. specialRows (core/plan) owns the filter and its honesty
+   number; this side owns the fetches and the caveats. One anchored fetch per
+   weekend day: the stationboard API honours the datetime parameter (checked
+   live at Bauma -- unlike connections' silently-dropped `when`). The allowlist
+   covers only part of the heritage scene (UNSOLVED-GAPS 1.2 puts an
+   algorithmic answer at roughly a third), so the board SAYS what it had to
+   leave unnamed instead of pretending the filter is the world. */
+const DAY_NAMES=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+function specialWrap(name, inner){
+  return `<div class="spcl"><div class="nhead"><span class="ntitle">&#128642; Special trains this weekend &#8212; ${esc(shortStop(name))}</span>`
+    + `<button class="nx" type="button" aria-label="Close" onclick="closeSpecial()">&#10005;</button></div>${inner}</div>`;
+}
+function closeSpecial(){ const b=$("specialOut"); if(b) b.innerHTML=""; }
+function specialDayHTML(day, rows){
+  if(!rows.length) return "";
+  const d=new Date(day+"T12:00:00");
+  const label=`${DAY_NAMES[d.getDay()]} ${d.getDate()}.${d.getMonth()+1}.`;
+  return `<div class="sday">${esc(label)}</div>`
+    + rows.map(r=>`<div class="srow"><b>${hhmm(r.dep)}</b> <span class="sline">${esc((r.op+" "+r.num).trim())}</span> &#8594; ${esc(shortStop(r.to))}</div>`).join("");
+}
+async function specialBoard(name){
+  const box=$("specialOut"); if(!box||!name) return;
+  box.innerHTML=specialWrap(name, `<div class="ncav">checking the weekend timetable&#8230;</div>`);
+  try{
+    const days=weekendDays(Date.now());
+    let disp=name, inner="", any=0, other=0;
+    for(const day of days){
+      const d=await api(`/stationboard?limit=100&station=${encodeURIComponent(name)}&datetime=${encodeURIComponent(day+" 05:00")}`);
+      disp=d.station?.name||disp;
+      const r=specialRows(d.stationboard||[], day);
+      other+=r.extOther; any+=r.rows.length;
+      inner+=specialDayHTML(day, r.rows);
+    }
+    /* the honesty lines: what the filter dropped, and how small the filter is */
+    const dropped = other>0
+      ? `<div class="ncav">${other} other EXT departure${other===1?"":"s"} this weekend matched no operator on the heritage list &#8212; football shuttles and engineering extras file under EXT too, but so might a special we cannot name.</div>`
+      : "";
+    const coverage = `<div class="ncav">The heritage list is curated and covers only part of the scene &#8212; a special train under an operator we do not recognise will not appear here.</div>`;
+    if(!any){
+      box.innerHTML=specialWrap(disp,
+        `<div class="nnone">No heritage runs we can recognise leave from here this weekend.</div>`
+        + dropped + coverage);
+      return;
+    }
+    box.innerHTML=specialWrap(disp, inner + dropped + coverage);
+  }catch(e){
+    box.innerHTML=specialWrap(name,
+      `<div class="ncav">Could not check (${esc(e&&e.message||"no answer")}) &#8212; an outage, not a &quot;no&quot;. Tap &#128642; to retry.</div>`);
   }
 }
 function toggleFav(name){
