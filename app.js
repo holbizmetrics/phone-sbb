@@ -3422,6 +3422,71 @@ function dayOutlook(lat,lon){
     .catch(e=>{ delete dayOutlookCache[k]; throw e; });   // an outage must not be cached as a verdict
   return dayOutlookCache[k];
 }
+/* ---------- fog top (UNSOLVED-GAPS 1.1) ----------
+   "Where can I get above the fog today?" Point weather at the destination says
+   "overcast" both under and above an inversion, so the missing quantity is the
+   FOG TOP. Derived from pressure levels: relative humidity collapsing between
+   two adjacent levels marks the top, a temperature inversion across the same
+   gap corroborates it independently, and geopotential height converts the
+   level to metres. Model pinned to MeteoSwiss ICON -- high fog is a 1-2 km
+   phenomenon and a global model will not resolve the valley boundaries. */
+const FOG_LEVELS=[1000,975,950,925,900,850,800,700];   // hPa, bottom-up; the deck lives below ~3 km
+const FOG_RH_IN=90, FOG_RH_OUT=65;    // saturated inside the deck, collapsed above it
+const FOG_GATE=40;                    // % cloud_cover_low; under this there is no deck to rank against
+const FOG_BAND=150;                   // m -- vertical resolution near the ground is a few hundred metres
+const fogCache={};
+/* The gate is its own tiny request so the pressure-level fetch is never paid
+   on clear days -- that is the point of gating on cloud_cover_low. */
+function fogGate(lat,lon){
+  const k="g"+(+lat).toFixed(2)+","+(+lon).toFixed(2);
+  if(!fogCache[k]) fogCache[k]=fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=cloud_cover_low&forecast_days=1&timezone=auto`)
+    .then(r=>{ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
+    .then(d=>d.hourly)
+    .catch(e=>{ delete fogCache[k]; throw e; });   // an outage must not be cached as "clear"
+  return fogCache[k];
+}
+function fogLevels(lat,lon){
+  const k="p"+(+lat).toFixed(2)+","+(+lon).toFixed(2);
+  if(!fogCache[k]){
+    const h=FOG_LEVELS.map(l=>`relative_humidity_${l}hPa,temperature_${l}hPa,geopotential_height_${l}hPa`).join(",");
+    fogCache[k]=fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=${h}&forecast_days=1&timezone=auto&models=meteoswiss_icon_ch1`)
+      .then(r=>{ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
+      .then(d=>d.hourly)
+      .catch(e=>{ delete fogCache[k]; throw e; });
+  }
+  return fogCache[k];
+}
+/* Pure: read the deck top out of one hour of pressure-level data.
+   null = no derivable top; that is "unknown", never a verdict. */
+function fogTopAt(hourly, hourIso){
+  if(!hourly||!Array.isArray(hourly.time)) return null;
+  const key=(hourIso||"").slice(0,13);
+  const i=hourly.time.findIndex(t=>t.slice(0,13)===key);
+  if(i<0) return null;
+  const at=(f,l)=>{ const a=hourly[`${f}_${l}hPa`]; return Array.isArray(a)&&a[i]!=null?a[i]:null; };
+  for(let n=0;n<FOG_LEVELS.length-1;n++){
+    const lo=FOG_LEVELS[n], hi=FOG_LEVELS[n+1];          // pressure falls upward
+    const rhLo=at("relative_humidity",lo), rhHi=at("relative_humidity",hi);
+    if(rhLo==null||rhHi==null) continue;
+    if(rhLo>=FOG_RH_IN&&rhHi<=FOG_RH_OUT){
+      const zLo=at("geopotential_height",lo), zHi=at("geopotential_height",hi);
+      if(zLo==null||zHi==null) return null;              // a top with no height is not a top
+      const tLo=at("temperature",lo), tHi=at("temperature",hi);
+      return { top: Math.round((zLo+zHi)/2),             // the collapse happens somewhere in the gap
+               inv: tLo!=null&&tHi!=null&&tHi>tLo };     // warmer ABOVE = inversion, independent corroboration
+    }
+  }
+  return null;
+}
+/* Three-valued on purpose: the band is the vertical resolution, and "too close
+   to call" is the state that stops the app sending someone up an
+   Aussichtsberg into grey soup. */
+function fogVerdict(elev,top){
+  if(elev==null||top==null) return null;
+  if(elev>=top+FOG_BAND) return "above";
+  if(elev<=top-FOG_BAND) return "below";
+  return "close";
+}
 function bestDayHTML(daily){
   const days=(daily&&daily.time)||[], codes=(daily&&daily.weather_code)||[];
   if(days.length<2) return "";
@@ -3814,7 +3879,8 @@ function wanCandidates(board, now, deadline){
       const prev=best.get(nm);
       if(!prev || arrT<prev.arrT)
         best.set(nm,{name:nm, dep, arr, arrT, ride, cat:j.category,
-                     num:j.number||j.line, scenic:isScenic(j.category)});
+                     num:j.number||j.line, scenic:isScenic(j.category),
+                     crd:p.station?.coordinate||null});   // x=lat,y=lon -- the fog layer needs an elevation
     }
   }
   // the ride is the point: scenic first, then the longest ride that still fits
@@ -3852,6 +3918,48 @@ async function wanReturns(c, deadline){
     c.last=late[0]?.from?.departure||null; c.lastOk=true;
   }catch(e){ c.last=null; c.lastOk=false; }
 }
+/* Fog ranking layer (UNSOLVED-GAPS 1.1). Adds a verdict per candidate --
+   above / below / too close to call -- never a card of its own. Failure here
+   must not cost the feature: the cards stand without it, so a dead fog request
+   degrades to "no verdict" with its reason kept on the note line, and a clear
+   day costs exactly one tiny gate request. */
+let wanFogNote="";
+async function wanFog(cands, stn){
+  wanFogNote="";
+  const co=stn&&stn.coordinate;
+  if(!co||co.x==null) return;                    // no origin fix -> nothing to anchor the column on
+  // Open-Meteo hourly times are LOCAL (timezone=auto); the device may be
+  // anywhere, so the current hour is formatted IN Zurich's zone, like swissQS.
+  const p=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Zurich",year:"numeric",month:"2-digit",
+    day:"2-digit",hour:"2-digit",hourCycle:"h23"}).formatToParts(new Date());
+  const g=t=>p.find(x=>x.type===t)?.value||"00";
+  const hourKey=`${g("year")}-${g("month")}-${g("day")}T${g("hour")}`;
+  try{
+    const gate=await fogGate(co.x, co.y);
+    const i=(gate&&Array.isArray(gate.time)?gate.time:[]).findIndex(t=>t.slice(0,13)===hourKey);
+    const low=i>=0&&Array.isArray(gate.cloud_cover_low)?gate.cloud_cover_low[i]:null;
+    if(low==null||low<FOG_GATE) return;          // clear day: the pressure-level fetch is never paid
+    const withC=cands.filter(c=>c.crd&&c.crd.x!=null);
+    const [levels, elevs]=await Promise.all([
+      fogLevels(co.x, co.y),
+      withC.length?routeElevation(withC.map(c=>({x:+c.crd.y, y:+c.crd.x}))):[],
+    ]);
+    const ft=fogTopAt(levels, hourKey+":00");
+    if(!ft){ wanFogNote=`low cloud ${low}% but no clean deck top in the profile &#8212; no verdict`; return; }
+    withC.forEach((c,n)=>{
+      c.fogElev=Array.isArray(elevs)&&elevs[n]!=null?Math.round(elevs[n]):null;
+      c.fog=fogVerdict(c.fogElev, ft.top);
+    });
+    wanFogNote=`fog top &#8776;${ft.top}&#8201;m`+(ft.inv?" (inversion confirmed)":"");
+  }catch(e){ wanFogNote="fog check did not answer ("+esc(e&&e.message||"")+") &#8212; verdicts withheld"; }
+}
+/* On a fog day the deck decides the ORDER: above first, below last. The sort
+   is stable, so inside each group the scenic-then-longest order survives; on a
+   clear day every card ranks the same and nothing moves. */
+function wanFogRank(list){
+  const r=c=>c.fog==="above"?0:c.fog==="below"?2:1;
+  return list.slice().sort((a,b)=>r(a)-r(b));
+}
 function wanCard(c){
   const b=badge(c.cat,c.num);
   const dwell=c.ret ? Math.round((new Date(c.ret.from.departure)-c.arrT)/60000) : null;
@@ -3871,6 +3979,14 @@ function wanCard(c){
      train home may exist unseen. The one printed is a train that EXISTS -- plan
      around it and you cannot be stranded; claiming it is THE last would lie in
      the dangerous direction on thin lines. */
+  // three-valued and honest: no fog data on this candidate = no line, never a guess
+  const fog = c.fog==="above"
+    ? `<div class="wfog up">&#9728; above the fog &#8212; ${c.fogElev}&#8201;m, the deck top is below you</div>`
+    : c.fog==="below"
+    ? `<div class="wfog dn">under the fog &#8212; ${c.fogElev}&#8201;m is inside the grey</div>`
+    : c.fog==="close"
+    ? `<div class="wfog md">too close to call &#8212; ${c.fogElev}&#8201;m sits at the deck top; could be soup up there</div>`
+    : "";
   const lastLine = c.lastOk
     ? (c.last ? `<div class="wlast">last verified way home departs ${hhmm(c.last)}</div>`
               : `<div class="wlast">&#9888; no later way home could be verified &#8212; treat the return above as your last safe one</div>`)
@@ -3882,7 +3998,7 @@ function wanCard(c){
       <div class="wride">${fmtDur(c.ride)}</div>
     </div>
     <div class="wlegs">${legs}</div>
-    ${warn}${unv}${lastLine}
+    ${fog}${warn}${unv}${lastLine}
   </div>`;
 }
 async function runWander(){
@@ -3890,10 +4006,10 @@ async function runWander(){
   const run=++wanRun, out=$("wanOut");
   out.innerHTML=skel(4);
   const now=Date.now(), deadline=now+wanBudget*60000;
-  let board;
+  let board, stn;
   try{
     const d=await api("/stationboard?limit=15&station="+encodeURIComponent(wanName));
-    board=d.stationboard||[];
+    board=d.stationboard||[]; stn=d.station;
   }catch(e){
     if(run!==wanRun) return;
     out.innerHTML=errBox(e, "what leaves from here", "try again");
@@ -3905,7 +4021,7 @@ async function runWander(){
     out.innerHTML=`<div class="empty"><div class="big">&#8987;</div>No round trip fits in ${fmtDur(wanBudget)} from ${esc(wanName)}.<br>Try a bigger budget &#8212; the shortest outing needs the ride out, ${WAN_MIN_DWELL}&#8242; there, and the ride back.</div>`;
     return;
   }
-  await Promise.all(cands.map(c=>wanReturns(c, deadline)));
+  await Promise.all([...cands.map(c=>wanReturns(c, deadline)), wanFog(cands, stn)]);
   if(run!==wanRun) return;
   // a candidate with an ANSWERED query and no fitting return fails the premise -> drop.
   // an UNANSWERED query is shown, loudly unverified -- unknown is not "no".
@@ -3914,7 +4030,8 @@ async function runWander(){
     out.innerHTML=`<div class="empty"><div class="big">&#8987;</div>Trains go out, but nothing gets you back inside ${fmtDur(wanBudget)}.<br>Try a bigger budget.</div>`;
     return;
   }
-  out.innerHTML=show.map(wanCard).join("");
+  out.innerHTML=(wanFogNote?`<div class="wfognote">${wanFogNote}</div>`:"")
+    +wanFogRank(show).map(wanCard).join("");
 }
 
 /* ---------- touch timetable ---------- */
