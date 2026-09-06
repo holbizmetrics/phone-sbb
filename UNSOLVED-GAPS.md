@@ -49,7 +49,10 @@ SBB Mobile and phone-sbb, not about the field.
 The structural gap. Both apps answer *A → B at time T*. Neither answers *where should I
 go*. `Wander` is the one exception in either product and it is phone-sbb's.
 
-**1.1 "Where can I get above the fog today?"** — `INFERRED`
+**1.1 "Where can I get above the fog today?"** — **SHIPPED** (`b866f86`, 2026-09-06,
+ported from the H15 arm; tests/fog.mjs 41 checks). Built exactly as sketched below —
+fog top from RH collapse + inversion corroboration, MeteoSwiss-pinned, gated on
+`cloud_cover_low`, three-valued verdict, ranking layer over Wander. Original analysis:
 
 The most Swiss rail question there is, unanswered from October to February by anything.
 Needs three inputs that no single vendor holds: reachability, elevation, and cloud-base
@@ -255,17 +258,17 @@ tidy-up will otherwise remove them:
 
 ## Priority (re-ranked 2026-09-06 after the shipped items were struck)
 
-1. **§1.1 fog** — a ranking layer over existing infrastructure; nothing else in the market can compute it.
-2. **§2.1 replan-from-here** — largest gap, but needs a running-journey state rather than a search. Real architectural step.
-3. **§1.2 special trains** — category+operator filter, measured feasible at Bauma.
-4. **§0 assess ZVV** — cheapest way to find out whether this document describes the field or just two apps.
+1. **§2.1 replan-from-here** — largest gap, but needs a running-journey state rather than a search. Real architectural step.
+2. **§1.2 special trains** — category+operator filter, measured feasible at Bauma.
+3. **§0 assess ZVV** — cheapest way to find out whether this document describes the field or just two apps.
 
-*(§3 anchoring — was #1 — is shipped; struck above.)*
+*(§3 anchoring and §1.1 fog — the former #1s — are shipped; struck above.)*
 
-**Reference implementations exist for #1–#3** (PCLA experiment H15, 2026-09-06): fog-top
-ranking over Wander, onboard replan-from-here with a live change-buffer recheck, and the
-weekend special-trains board (DVZO allowlist, datetime-anchored stationboard, live-verified
-at Bauma) were each built ~110–135 lines with a shared Node test suite (fog 41 / replan 44 /
+**Reference implementations exist for #1–#2** (PCLA experiment H15, 2026-09-06):
+onboard replan-from-here with a live change-buffer recheck, and the weekend
+special-trains board (DVZO allowlist, datetime-anchored stationboard, live-verified
+at Bauma) were each built ~110 lines with a shared Node test suite (replan 44 /
 special 29 checks, mutation-controlled) — in two LOCAL-ONLY experiment clones on the
-operator's termux box, never pushed here. Porting any of them upstream is a small,
-already-derisked task; ask the operator for the arm trees.
+operator's termux box, never pushed here. Porting either upstream is a small,
+already-derisked task (fog-top was ported this way in `b866f86`); ask the operator
+for the arm trees.
