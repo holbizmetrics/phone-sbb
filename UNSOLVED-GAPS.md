@@ -123,7 +123,13 @@ Wander and Touch (verified 2026-09-06, tip `014064a`).*
 
 ## 2. The live journey
 
-**2.1 "I'm on the train, my connection is dying, replan from here"** — `OBSERVED`
+**2.1 "I'm on the train, my connection is dying, replan from here"** — **replan half
+SHIPPED, in two layers** (manual: `replanFromStop`, tap any stop in the route sketch;
+unprompted: `a7e949d`, 2026-09-06, ported from the H15 arm — the pinned journey's live
+buffer at the next change is rechecked against the arrival board and the onboard bar
+grows a one-tap replan when it goes tight or dies; tests/replan-offer.mjs 40 checks).
+The notification half stays out for the reason below (web push needs a server).
+Original analysis:
 
 phone-sbb knows everything at *search* time and nothing after. It flags impossible
 changes when you search — but at that moment they were still possible. The expensive
@@ -262,15 +268,10 @@ tidy-up will otherwise remove them:
 
 ## Priority (re-ranked 2026-09-06 after the shipped items were struck)
 
-1. **§2.1 replan-from-here** — largest gap, but needs a running-journey state rather than a search. Real architectural step.
-2. **§1.2 curated heritage catalogue** — the non-algorithmic two-thirds: build-time JSON per operator, changes yearly.
-3. **§0 assess ZVV** — cheapest way to find out whether this document describes the field or just two apps.
+1. **§1.2 curated heritage catalogue** — the non-algorithmic two-thirds: build-time JSON per operator, changes yearly.
+2. **§0 assess ZVV** — cheapest way to find out whether this document describes the field or just two apps.
+3. **§4.1 occupancy** — blocked on the source; only correct wording is actionable.
 
-*(§3 anchoring, §1.1 fog and §1.2's algorithmic third are shipped; struck above.)*
-
-**A reference implementation exists for #1** (PCLA experiment H15, 2026-09-06):
-onboard replan-from-here with a live change-buffer recheck, ~110 lines with a
-44-check Node suite, mutation-controlled — in a LOCAL-ONLY experiment clone on the
-operator's termux box, never pushed here. Porting it upstream is a small,
-already-derisked task (fog-top `b866f86` and special-trains `d153370` were ported
-this way); ask the operator for the arm trees.
+*(§3 anchoring, §1.1 fog, §1.2's algorithmic third and §2.1's replan half are shipped;
+struck above. All three H15 reference implementations are now ported upstream —
+`b866f86`, `d153370`, `a7e949d` — the arm trees hold nothing unported.)*
