@@ -74,7 +74,11 @@ Vertical resolution near the ground is a few hundred metres, so the honest outpu
 three-valued: **above · below · too close to call.** The third state is the one that
 stops the app sending someone up an Aussichtsberg into grey soup.
 
-**1.2 "What's running that's special this weekend?"** — partly `MEASURED`
+**1.2 "What's running that's special this weekend?"** — **algorithmic third SHIPPED**
+(`d153370`, 2026-09-06, ported from the H15 arm; tests/special.mjs 29 checks). Built as
+sketched: EXT + curated operator allowlist (DVZO only — the one operator live-verified),
+datetime-anchored per-day fetches, dropped-EXT count + always-on coverage caveat on the
+card. The curated-catalogue two-thirds below remains open. Original analysis:
 
 Heritage and scenic operations. Confirmed reachable, with a caveat that kills the naive
 version.
@@ -259,16 +263,14 @@ tidy-up will otherwise remove them:
 ## Priority (re-ranked 2026-09-06 after the shipped items were struck)
 
 1. **§2.1 replan-from-here** — largest gap, but needs a running-journey state rather than a search. Real architectural step.
-2. **§1.2 special trains** — category+operator filter, measured feasible at Bauma.
+2. **§1.2 curated heritage catalogue** — the non-algorithmic two-thirds: build-time JSON per operator, changes yearly.
 3. **§0 assess ZVV** — cheapest way to find out whether this document describes the field or just two apps.
 
-*(§3 anchoring and §1.1 fog — the former #1s — are shipped; struck above.)*
+*(§3 anchoring, §1.1 fog and §1.2's algorithmic third are shipped; struck above.)*
 
-**Reference implementations exist for #1–#2** (PCLA experiment H15, 2026-09-06):
-onboard replan-from-here with a live change-buffer recheck, and the weekend
-special-trains board (DVZO allowlist, datetime-anchored stationboard, live-verified
-at Bauma) were each built ~110 lines with a shared Node test suite (replan 44 /
-special 29 checks, mutation-controlled) — in two LOCAL-ONLY experiment clones on the
-operator's termux box, never pushed here. Porting either upstream is a small,
-already-derisked task (fog-top was ported this way in `b866f86`); ask the operator
-for the arm trees.
+**A reference implementation exists for #1** (PCLA experiment H15, 2026-09-06):
+onboard replan-from-here with a live change-buffer recheck, ~110 lines with a
+44-check Node suite, mutation-controlled — in a LOCAL-ONLY experiment clone on the
+operator's termux box, never pushed here. Porting it upstream is a small,
+already-derisked task (fog-top `b866f86` and special-trains `d153370` were ported
+this way); ask the operator for the arm trees.
