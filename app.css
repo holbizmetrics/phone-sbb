@@ -574,6 +574,12 @@
   .obpoi{margin:6px 0}
   .obunpin{margin-top:9px; font-size:11px; font-weight:700; padding:5px 10px; border:1px solid var(--line);
     border-radius:8px; background:transparent; color:var(--faint); cursor:pointer; font-family:inherit}
+  .oboffer{padding:0 14px}
+  .oboffer:empty{display:none}
+  .obrp{display:block; width:100%; margin:8px 0; font-size:13px; font-weight:800; padding:9px 12px;
+    border:0; border-radius:10px; background:rgba(235,0,0,.16); color:var(--tighttxt);
+    cursor:pointer; font-family:inherit; text-align:left}
+  .oblive{font-size:12px; color:var(--dim); margin:4px 0; font-variant-numeric:tabular-nums}
   .rbrow{display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin-bottom:6px}
   .rbrow:empty{display:none}
   .rib{font-size:10px; font-weight:800; letter-spacing:.03em; text-transform:uppercase; padding:3px 8px; border-radius:6px; white-space:nowrap}

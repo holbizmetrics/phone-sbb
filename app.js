@@ -2605,7 +2605,7 @@ function obLineHTML(ob,nx){
     const m=minsUntil(ob.arr);
     return `${pin} &#8594; <b>${esc(ob.to)}</b> ${hhmm(ob.arr)}${m>0&&m<600?` &#183; in ${m}&#8242;`:""} &#183; no more changes`;
   }
-  const x=nx.x;
+  const x=obEffective(nx)||nx.x;   // the one-line bar shows the freshest buffer it has
   const t=x.missed?`<b class="obmiss">missed</b>`:`<b>${x.b}&#8242;</b>`;
   return `${pin} &#8594; <b>${esc(ob.to)}</b> &#183; next change ${esc(x.stn)} ${t}${x.pd?` &#183; Pl.&#8201;${esc(x.pd)}`:""}`;
 }
@@ -2617,7 +2617,11 @@ function obSheetHTML(ob,nx){
       : `No more changes &#8212; ride it out to <b>${esc(ob.to)}</b>, arriving <b>${hhmm(ob.arr)}</b>.`;
     return `<div class="obh">${line}</div>${unpin}`;
   }
-  const x=nx.x;
+  const x=obEffective(nx)||nx.x;
+  // three-valued and honest: a live read, a live failure, or silence -- never a guessed "on time"
+  const live = obLive&&obLive.k===nx.k
+    ? `<div class="oblive">live: incoming train ${obLive.dly>0?`+${obLive.dly}&#8242;`:"on time"} &#8212; buffer recomputed</div>`
+    : obLiveNote ? `<div class="oblive">${obLiveNote}</div>` : "";
   const times=`${x.at?`arrive ${hhmm(x.at)}${x.pa?` Pl.&#8201;${esc(x.pa)}`:""}`:""}${x.dt?` &#183; depart ${hhmm(x.dt)}${x.pd?` Pl.&#8201;${esc(x.pd)}`:""}`:""}`;
   const later = nx.left>0 ? `then ${nx.left} more change${nx.left===1?"":"s"} &#183; ` : "";
   // the setting travels with the sheet, so turning it on happens exactly where
@@ -2626,7 +2630,7 @@ function obSheetHTML(ob,nx){
   const poiBox = obPoi && !x.missed && x.b>=LAYOVER_MIN && x.co ? `<div class="obpoi"></div>` : "";
   return `<div class="obh">Next change &#8212; <b>${esc(x.stn)}</b></div>`
     + `<div class="obt">${times}</div>`
-    + obVerdictHTML(x)
+    + obVerdictHTML(x) + live
     + poiBox + tog
     + `<div class="obt">${later}arriving ${esc(ob.to)} <b>${hhmm(ob.arr)}</b></div>`
     + unpin;
@@ -2652,6 +2656,72 @@ async function obFillPoi(box,x){
   }
   box.innerHTML=rows.map(p=>`<div class="lprow"><span class="lpe">${p.ty.e}</span><span class="lpn">${esc(p.name)}</span><span class="lpm">${p.ty.l?esc(p.ty.l)+" &#183; ":""}${p.walk}&#8242; walk</span></div>`).join("")
     + `<div class="lpcav">One-way walk times; keep ~${LAYOVER_KEEP}&#8242; to be back and find your platform. Opening hours not checked.</div>`;
+}
+/* ---------- unprompted replan offer (UNSOLVED-GAPS 2.1 residual) ----------
+   replanFromStop serves the passenger who NOTICED the plan die; the pin's
+   buffer maths is the only thing positioned to notice FOR them. While the next
+   change is upcoming and near, the change stop's arrival board is asked about
+   the pinned incoming train every few minutes; when the LIVE buffer goes below
+   TIGHT -- or the change is already gone -- the bar itself grows a one-tap
+   offer that replans from the change stop, leaving now. The offer lives on the
+   BAR, not in the sheet: unprompted means visible without opening anything. */
+let obLive=null;      // {k,b,dly} -- last live read, keyed to the change row it measured
+let obLiveAt=0;       // when that read landed
+let obCheckAt=0;      // throttle: next board request no earlier than this
+let obLiveNote="";    // honest status when the check could not answer
+const OB_RECHECK_MIN=3;    // volunteer API: one arrival-board request every few minutes, only while pinned
+const OB_HORIZON_MIN=120;  // a change hours away has no live board yet -- don't burn requests on it
+
+/* Live supersedes pin-time ONLY for the change it measured -- an old read
+   about Olten must not colour the verdict for Bern once the anchor moves on. */
+function obEffective(nx){
+  if(nx.phase!=="change") return null;
+  if(!obLive || obLive.k!==nx.k) return nx.x;
+  return Object.assign({}, nx.x, {b:obLive.b, missed:obLive.b<0});
+}
+function obOfferHTML(ob,nx){
+  const x=obEffective(nx);
+  if(!x || !x.stn || x.stn===ob.to) return "";
+  if(!(x.missed || x.b<TIGHT)) return "";
+  const why=x.missed?`the change at ${esc(x.stn)} is gone`:`${x.b}&#8242; at ${esc(x.stn)} is a sprint`;
+  return `<button type="button" class="obrp" onclick="onboardReplan(event)">&#9888; ${why} &#8212; replan from ${esc(x.stn)}, leaving now</button>`;
+}
+async function obRecheck(now){
+  if(!onboard) return;
+  const nx=onboardNext(onboard,now);
+  if(nx.phase!=="change") return;
+  const x=nx.x;
+  if(!x.at || new Date(x.at).getTime()-now>OB_HORIZON_MIN*60000) return;
+  if(now<obCheckAt) return;
+  obCheckAt=now+OB_RECHECK_MIN*60000;
+  try{
+    const d=await api("/stationboard?station="+encodeURIComponent(x.stn)+"&type=arrival&limit=30");
+    const r=obLiveBuffer(x, d.stationboard||[]);
+    if(r){ obLive={k:nx.k, b:r.b, dly:r.dly}; obLiveNote=""; }
+    else { obLive=null; obLiveNote="incoming train not on the arrival board &#8212; live check has no verdict"; }
+  }catch(e){
+    // a dead request is "unknown", not "on time" -- the pin-time buffer stands, labelled
+    obLive=null; obLiveNote="live check did not answer &#8212; buffer shown is pin-time";
+  }
+  obLiveAt=Date.now();
+  paintOnboard();
+}
+/* One tap: the change stop becomes the origin, the pinned destination stays,
+   and the journey tab re-runs LEAVING NOW -- replanFromStop's move, fired
+   from the bar instead of from a tapped stop row. */
+function onboardReplan(ev){
+  if(ev) ev.stopPropagation();
+  if(!onboard) return;
+  const nx=onboardNext(onboard,Date.now());
+  const x=nx.phase==="change"?nx.x:null;
+  if(!x || !x.stn || x.stn===onboard.to) return;
+  fromName=x.stn;
+  const f=$("iFrom"); if(f){ f.value=x.stn; $("fFrom")?.classList.add("has"); }
+  toName=onboard.to;
+  const t=$("iTo"); if(t){ t.value=onboard.to; $("fTo")?.classList.add("has"); }
+  setTab("jrn");
+  setWhen("now");                    // replans as its last act -- the offer means NOW
+  scrollTo({top:0,behavior:"smooth"});
 }
 function onboardPin(i){
   const c=jrnConns[i]; if(!c) return;
@@ -2704,13 +2774,17 @@ function paintOnboard(){
     host.innerHTML=`<div class="obbar"><div class="obtop">`
       +`<button type="button" class="obline" onclick="onboardSheetToggle()" aria-expanded="false" aria-label="Your pinned journey &#8212; tap for the next change"></button>`
       +`<button type="button" class="obx" onclick="onboardUnpin()" aria-label="Unpin this journey">&#10005;</button>`
-      +`</div><div class="obsheet"></div></div>`;
+      +`</div><div class="oboffer"></div><div class="obsheet"></div></div>`;
   }
   const lineEl=host.querySelector(".obline");
   const line=obLineHTML(onboard,nx);
   if(lineEl.innerHTML!==line) lineEl.innerHTML=line;
+  const offEl=host.querySelector(".oboffer");
+  const offer=obOfferHTML(onboard,nx);
+  if(offEl && offEl.innerHTML!==offer) offEl.innerHTML=offer;
   if(obOpen && key!==obKey) renderObSheet();   // the anchor moved while the sheet was open
   obKey=key;
+  obRecheck(Date.now());   // fire-and-forget; throttled + horizon-bounded inside
 }
 
 /* ---- Wikipedia enrichment (REST summary; keyless, CORS-open) ---- */
@@ -3979,6 +4053,29 @@ function wanCandidates(board, now, deadline){
   return [...best.values()]
     .sort((a,b)=>(b.scenic?1:0)-(a.scenic?1:0) || b.ride-a.ride)
     .slice(0,WAN_MAX_CAND);
+}
+/* ---------- live buffer at the next change ----------
+   The pin's chg rows are pin-time facts; the buffer rots the moment the
+   incoming train slips. Given the change stop's ARRIVAL board, find the row
+   whose scheduled arrival equals the pinned one, take the prognosis (or the
+   delay field when no prognosis instant is given), and recompute the buffer
+   against the SCHEDULED onward departure. The onward train's own slip is
+   deliberately not folded in: guessing it would be inventing data, and being
+   wrong there flips the verdict in the dangerous direction. No matching row
+   on the board = UNKNOWN (null), never a verdict. */
+function obLiveBuffer(x, rows){
+  if(!x || !x.at || !x.dt) return null;
+  const schedT=new Date(x.at).getTime(), depT=new Date(x.dt).getTime();
+  if(isNaN(schedT)||isNaN(depT)) return null;
+  for(const j of rows||[]){
+    const arr=j&&j.stop&&j.stop.arrival; if(!arr) continue;
+    if(new Date(arr).getTime()!==schedT) continue;
+    const prog=j.stop.prognosis&&j.stop.prognosis.arrival;
+    let freshT=prog?new Date(prog).getTime():NaN;
+    if(isNaN(freshT)) freshT = typeof j.stop.delay==="number" ? schedT+j.stop.delay*60000 : schedT;
+    return {b:Math.round((depT-freshT)/60000), dly:Math.round((freshT-schedT)/60000)};
+  }
+  return null;
 }
 /* Return legs for one candidate. Two separate verdicts, never conflated:
    ret     -- latest connection back that still lands inside the budget
