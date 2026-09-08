@@ -24,7 +24,13 @@ const ALLOWED = [
   // string constants. Tap-to-open <a href> links are the user's own outbound
   // step -- the privacy text says so -- but collect everything and split.
   const urls = [...src.matchAll(/https:\/\/(?:\$\{lang\}\.)?([a-z0-9.-]+)/g)].map(m => m[1]);
-  const outboundLinks = ["www.windy.com", "www.meteoblue.com", "www.google.com", "github.com"];
+  // The heritage catalogue's `src` fields are operator pages rendered as <a href>
+  // and NEVER fetched: derive them from the constant so adding a product does not
+  // need an edit here, then pin (below) that the disclosure names them and that
+  // no fetch/api call reaches any of them.
+  const catConst = (src.match(/const HERITAGE_CATALOGUE=(\[[^\n]*\]);/) || [])[1];
+  const catHosts = catConst ? [...new Set(JSON.parse(catConst).map(p => new URL(p.src).host))] : [];
+  const outboundLinks = ["www.windy.com", "www.meteoblue.com", "www.google.com", "github.com", ...catHosts];
   const unknown = [...new Set(urls)].filter(h =>
     !ALLOWED.some(a => h === a || h.endsWith("." + a.replace(/^www\./, ""))) &&
     !outboundLinks.includes(h));
@@ -38,6 +44,10 @@ const ALLOWED = [
      silent addition into an edit of the sentence the user reads -- the suite
      went red on the host list AND on the word "four" the moment the geocoder
      landed, which is the whole design of this file. */
+  chk("the operator pages behind the heritage card are disclosed as tap-to-open links, and none is ever fetched",
+    catHosts.length > 0 && /railway operator&#8217;s own page/.test(src) && /never fetches from those operators/.test(src) &&
+    !catHosts.some(h => new RegExp("(?:fetch|api)\\([^)]*" + h.replace(/\./g, "\\.")).test(src)),
+    "catalogue hosts: " + catHosts.join(", "));
   chk("the disclosure says the address lookup is tap-only, since that is the one request carrying something you typed",
     /never while you type/.test(src) && /if you never tap it, it never runs/.test(src), "");
 }

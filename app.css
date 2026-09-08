@@ -269,6 +269,11 @@
   .spcl .sline{color:var(--dim); font-weight:600; font-size:12.5px}
   .spcl .nnone{font-weight:700; color:var(--amber); font-size:14.5px}
   .spcl .ncav{margin-top:7px; font-size:12px; color:var(--faint); line-height:1.5}
+  .spcl .crow{border-top:1px solid var(--line); padding:5px 0}
+  .spcl .crow .srow{border-top:0; padding:0 0 2px}
+  .spcl .cmeta{font-size:12px; color:var(--dim); line-height:1.5}
+  .spcl .cmeta a{color:var(--dim)}
+  .spcl .cev{color:var(--amber); font-weight:600}
 
   .dep{display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--line);
     padding:14px; border-radius:16px; margin-bottom:9px; animation:rise .3s ease backwards}

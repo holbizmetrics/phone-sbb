@@ -10,7 +10,7 @@ SBB Mobile nor phone-sbb answers**, plus the honest reasons some of them stay un
 
 Compiled 2026-07-27. Supersedes nothing; sits alongside `ROADMAP.md`.
 
-**Re-verified against the code 2026-09-06 22:07Z (tip `014064a`).** Two sections had gone
+**Re-verified against the code 2026-09-06 22:07Z (tip `014064a`); §1.2 catalogue strike added 2026-09-08 in the shipping commit.** Two sections had gone
 stale — §3 anchoring and §4.2 coverage are SHIPPED (marked below with the verifying
 symbols). The cost of the staleness was real: an experiment (PCLA H15) froze a 5-task
 set off this document and 2 of the 5 were void because the "gap" was already in the
@@ -78,7 +78,22 @@ stops the app sending someone up an Aussichtsberg into grey soup.
 (`d153370`, 2026-09-06, ported from the H15 arm; tests/special.mjs 29 checks). Built as
 sketched: EXT + curated operator allowlist (DVZO only — the one operator live-verified),
 datetime-anchored per-day fetches, dropped-EXT count + always-on coverage caveat on the
-card. The curated-catalogue two-thirds below remains open. Original analysis:
+card. **Curated-catalogue two-thirds SHIPPED 2026-09-08** (tablet session; tests/heritage.mjs
+42 checks, mutation battery tests/mutations/mut-heritage.py 8/8 caught): `tools/heritage.json` (10 products, hand-curated, one operator page per row) →
+`tools/build-heritage.py` (validates, resolves stop names to UIC ids through
+transport.opendata.ch — exact name only, 43 of 46 resolved, the 3 unresolved are
+Sursee–Triengen's halts which are bus stops, kept name-only and printed — and `--check`
+decides whether app.js is current) → `HERITAGE_CATALOGUE` in app.js → rows on the same
+weekend card: which products call at this station, on which of the weekend days, season in
+the operator's own shape, reservation, a source link, the check date. Two honesty marks
+travel per row: `evidence: operator` vs `third-party` (three rows — Bernina Express season,
+DFB season, Sursee–Triengen dates — are third-party and the card flags them in amber, because
+the operator page stated no season or the site was unreachable from the curating box), and
+`checked: 2026-09-08` (seasons change yearly; re-check before the next timetable year). The
+catalogue is offline data: it renders on an API outage too, matched by station name.
+**Still open inside 1.2:** the catalogue is 10 products, mostly Graubünden + four others;
+ZVV/BLS/MOB/Zentralbahn products are `UNASSESSED`; official timetable table 615 (DFB) could
+not be read on this box. Original analysis:
 
 Heritage and scenic operations. Confirmed reachable, with a caveat that kills the naive
 version.
@@ -268,7 +283,8 @@ tidy-up will otherwise remove them:
 
 ## Priority (re-ranked 2026-09-06 after the shipped items were struck)
 
-1. **§1.2 curated heritage catalogue** — the non-algorithmic two-thirds: build-time JSON per operator, changes yearly.
+1. ~~**§1.2 curated heritage catalogue**~~ — SHIPPED 2026-09-08 (see §1.2); what remains is
+   breadth (10 products; re-check yearly via `python3 tools/build-heritage.py --check`).
 2. **§0 assess ZVV** — cheapest way to find out whether this document describes the field or just two apps.
 3. **§4.1 occupancy** — blocked on the source; only correct wording is actionable.
 

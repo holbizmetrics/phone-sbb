@@ -32,6 +32,15 @@ to go* — and they are easy to miss if you only read the planning sections.
 - **Touch** — planning without typing. The stations the app already knows about
   (your stars, recent routes, last board) become tiles; you drag a line from one
   to another and that line is the journey.
+- **Special trains this weekend** — the 🚂 button on a departure board. Two layers:
+  what the *timetable* files as a heritage run (EXT departures under a verified
+  operator, DVZO so far), and what the timetable cannot show — panorama trains,
+  open scenic carriages, museum and steam lines — from a hand-curated catalogue
+  (`tools/heritage.json`, 10 products) of the operators' published seasons: which
+  products call at this station, on which of the weekend days, reservation, a link
+  to the operator's page, and the date it was checked. A season is the operator's
+  calendar, not a promise for the day; rows whose season came only from a third
+  party say so in amber.
 
 ## The Smart change-finder
 
@@ -303,6 +312,9 @@ Works identically on desktop and phone.
   runs the point-in-polygon offline and pastes 17 KB of answers into
   `index.html`. A maintainer reruns it when Verbund boundaries move
   (`--check` fails if the file is stale). Users still get one HTML file.
+  The heritage catalogue follows the same rule: `tools/heritage.json` is hand-curated,
+  `python3 tools/build-heritage.py --apply` writes it into app.js and `--check` says whether
+  app.js is current; seasons change yearly, so re-check every row before the next timetable year.
 
 - **Endpoints:** `/stationboard`, `/connections` (with multi-`via[]` hub
   sweeps) and `/locations` on transport.opendata.ch; `/v1/forecast` and
@@ -328,6 +340,7 @@ node tests/summit.mjs           # is it worth going up — runs anywhere, no bro
 node tests/storage-full.mjs     # a full phone must not kill the app — runs anywhere
 node tests/board-refresh.mjs    # the 30s refresh keeps its rows — runs anywhere
 node tests/outage-not-verdict.mjs # an outage is not "no such journey" — runs anywhere
+node tests/heritage.mjs         # the curated heritage catalogue: seasons, stations, the build check — 42 checks
 node tests/verbund.mjs          # fare-zone lookup — the negatives are the point
 node tests/vehicle.mjs          # boat / cog / replacement-bus signals — runs anywhere
 node tests/last-home.mjs        # the last way back — and an outage is not "no way back"

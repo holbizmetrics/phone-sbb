@@ -86,6 +86,16 @@ const mkSpec = ({ byDay = {}, apiErr = null } = {}) => {
     ${grab("weekendDays")}
     ${grab("specialRows")}
     ${grabC(/const DAY_NAMES=\[[^\n]*\];/, "DAY_NAMES")}
+    ${grabC(/const HERITAGE_CATALOGUE=\[[^\n]*\];/, "HERITAGE_CATALOGUE")}
+    ${grabC(/const HERITAGE_DOW=\[[^\n]*\];/, "HERITAGE_DOW")}
+    ${grab("heritageRuns")}
+    ${grab("heritageNorm")}
+    ${grab("heritageAt")}
+    ${grab("heritageSplit")}
+    ${grab("heritageDM")}
+    ${grab("heritageDaysLabel")}
+    ${grab("heritageSeasonText")}
+    ${grab("specialCatalogueHTML")}
     ${grab("specialWrap")}
     ${grab("closeSpecial")}
     ${grab("specialDayHTML")}

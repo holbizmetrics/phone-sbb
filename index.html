@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-180.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <title>Rail &#183; live departures</title>
-<link rel="stylesheet" href="app.css?v=20260731b">
+<link rel="stylesheet" href="app.css?v=20260908a">
 </head>
 <body>
 <div class="wrap">
@@ -96,8 +96,9 @@
         destination list &#8212; that one address to <b>Nominatim/OSM</b> to turn it into coordinates.
         That last one is the only request that carries a place you typed rather than a station name, it
         happens once per tap and never while you type, and if you never tap it, it never runs;
-        links to maps, webcams or a second forecast
-        open in a new tab &#8212; what you do there is between you and them. Your location is read
+        links to maps, webcams, a second forecast or a railway operator&#8217;s own page (the source
+        behind each row of the weekend heritage card) open in a new tab &#8212; what you do there is
+        between you and them; the app itself never fetches from those operators. Your location is read
         only in the moment you tap &#128205;, and is sent nowhere except that one nearest-stop
         lookup. There is nothing to log in to because there is nothing about you here.
       </div>
@@ -245,6 +246,6 @@
      are on follows you to every tab, which is the whole point of pinning it. -->
 <div id="ob"></div>
 
-<script src="app.js?v=20260731b"></script>
+<script src="app.js?v=20260908a"></script>
 </body>
 </html>
