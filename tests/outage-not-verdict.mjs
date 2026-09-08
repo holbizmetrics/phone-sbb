@@ -148,8 +148,12 @@ chk("the outage branch still says it is not a 'no' when filtered",
 chk("the direct queries pass a note AND the abort signal", (src.match(/tryConns\(`from=[^`]*`,\s*direct,\s*sig\)/g) || []).length === 2,
   "expected both direct queries to report failure and be abortable; found " +
   (src.match(/tryConns\(`from=[^`]*`,\s*direct,\s*sig\)/g) || []).length);
-chk("hub sweeps deliberately pass no note (but still the signal)", !/via\[\]=[^`]*`,\s*direct[,)]/.test(src) && /via\[\]=[^`]*`,\s*null,\s*sig\)/.test(src),
-  "a timed-out hub would be reported as the timetable being down");
+// (row 371: hubs now go through sweepHub, which keeps a PRIVATE note per attempt -- the
+// invariant is unchanged: a hub's failure must never reach the direct-query verdict)
+chk("hub sweeps never pass the direct note (they carry their own, plus the signal)",
+  !/via\[\]=[^`]*`,\s*direct[,)]/.test(src) && /sweepHub\(h, `from=[^`]*via\[\]=[^`]*`, sig\)/.test(src)
+  && /const note=\{\};\s*const r=await withTimeout\(tryConns\(qs, note, sig\)/.test(src),
+  "a timed-out or rate-limited hub would be reported as the timetable being down");
 // Both phases must carry the flag. Counting `renderSmart(` calls and requiring
 // every one of them to mention `direct.failed && !direct.ok` is the check that
 // stays true if a third render phase is ever added -- matching on the argument

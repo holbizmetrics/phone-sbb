@@ -144,7 +144,13 @@ function vehicleRibs(secs){
 /* ---------- API ---------- */
 async function api(path, signal){
   const r = await fetch(API+path, signal?{signal}:undefined);
-  if(!r.ok) throw new Error("HTTP "+r.status);
+  if(!r.ok){
+    const e=new Error("HTTP "+r.status);
+    /* a 429 may say how long to wait; carry it so the hub sweep can honour it (row 371) */
+    const ra=r.headers&&r.headers.get&&r.headers.get("Retry-After");
+    if(ra&&/^\d+$/.test(String(ra).trim())) e.retryAfter=+ra;
+    throw e;
+  }
   return r.json();
 }
 const locCache = new Map();
@@ -2957,7 +2963,62 @@ function enrichWonders(top, body){
 }
 
 // resolve to [] if a slow query outruns the cap, so one lagging hub can't stall first paint
-function withTimeout(p, ms){ return Promise.race([p, new Promise(r=>setTimeout(()=>r([]), ms))]); }
+function withTimeout(p, ms, onTimeout){ return Promise.race([p, new Promise(r=>setTimeout(()=>r(onTimeout===undefined?[]:onTimeout), ms))]); }
+
+/* ---------- hub sweep: bounded, and honest about what it did not sweep (courier row 371) ----------
+   One tap used to fire base + wide + one request PER HUB at once -- about eleven
+   to a volunteer API -- and the 429 that came back was self-inflicted (probe
+   2026-09-06: one request 200; six at 150 ms spacing 0x429; the burst trips
+   it). Worse, hub jobs ran under allSettled and a rejected hub simply VANISHED
+   from the answer, while a 429 on base or wide killed the whole plan with the
+   red banner: the same refusal, two outcomes, decided by which of the eleven the
+   server picked. So: at most HUB_PAR hub requests in flight, one retry after a
+   429 (Retry-After when the server sends one, else HUB_RETRY_MS), and every hub
+   that still came back empty-handed is RETURNED with its reason -- the render
+   owes the rider the count and the names, because "swept 9 routes" over a sweep
+   that silently lost two is the absence-as-data class this app keeps finding. */
+const HUB_PAR = 3;          // hub requests in flight at once
+const HUB_RETRY_MS = 1500;  // wait before the one retry after a 429 that carries no Retry-After
+const HUB_CAP = 5000;       // per-attempt cap: hubs measured 3.3-9.3 s; first paint never waits on this
+const HUB_TIMEOUT = Symbol("hub-timeout");
+/* Run thunks with at most `limit` in flight; results land in input order; a
+   thunk that throws leaves its Error in the slot, never a hole. */
+async function pooled(thunks, limit){
+  const out=new Array(thunks.length); let next=0;
+  async function worker(){
+    while(next<thunks.length){ const k=next++; try{ out[k]=await thunks[k](); }catch(e){ out[k]=e; } }
+  }
+  await Promise.all(Array.from({length:Math.max(1,Math.min(limit,thunks.length))}, worker));
+  return out;
+}
+/* One hub -> {hub, conns, state}; state is ok | limited | timeout | failed | aborted.
+   A 429 is retried ONCE after the server's Retry-After (or HUB_RETRY_MS); a
+   Retry-After longer than the cap is not waited for -- the hub reads limited. */
+async function sweepHub(h, qs, sig){
+  for(let attempt=0; attempt<2; attempt++){
+    const note={};
+    const r=await withTimeout(tryConns(qs, note, sig), HUB_CAP, HUB_TIMEOUT);
+    if(r===HUB_TIMEOUT) return {hub:h, conns:[], state:"timeout"};
+    if(!note.failed) return {hub:h, conns:r.map(c=>{c._via=h; return c;}), state:"ok"};
+    if(sig&&sig.aborted) return {hub:h, conns:[], state:"aborted"};
+    const m=/^HTTP (\d+)/.exec((note.err&&note.err.message)||"");
+    if(!(m&&m[1]==="429")) return {hub:h, conns:[], state:"failed"};
+    const wait = note.err.retryAfter ? note.err.retryAfter*1000 : HUB_RETRY_MS;
+    if(attempt>0 || wait>HUB_CAP) return {hub:h, conns:[], state:"limited"};
+    await new Promise(res=>setTimeout(res, wait));
+  }
+  return {hub:h, conns:[], state:"limited"};
+}
+/* The line the settled render owes: which hubs were NOT searched and why. Empty
+   when every hub answered -- and only then. */
+function unsweptNote(unswept){
+  const u=(unswept||[]).filter(x=>x&&x.state&&x.state!=="ok"&&x.state!=="aborted");
+  if(!u.length) return "";
+  const why={limited:"rate-limited", timeout:"timed out", failed:"failed"};
+  return `<div class="shint unswept">${u.length} hub route${u.length===1?"":"s"} unswept: `
+    + u.map(x=>`${esc(x.hub)} (${esc(why[x.state]||x.state)})`).join(", ")
+    + ` &#8212; not searched, so not &quot;none&quot;; tap Search again to retry.</div>`;
+}
 
 /* A sweep takes up to five seconds. Refusing to start a new one while the old
    one runs meant a mode chip tapped in that window did NOTHING -- no result, no
@@ -2983,10 +3044,8 @@ async function smartPlan(){
     // API takes ONE via[] here, and a second one is not "more thorough" --
     // it is a different journey the passenger did not ask for.
     const hubList = viaName ? [] : [...HUBS, ...(preferScenic?SCENIC_HUBS:[])].filter(h=>h!==fromName&&h!==toName);
-    const HUB_CAP=5000;  // tunable: bounds hub fill-in (hubs measured 3.3-9.3s); the base render fixes PERCEIVED latency regardless of this
-    const hubJobs = hubList.map(h=>
-      withTimeout(tryConns(`from=${f}&to=${t}&via[]=${encodeURIComponent(h)}&limit=3${whenQS()}${modeQS()}`, null, sig), HUB_CAP)
-        .then(cs=>cs.map(c=>{c._via=h; return c;})).catch(()=>[]));
+    // hubs: at most HUB_PAR in flight, each with one 429 retry, each reporting its own outcome (row 371)
+    const hubsP = pooled(hubList.map(h=>()=>sweepHub(h, `from=${f}&to=${t}&via[]=${encodeURIComponent(h)}&limit=3${whenQS()}${modeQS()}`, sig)), HUB_PAR);
 
     // Phase 1 -- render the direct/wide results the moment they land (~base latency), hint that more is coming
     const [rawBase, rawWide] = await Promise.all([baseP, wideP]);
@@ -3001,12 +3060,14 @@ async function smartPlan(){
     if(base.length||wide.length) rememberRoute(fromName,toName);   // a real result -- now it is worth a chip
     renderSmart(base, wide.slice(), baseline, true, (direct.failed && !direct.ok) ? (direct.err||true) : null, nKept, nRaw);
 
-    // Phase 2 -- hub routes fill in when they arrive; any past the cap are dropped silently
-    const rawHubs = (await Promise.allSettled(hubJobs)).flatMap(r=>r.status==="fulfilled"?r.value:[]);
+    // Phase 2 -- hub routes fill in when they arrive; a hub past the cap, rate-limited or failed is NAMED, never dropped
+    const hubOut = (await hubsP).map((r,i)=> (r&&r.state) ? r : {hub:hubList[i], conns:[], state:"failed"});
     if(gen!==jrnGen) return;                                       // superseded
+    const rawHubs = hubOut.flatMap(r=>r.conns);
+    const unswept = hubOut.filter(r=>r.state!=="ok");
     const hubResults = catFilter(rawHubs);
     renderSmart(base, wide.concat(hubResults), baseline, false, (direct.failed && !direct.ok) ? (direct.err||true) : null,
-                nKept+hubResults.length, nRaw+rawHubs.length);
+                nKept+hubResults.length, nRaw+rawHubs.length, unswept);
     fillJourneyLastHome(gen);   // after the settled render: the slot exists now, and gen bars a stale paint
   }catch(e){
     if(gen!==jrnGen) return;                                       // superseded
@@ -3020,7 +3081,7 @@ async function smartPlan(){
    refusal. It carries the thrown error when the direct query died unanswered,
    and null otherwise -- still falsy at the branch, so the "one answered query is
    a definite answer" rule above is unchanged. */
-function renderSmart(base, swept, baseline, searching, reqErr, nKept, nRaw){
+function renderSmart(base, swept, baseline, searching, reqErr, nKept, nRaw, unswept){
   const seen=new Set(), all=[];
   base.concat(swept).forEach(c=>{ const s=connSig(c); if(!seen.has(s)){ seen.add(s); all.push(annotate(c)); } });
   if(!all.length){
@@ -3081,6 +3142,7 @@ function renderSmart(base, swept, baseline, searching, reqErr, nKept, nRaw){
     + pgNote()
     + viaNote()
     + catFilterNote(nKept, nRaw)
+    + (searching?"":unsweptNote(unswept))
     + (searching?`<div class="shint">&#8987; searching wider routes&#8230;</div>`
                 :jrnZoneFact()+`<div id="jlh"></div>`)   // route-level facts, settled render only (one request per search, not per phase)
     + top.map((c,i)=>connCard(c,i)).join("")

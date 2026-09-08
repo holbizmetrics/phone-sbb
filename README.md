@@ -55,8 +55,11 @@ search for you, every time:
 - **Widens the scan** to 16 results instead of the handful you normally see.
 - **Sweeps the interchange hubs** — it re-runs the search *via* Zürich HB,
   Bern, Basel SBB, Luzern, Olten, Arth-Goldau, Lausanne, Biel/Bienne, Zürich
-  Flughafen and Winterthur, in parallel, to surface routes the default list
-  never led with.
+  Flughafen and Winterthur, three at a time (never all at once — one tap used
+  to fire eleven requests and rate-limit itself), to surface routes the default
+  list never led with. A hub the service refused or that timed out is named
+  under the results as *unswept*, so "swept 9 routes" is never printed over a
+  sweep that quietly lost two.
 - **Reads the real transfer buffer** at every change (the actual minutes
   between one train arriving and the next leaving) and flags **tight**
   changes under 5 minutes so a 4-minute platform sprint never surprises you.
@@ -187,8 +190,9 @@ answer is worse than an absent one:
   timetable request used to arrive at the screen as "No connections found —
   check the station names", sending you hunting for a typo in a name that was
   perfectly correct. An unreachable timetable now says so, and says explicitly
-  that it is **not a "no"**. A hub sweep that times out stays silent, because a
-  slow interchange has never meant the journey doesn't exist.
+  that it is **not a "no"**. A hub sweep that times out or is rate-limited
+  never turns into that banner (a slow interchange has never meant the journey
+  doesn't exist) — it is listed by name as unswept, with the reason.
 - If your phone isn't on Swiss time, a note says so — every time below is
   Swiss local, and the clock at the top is yours.
 - **A phone with no free space says so and keeps working.** `localStorage` throws
@@ -319,8 +323,10 @@ Works identically on desktop and phone.
 - **Endpoints:** `/stationboard`, `/connections` (with multi-`via[]` hub
   sweeps) and `/locations` on transport.opendata.ch; `/v1/forecast` and
   `/v1/elevation` on Open-Meteo.
-- **Politeness:** transport.opendata.ch is a volunteer service. Hub sweeps are
-  batched, results are cached, and polling stops the moment the tab is hidden.
+- **Politeness:** transport.opendata.ch is a volunteer service. Hub sweeps run
+  at most three requests at a time with one retry after a 429 (honouring
+  `Retry-After` when sent), results are cached, and polling stops the moment
+  the tab is hidden.
 
 ## Tests
 
@@ -341,6 +347,7 @@ node tests/storage-full.mjs     # a full phone must not kill the app — runs an
 node tests/board-refresh.mjs    # the 30s refresh keeps its rows — runs anywhere
 node tests/outage-not-verdict.mjs # an outage is not "no such journey" — runs anywhere
 node tests/heritage.mjs         # the curated heritage catalogue: seasons, stations, the build check — 42 checks
+node tests/hub-sweep.mjs        # the hub sweep is capped, retries a 429 once, names what it did not sweep — 19 checks
 node tests/verbund.mjs          # fare-zone lookup — the negatives are the point
 node tests/vehicle.mjs          # boat / cog / replacement-bus signals — runs anywhere
 node tests/last-home.mjs        # the last way back — and an outage is not "no way back"
