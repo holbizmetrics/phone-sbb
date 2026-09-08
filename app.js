@@ -2692,7 +2692,9 @@ function onboardNext(ob,now){
 /* The verdict line is ALWAYS on -- it is the one thing here nobody else can
    tell you. The station signage knows the platform; only the buffer maths
    knows whether those minutes buy you the station hall or just the Gleis. */
-function obVerdictHTML(x){
+function obVerdictHTML(x, f){
+  if(f && f.state==="stale")
+    return `<div class="obverdict unverified">${x.missed?"missed":x.b+"&#8242;"} at the last live read, ${f.age}&#8242; ago &#8212; unverified since; the verdict may be out of date</div>`;
   if(x.missed)          return `<div class="obverdict miss">&#9888; missed by ${-x.b}&#8242; &#8212; this change cannot be made; replan from ${esc(x.stn)}</div>`;
   if(x.b>=LAYOVER_MIN)  return `<div class="obverdict go">${x.b}&#8242; &#8212; enough to leave the platform</div>`;
   return `<div class="obverdict stay">${x.b}&#8242; &#8212; stay on the platform</div>`;
@@ -2700,27 +2702,38 @@ function obVerdictHTML(x){
 function obLineHTML(ob,nx){
   const pin=CP(0x1F4CC);
   if(nx.phase==="arrived")  return `${pin} <b>${esc(ob.to)}</b> &#8212; arrived`;
+  const f=obFreshness(ob,nx,Date.now());
   if(nx.phase==="arriving"){
-    const m=minsUntil(ob.arr);
-    return `${pin} &#8594; <b>${esc(ob.to)}</b> ${hhmm(ob.arr)}${m>0&&m<600?` &#183; in ${m}&#8242;`:""} &#183; no more changes`;
+    const liveArr = f&&(f.state==="live"||f.state==="stale") ? obArr : null;   // obFreshness already keyed the read to THIS pin
+    const when = liveArr ? liveArr.at : ob.arr;
+    const m=minsUntil(when);
+    const dly = liveArr && liveArr.dly ? ` (${liveArr.dly>0?"+":""}${liveArr.dly}&#8242;)` : "";
+    return `${pin} &#8594; <b>${esc(ob.to)}</b> ${hhmm(when)}${dly}${m>0&&m<600?` &#183; in ${m}&#8242;`:""} &#183; no more changes${obFreshTag(f)}`;
   }
   const x=obEffective(nx)||nx.x;   // the one-line bar shows the freshest buffer it has
   const t=x.missed?`<b class="obmiss">missed</b>`:`<b>${x.b}&#8242;</b>`;
-  return `${pin} &#8594; <b>${esc(ob.to)}</b> &#183; next change ${esc(x.stn)} ${t}${x.pd?` &#183; Pl.&#8201;${esc(x.pd)}`:""}`;
+  return `${pin} &#8594; <b>${esc(ob.to)}</b> &#183; next change ${esc(x.stn)} ${t}${x.pd?` &#183; Pl.&#8201;${esc(x.pd)}`:""}${obFreshTag(f)}`;
 }
 function obSheetHTML(ob,nx){
   const unpin=`<button type="button" class="obunpin" onclick="onboardUnpin()">unpin &#8212; I&#39;m off this journey</button>`;
+  const f=obFreshness(ob,nx,Date.now());
   if(nx.phase!=="change"){
-    const line=nx.phase==="arrived"
-      ? `Arrived at <b>${esc(ob.to)}</b>.`
-      : `No more changes &#8212; ride it out to <b>${esc(ob.to)}</b>, arriving <b>${hhmm(ob.arr)}</b>.`;
-    return `<div class="obh">${line}</div>${unpin}`;
+    let line;
+    if(nx.phase==="arrived") line=`Arrived at <b>${esc(ob.to)}</b>.`;
+    else{
+      const liveArr = f&&(f.state==="live"||f.state==="stale") ? obArr : null;
+      line=`No more changes &#8212; ride it out to <b>${esc(ob.to)}</b>, arriving <b>${hhmm(liveArr?liveArr.at:ob.arr)}</b>`
+        + (liveArr ? (liveArr.dly ? ` (${liveArr.dly>0?"+":""}${liveArr.dly}&#8242;, live ${f.age}&#8242; ago)` : ` (on time, live ${f.age}&#8242; ago)`) : "") + ".";
+    }
+    const note = f && f.state!=="live" && nx.phase==="arriving" ? `<div class="oblive">${f.state==="stale"?`live read is ${f.age}&#8242; old &#8212; arrival unverified since`:f.note}</div>` : "";
+    return `<div class="obh">${line}</div>${note}${unpin}`;
   }
   const x=obEffective(nx)||nx.x;
-  // three-valued and honest: a live read, a live failure, or silence -- never a guessed "on time"
-  const live = obLive&&obLive.k===nx.k
-    ? `<div class="oblive">live: incoming train ${obLive.dly>0?`+${obLive.dly}&#8242;`:"on time"} &#8212; buffer recomputed</div>`
-    : obLiveNote ? `<div class="oblive">${obLiveNote}</div>` : "";
+  // four-valued and honest: a live read WITH ITS AGE, a stale read, a live failure, or pin-time -- never a guessed "on time"
+  const live = f.state==="live"
+    ? `<div class="oblive">live: incoming train ${obLive.dly>0?`+${obLive.dly}&#8242;`:"on time"} &#8212; buffer recomputed, read ${f.age}&#8242; ago</div>`
+    : f.state==="stale" ? `<div class="oblive">live read is ${f.age}&#8242; old &#8212; buffer unverified since</div>`
+    : `<div class="oblive">${f.note}</div>`;
   const times=`${x.at?`arrive ${hhmm(x.at)}${x.pa?` Pl.&#8201;${esc(x.pa)}`:""}`:""}${x.dt?` &#183; depart ${hhmm(x.dt)}${x.pd?` Pl.&#8201;${esc(x.pd)}`:""}`:""}`;
   const later = nx.left>0 ? `then ${nx.left} more change${nx.left===1?"":"s"} &#183; ` : "";
   // the setting travels with the sheet, so turning it on happens exactly where
@@ -2729,7 +2742,7 @@ function obSheetHTML(ob,nx){
   const poiBox = obPoi && !x.missed && x.b>=LAYOVER_MIN && x.co ? `<div class="obpoi"></div>` : "";
   return `<div class="obh">Next change &#8212; <b>${esc(x.stn)}</b></div>`
     + `<div class="obt">${times}</div>`
-    + obVerdictHTML(x) + live
+    + obVerdictHTML(x, f) + live
     + poiBox + tog
     + `<div class="obt">${later}arriving ${esc(ob.to)} <b>${hhmm(ob.arr)}</b></div>`
     + unpin;
@@ -2768,8 +2781,54 @@ let obLive=null;      // {k,b,dly} -- last live read, keyed to the change row it
 let obLiveAt=0;       // when that read landed
 let obCheckAt=0;      // throttle: next board request no earlier than this
 let obLiveNote="";    // honest status when the check could not answer
+let obArr=null;       // {key, at, dly} -- live arrival at the destination for the last leg, keyed to the pinned arrival
+let obArrAt=0;        // when that read landed
+let obArrNote="";     // honest status for the arrival check
 const OB_RECHECK_MIN=3;    // volunteer API: one arrival-board request every few minutes, only while pinned
 const OB_HORIZON_MIN=120;  // a change hours away has no live board yet -- don't burn requests on it
+const OB_STALE_MIN=10;     // a live read older than this no longer underwrites the go/stay verdict (courier row 361)
+
+/* ---------- freshness: the bar says how old its data is (courier row 361) ----------
+   paintOnboard repaints every 30 s, so the bar LOOKS live whatever it knows. The
+   clock advances while the timetable may not: before the first live read, beyond
+   the 2 h horizon, after a failed read, or when the last read has aged. Each of
+   those is a different fact and the rider is owed the right one, on the one-line
+   bar and not only in the sheet. Four states, never a guessed "live":
+     live    -- a read for THIS change/arrival, younger than OB_STALE_MIN
+     stale   -- a read for this change, older than that: the number is shown, the verdict is not asserted
+     failed  -- the last read did not answer or found no row (note says which)
+     pintime -- no read yet (note says whether one is even due) */
+function obFreshness(ob, nx, now){
+  if(nx.phase==="change"){
+    if(obLive && obLive.k===nx.k){
+      const age=Math.max(0, Math.round((now-obLiveAt)/60000));
+      return age<=OB_STALE_MIN ? {state:"live", age} : {state:"stale", age};
+    }
+    if(obLiveNote) return {state:"failed", age:null, note:obLiveNote};
+    const far = !!(nx.x && nx.x.at && new Date(nx.x.at).getTime()-now > OB_HORIZON_MIN*60000);
+    return {state:"pintime", age:null, note: far
+      ? `pin-time buffer &#8212; the live check starts within ${Math.round(OB_HORIZON_MIN/60)}&#8201;h of the change`
+      : "pin-time buffer &#8212; no live check yet"};
+  }
+  if(nx.phase==="arriving"){
+    if(obArr && ob && obArr.key===ob.arr){
+      const age=Math.max(0, Math.round((now-obArrAt)/60000));
+      return age<=OB_STALE_MIN ? {state:"live", age} : {state:"stale", age};
+    }
+    if(obArrNote) return {state:"failed", age:null, note:obArrNote};
+    const far = !!(ob && ob.arr && new Date(ob.arr).getTime()-now > OB_HORIZON_MIN*60000);
+    return {state:"pintime", age:null, note: far
+      ? `pin-time arrival &#8212; the live check starts within ${Math.round(OB_HORIZON_MIN/60)}&#8201;h of arriving`
+      : "pin-time arrival &#8212; no live check yet"};
+  }
+  return null;
+}
+function obFreshTag(f){
+  if(!f) return "";
+  const t = f.state==="live" ? `live ${f.age}&#8242;` : f.state==="stale" ? `stale ${f.age}&#8242;`
+          : f.state==="failed" ? "live check failed" : "pin-time";
+  return ` <span class="obfresh ${f.state}">${t}</span>`;
+}
 
 /* Live supersedes pin-time ONLY for the change it measured -- an old read
    about Olten must not colour the verdict for Bern once the anchor moves on. */
@@ -2788,21 +2847,32 @@ function obOfferHTML(ob,nx){
 async function obRecheck(now){
   if(!onboard) return;
   const nx=onboardNext(onboard,now);
-  if(nx.phase!=="change") return;
-  const x=nx.x;
-  if(!x.at || new Date(x.at).getTime()-now>OB_HORIZON_MIN*60000) return;
+  // the next change while there is one; the destination's arrival on the last leg (row 361)
+  let stn, at;
+  if(nx.phase==="change"){ stn=nx.x.stn; at=nx.x.at; }
+  else if(nx.phase==="arriving"){ stn=onboard.to; at=onboard.arr; }
+  else return;
+  if(!stn || !at || new Date(at).getTime()-now>OB_HORIZON_MIN*60000) return;
   if(now<obCheckAt) return;
   obCheckAt=now+OB_RECHECK_MIN*60000;
   try{
-    const d=await api("/stationboard?station="+encodeURIComponent(x.stn)+"&type=arrival&limit=30");
-    const r=obLiveBuffer(x, d.stationboard||[]);
-    if(r){ obLive={k:nx.k, b:r.b, dly:r.dly}; obLiveNote=""; }
-    else { obLive=null; obLiveNote="incoming train not on the arrival board &#8212; live check has no verdict"; }
+    const d=await api("/stationboard?station="+encodeURIComponent(stn)+"&type=arrival&limit=30");
+    if(nx.phase==="change"){
+      const r=obLiveBuffer(nx.x, d.stationboard||[]);
+      if(r){ obLive={k:nx.k, b:r.b, dly:r.dly}; obLiveNote=""; }
+      else { obLive=null; obLiveNote="incoming train not on the arrival board &#8212; live check has no verdict"; }
+      obLiveAt=Date.now();
+    }else{
+      const r=obLiveArrival(at, d.stationboard||[]);
+      if(r){ obArr={key:onboard.arr, at:r.at, dly:r.dly}; obArrNote=""; }
+      else { obArr=null; obArrNote="your train is not on the destination&#39;s arrival board &#8212; no live arrival"; }
+      obArrAt=Date.now();
+    }
   }catch(e){
-    // a dead request is "unknown", not "on time" -- the pin-time buffer stands, labelled
-    obLive=null; obLiveNote="live check did not answer &#8212; buffer shown is pin-time";
+    // a dead request is "unknown", not "on time" -- the pin-time figure stands, labelled
+    if(nx.phase==="change"){ obLive=null; obLiveNote="live check did not answer &#8212; buffer shown is pin-time"; obLiveAt=Date.now(); }
+    else { obArr=null; obArrNote="live check did not answer &#8212; arrival shown is pin-time"; obArrAt=Date.now(); }
   }
-  obLiveAt=Date.now();
   paintOnboard();
 }
 /* One tap: the change stop becomes the origin, the pinned destination stays,
@@ -4229,6 +4299,22 @@ function obLiveBuffer(x, rows){
     let freshT=prog?new Date(prog).getTime():NaN;
     if(isNaN(freshT)) freshT = typeof j.stop.delay==="number" ? schedT+j.stop.delay*60000 : schedT;
     return {b:Math.round((depT-freshT)/60000), dly:Math.round((freshT-schedT)/60000)};
+  }
+  return null;
+}
+/* The last leg has no change to recheck, but its arrival rots the same way: the
+   destination's arrival board row whose SCHEDULED arrival equals the pinned one
+   gives the live instant (prognosis, else delay field). No row = UNKNOWN. */
+function obLiveArrival(at, rows){
+  if(!at) return null;
+  const schedT=new Date(at).getTime(); if(isNaN(schedT)) return null;
+  for(const j of rows||[]){
+    const arr=j&&j.stop&&j.stop.arrival; if(!arr) continue;
+    if(new Date(arr).getTime()!==schedT) continue;
+    const prog=j.stop.prognosis&&j.stop.prognosis.arrival;
+    let freshT=prog?new Date(prog).getTime():NaN;
+    if(isNaN(freshT)) freshT = typeof j.stop.delay==="number" ? schedT+j.stop.delay*60000 : schedT;
+    return {at:new Date(freshT).toISOString(), dly:Math.round((freshT-schedT)/60000)};
   }
   return null;
 }

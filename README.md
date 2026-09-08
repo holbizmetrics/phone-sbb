@@ -41,6 +41,16 @@ to go* — and they are easy to miss if you only read the planning sections.
   to the operator's page, and the date it was checked. A season is the operator's
   calendar, not a promise for the day; rows whose season came only from a third
   party say so in amber.
+- **I'm on this one** — pin a connection and a bar at the bottom follows the
+  journey by the clock: the next change with its buffer and platform, and the
+  verdict only this app can give (*enough to leave the platform* / *stay on
+  the platform*). While a change is within two hours the change stop's arrival
+  board is re-read every few minutes and the buffer recomputed from the live
+  prognosis; on the last leg the destination's board is read the same way. The
+  bar says how old its data is — *live 2′*, *stale 14′*, *pin-time*, *live check
+  failed* — and once a live read is older than ten minutes it stops asserting
+  the verdict and says so, because a bar that repaints every 30 seconds looks
+  live whether it knows anything or not.
 
 ## The Smart change-finder
 
@@ -348,6 +358,7 @@ node tests/board-refresh.mjs    # the 30s refresh keeps its rows — runs anywhe
 node tests/outage-not-verdict.mjs # an outage is not "no such journey" — runs anywhere
 node tests/heritage.mjs         # the curated heritage catalogue: seasons, stations, the build check — 42 checks
 node tests/hub-sweep.mjs        # the hub sweep is capped, retries a 429 once, names what it did not sweep — 19 checks
+node tests/onboard-fresh.mjs    # the pinned bar says how old its data is and withholds a stale verdict — 26 checks
 node tests/verbund.mjs          # fare-zone lookup — the negatives are the point
 node tests/vehicle.mjs          # boat / cog / replacement-bus signals — runs anywhere
 node tests/last-home.mjs        # the last way back — and an outage is not "no way back"
