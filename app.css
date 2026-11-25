@@ -321,7 +321,11 @@
   .conn .wx{font-size:14px; font-weight:700; color:var(--dim); white-space:nowrap; display:inline-flex; align-items:center; gap:3px}
   .conn .wx.tappable{cursor:pointer; border-bottom:1px dotted var(--faint); padding-bottom:1px}
   .conn .wx.tappable:active{opacity:.6}
-  .wxpop{position:absolute; z-index:60; max-width:min(320px,calc(100vw - 16px));
+  .conn .aq{font-size:14px; font-weight:700; color:var(--dim); white-space:nowrap; display:inline-flex; align-items:center; gap:3px}
+  .conn .aq:empty{display:none}
+  .conn .aq.tappable{cursor:pointer; border-bottom:1px dotted var(--faint); padding-bottom:1px}
+  .conn .aq.tappable:active{opacity:.6}
+  .wxpop{white-space:pre-line; position:absolute; z-index:60; max-width:min(320px,calc(100vw - 16px));
     background:var(--card2); border:1px solid var(--line); border-radius:12px;
     box-shadow:var(--shadow); padding:10px 13px; font-size:13px; color:var(--txt);
     line-height:1.45; animation:pop .14s ease}

@@ -33,7 +33,7 @@ let pending = [];
 let aborts = 0;
 const ctx = {
   AbortController: class { constructor(){ this.signal = {}; } abort(){ aborts++; } },
-  fromName: "A", toName: "B", smart: false, weather: false, jrnConns: [],
+  fromName: "A", toName: "B", smart: false, weather: false, airq: false, jrnConns: [],
   $: id => (id === "jrnOut" ? jrnOut : { innerHTML: "" }),
   api: () => new Promise(res => pending.push(res)),
   skel: () => "SKEL",

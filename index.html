@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-180.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <title>Rail &#183; live departures</title>
-<link rel="stylesheet" href="app.css?v=20260908c">
+<link rel="stylesheet" href="app.css?v=20261125a">
 </head>
 <body>
 <div class="wrap">
@@ -91,7 +91,7 @@
         No account, no ads, no analytics, no cookies. Your favourites, routes and the pinned
         journey live in this browser&#8217;s own storage and never leave the phone. The app talks to
         exactly five services, each with only what the question needs: station names and times to
-        <b>transport.opendata.ch</b>, coordinates to <b>Open-Meteo</b> (weather), <b>Overpass/OSM</b>
+        <b>transport.opendata.ch</b>, coordinates to <b>Open-Meteo</b> (weather, and air &amp; pollen only if you switch that on), <b>Overpass/OSM</b>
         (nearby places), <b>Wikipedia</b> (sights), and &#8212; only when you tap an address row in the
         destination list &#8212; that one address to <b>Nominatim/OSM</b> to turn it into coordinates.
         That last one is the only request that carries a place you typed rather than a station name, it
@@ -171,6 +171,11 @@
         <span class="track"><span class="knob"></span></span>
         <span class="lbl">&#9925; Weather</span>
       </label>
+      <label class="smart-toggle" title="Show air quality and pollen at your destination for your arrival time (off unless you switch it on)">
+        <input type="checkbox" id="aqTog" onchange="onAirToggle()">
+        <span class="track"><span class="knob"></span></span>
+        <span class="lbl">&#127807; Air &amp; pollen</span>
+      </label>
       <span class="smart-hint">sweeps hubs &amp; flags tight changes</span>
     </div>
 
@@ -246,6 +251,6 @@
      are on follows you to every tab, which is the whole point of pinning it. -->
 <div id="ob"></div>
 
-<script src="app.js?v=20260908c"></script>
+<script src="app.js?v=20261125a"></script>
 </body>
 </html>

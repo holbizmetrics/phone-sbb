@@ -77,7 +77,7 @@ async function storm({ honourAbort, slowMs = 14000, settleMs = 50 }) {
   const pool = makePool(honourAbort);
   const jrnOut = { innerHTML: "" };
   const ctx = {
-    fromName: "A", toName: "B", smart: true, weather: false, jrnConns: [],
+    fromName: "A", toName: "B", smart: true, weather: false, airq: false, jrnConns: [],
     preferScenic: false, HUBS: ["H1","H2","H3","H4","H5","H6","H7","H8","H9"], SCENIC_HUBS: [],
     AbortController: FakeAC,
     $: id => (id === "jrnOut" ? jrnOut : { innerHTML: "" }),

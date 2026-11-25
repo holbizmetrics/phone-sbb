@@ -1088,6 +1088,11 @@ function onWeatherToggle(){
   weather = $("wxTog").checked;
   if(fromName&&toName) planJourney();
 }
+let airq = false;      // air quality + pollen at the destination, arrival hour (Open-Meteo air-quality). OFF by default:
+function onAirToggle(){ // nothing is fetched until the traveller switches it on (operator, 2026-11-25)
+  airq = $("aqTog").checked;
+  if(fromName&&toName) planJourney();
+}
 /* ---------- when to travel: now / leave at / arrive by ----------
    The planner used to answer only "from now". Two things this adds:
    jumping straight to a time (instead of paging through later trains), and
@@ -2207,6 +2212,7 @@ async function plainPlan(){
     $("jrnOut").innerHTML = shareBarHTML() + pgNote() + viaNote() + catFilterNote(kept.length, raw.length)
       + cs.map((c,i)=>connCard(c,i)).join("") + toiletsExpanderHTML(cs[0].to?.station) + wondersExpanderHTML(cs[0].to?.station);
     if(weather) fillWeather();
+  if(airq) fillAir();
   }catch(e){
     if(gen!==jrnGen) return;                                       // superseded
     $("jrnOut").innerHTML=errBox(e);
@@ -2358,16 +2364,84 @@ async function fillWeather(){
       e.dataset.detail=wxDetailText(w);   // tap reads this; no refetch
       e.classList.add("tappable");
       e.setAttribute("role","button"); e.setAttribute("tabindex","0");
-      e.setAttribute("aria-label",`Weather: ${wxDetailText(w)}`);
+      e.setAttribute("aria-label",popText(e));   // includes the air & pollen line if fillAir already ran
+    });
+  }
+}
+/* ---------- destination air quality + pollen (Open-Meteo air-quality API, no key, CORS-open) ----------
+   Same provider and same hour lookup as the weather chip. What it deliberately does NOT do:
+   - no "high/low pollen" word. There is no single standard threshold for pollen, and inventing one
+     would be the app giving health advice. The number travels with its unit (grains/m3), that is all.
+   - the air band words are the provider's OWN European AQI bands, quoted from
+     open-meteo.com/en/docs/air-quality-api (read 2026-11-25): 0-20 good, 20-40 fair, 40-60 moderate,
+     60-80 poor, 80-100 very poor, >100 extremely poor. A shared edge (exactly 20) goes to the
+     better band, since the docs give both readings.
+   - pollen is shown only when the top type rounds to at least 1 grain/m3; all-zero says nothing. */
+const AQ_POLLEN={alder_pollen:"Alder", birch_pollen:"Birch", grass_pollen:"Grass",
+  mugwort_pollen:"Mugwort", olive_pollen:"Olive", ragweed_pollen:"Ragweed"};
+function aqBand(v){
+  if(v==null||!isFinite(v)) return null;
+  return v<=20?"good":v<=40?"fair":v<=60?"moderate":v<=80?"poor":v<=100?"very poor":"extremely poor";
+}
+const aqCache={};
+function destAir(lat,lon){
+  const k=lat+","+lon;
+  if(!aqCache[k]) aqCache[k]=fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&hourly=european_aqi,${Object.keys(AQ_POLLEN).join(",")}&forecast_days=4&timezone=auto`)
+    .then(r=>r.json()).then(d=>d&&d.hourly?d.hourly:null).catch(()=>null);
+  return aqCache[k];
+}
+function aqAt(hourly, arrIso){
+  if(!hourly||!Array.isArray(hourly.time)||!arrIso) return null;
+  const i=hourly.time.findIndex(t=>t.slice(0,13)===arrIso.slice(0,13));   // local times (timezone=auto)
+  if(i<0) return null;
+  const at=a=>Array.isArray(a)&&a[i]!=null&&isFinite(a[i])?a[i]:null;
+  const aqi=at(hourly.european_aqi);
+  let top=null;
+  for(const k in AQ_POLLEN){ const v=at(hourly[k]); if(v!=null&&(!top||v>top.val)) top={name:AQ_POLLEN[k], val:v}; }
+  if(top&&Math.round(top.val)<1) top=null;
+  if(aqi==null&&!top) return null;           // nothing known for that hour -> no chip, never a made-up "good"
+  return {aqi:aqi==null?null:Math.round(aqi), band:aqBand(aqi), pollen:top?{name:top.name, val:Math.round(top.val)}:null,
+          hour:hourly.time[i].slice(11,16)};
+}
+function aqChipText(a){
+  return [a.band?`Air ${a.band}`:"", a.pollen?`${a.pollen.name} ${a.pollen.val}`:""].filter(Boolean).join(" · ");
+}
+function aqDetailText(a){
+  const p=[];
+  if(a.band) p.push(`Air quality: ${a.band} (European AQI ${a.aqi})`);
+  p.push(a.pollen?`${a.pollen.name} pollen ${a.pollen.val} grains/m³ (highest type)`:"No pollen in the forecast");
+  return p.join(" · ") + (a.hour?` · at ${a.hour}`:"") + " · forecast, Open-Meteo";
+}
+async function fillAir(){
+  const els=[...document.querySelectorAll(".aq[data-t]")];
+  if(!els.length) return;
+  const byCoord={};
+  els.forEach(e=>{ const k=e.dataset.lat+","+e.dataset.lon; (byCoord[k]=byCoord[k]||[]).push(e); });
+  for(const k in byCoord){
+    const [lat,lon]=k.split(",");
+    const hourly=await destAir(lat,lon);
+    byCoord[k].forEach(e=>{
+      const a=aqAt(hourly, e.dataset.t);
+      if(!a) return;
+      // its OWN dataset key, so it cannot race fillWeather writing data-detail on the same chip;
+      // the bubble joins the two at tap time (popText)
+      e.dataset.aqdetail=aqDetailText(a);
+      if(!e.textContent.trim()) e.textContent="\u{1F33F}";   // Weather off, or no forecast: the leaf is the chip
+      e.classList.add("tappable");
+      e.setAttribute("role","button"); e.setAttribute("tabindex","0");
+      e.setAttribute("aria-label",popText(e));
     });
   }
 }
 /* tap a weather chip -> a small dismissable bubble. Delegated, so it survives
    every re-render; tap-away / Esc closes. Nothing fetches on tap. */
 function wxClosePop(){ const p=$("wxPop"); if(p) p.remove(); }
+function popText(el){   // weather line, then the air & pollen line, whichever exist
+  return [el.dataset.detail, el.dataset.aqdetail].filter(Boolean).join("\n");
+}
 function wxShowPop(el){
   wxClosePop();
-  const txt=el.dataset.detail; if(!txt) return;
+  const txt=popText(el); if(!txt) return;
   const pop=document.createElement("div");
   pop.id="wxPop"; pop.className="wxpop"; pop.setAttribute("role","status"); pop.textContent=txt;
   document.body.appendChild(pop);
@@ -2378,7 +2452,7 @@ function wxShowPop(el){
   pop.style.top=(above ? r.top-pr.height-8 : r.bottom+8)+scrollY+"px";
 }
 document.addEventListener("click",e=>{
-  const chip=e.target.closest(".wx.tappable");
+  const chip=e.target.closest(".wx.tappable, .aq.tappable");
   if(chip){ e.stopPropagation(); (($("wxPop")&&chip===wxShowPop.last)?wxClosePop():(wxShowPop(chip), wxShowPop.last=chip)); return; }
   wxClosePop();
 });
@@ -3218,6 +3292,7 @@ function renderSmart(base, swept, baseline, searching, reqErr, nKept, nRaw, unsw
     + top.map((c,i)=>connCard(c,i)).join("")
     + (searching?"":toiletsExpanderHTML((base[0]||swept[0])?.to?.station) + wondersExpanderHTML((base[0]||swept[0])?.to?.station));   // expanders only on the settled render
   if(weather) fillWeather();
+  if(airq) fillAir();
 }
 
 function smartHead(baseline, nSafe, swN){
@@ -4190,7 +4265,10 @@ function connCard(c,i){
   // both-ends weather delta: origin forecast at DEPARTURE hour (left of arrow),
   // destination at ARRIVAL hour (right) — same wxAt/destWeather path, data-t = the hour to look up
   const cto=c.to?.station?.coordinate, cfr=c.from?.station?.coordinate;
-  const wxD = (weather && cto && arr) ? `<span class="wx" data-t="${esc(arr)}" data-lat="${cto.x}" data-lon="${cto.y}"></span>` : "";
+  // Air & pollen rides the DESTINATION chip's tap bubble (operator, 2026-11-25): with Weather on it is
+  // the same chip (class "wx aq"); with Weather off a bare leaf chip takes the same place. Never its own row.
+  const wxD = (cto && arr && (weather || airq))
+    ? `<span class="${weather?"wx":""}${weather&&airq?" ":""}${airq?"aq":""}" data-t="${esc(arr)}" data-lat="${cto.x}" data-lon="${cto.y}"></span>` : "";
   const wxO = (weather && cfr && dep) ? `<span class="wx" data-t="${esc(dep)}" data-lat="${cfr.x}" data-lon="${cfr.y}"></span>` : "";
   return `<div class="conn ${c._safePick?"win":""} ${c._tight?"hastight":""}" style="animation-delay:${i*30}ms">
     <div class="top">

@@ -349,6 +349,7 @@ node tests/route-history.mjs    # route chips — runs anywhere, no browser
 node tests/golden-hour.mjs      # arrive-before-sunset — runs anywhere, no browser
 node tests/enroute.mjs          # where to get off — runs anywhere, no browser
 node tests/toilets.mjs          # toilets near here — runs anywhere, no browser
+node tests/air.mjs              # air & pollen switch — runs anywhere, no browser
 node tests/offline-export.mjs   # the saved .html is honest and self-contained — 35 checks
 node tests/place-to-stops.mjs   # address → coordinates → nearest stops, tap-only — 31 checks
 node tests/sketch-labels.mjs    # which dots get a label and what it says — 10 checks

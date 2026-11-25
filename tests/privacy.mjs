@@ -14,6 +14,7 @@ const chk = (n, c, d = "") => { if (c) { pass++; console.log("  ok   " + n); } e
 const ALLOWED = [
   "transport.opendata.ch",     // timetable
   "api.open-meteo.com",        // weather + elevation
+  "air-quality-api.open-meteo.com", // air & pollen, ONLY with that switch on (same provider)
   "overpass-api.de",           // nearby places (OSM)
   "overpass.kumi.systems",     //   -- second mirror, same service
   "wikipedia.org",             // sights
