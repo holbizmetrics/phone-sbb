@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-180.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <title>Rail &#183; live departures</title>
-<link rel="stylesheet" href="app.css?v=20261125a">
+<link rel="stylesheet" href="app.css?v=20261125b">
 </head>
 <body>
 <div class="wrap">
@@ -110,7 +110,7 @@
   <div class="tabs">
     <button id="tabDep" class="on" onclick="setTab('dep')">Departures</button>
     <button id="tabJrn" onclick="setTab('jrn')">Journey</button>
-    <button id="tabWan" onclick="setTab('wan')">Wander</button>
+    <button id="tabWan" onclick="setTab('wan')" title="Where can a train take me and still get me back in time?">Wander</button>
     <button id="tabTch" onclick="setTab('tch')">Touch</button>
   </div>
 
@@ -123,6 +123,7 @@
       <button class="clr" type="button" aria-label="Clear station" onclick="clearField('dep')">&#10005;</button>
       <div class="ac" id="acDep"></div>
     </div>
+    <button type="button" class="wanpeek" id="wanPeek" hidden onclick="openWanderPeek()">&#129517; Got a few hours? See where a train can take you &#8212; and get you back &#8594;</button>
     <div class="favs" id="favs"></div>
     <div id="strandedOut"></div>
     <div id="specialOut"></div>
@@ -251,6 +252,6 @@
      are on follows you to every tab, which is the whole point of pinning it. -->
 <div id="ob"></div>
 
-<script src="app.js?v=20261125a"></script>
+<script src="app.js?v=20261125b"></script>
 </body>
 </html>

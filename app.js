@@ -6,7 +6,7 @@
 const BUILD = "dev";  // BUILD-STAMP
 const API = "https://transport.opendata.ch/v1";
 const $ = id => document.getElementById(id);
-const LS = { favs:"rail.favs", last:"rail.last", modes:"rail.modes", cats:"rail.cats", routes:"rail.routes", theme:"rail.theme", onboard:"rail.onboard", obpoi:"rail.obpoi", flightbuf:"rail.flightbuf" };
+const LS = { favs:"rail.favs", last:"rail.last", modes:"rail.modes", cats:"rail.cats", routes:"rail.routes", theme:"rail.theme", onboard:"rail.onboard", obpoi:"rail.obpoi", flightbuf:"rail.flightbuf", wanused:"rail.wanused" };
 let favs = load(LS.favs, []);
 let current = "";        // current departures station
 let refreshTimer = null;
@@ -4308,6 +4308,14 @@ const WAN_MIN_RIDE = 10;           // shorter than this is a tram hop, not an ou
 const WAN_MIN_DWELL = 15;          // arriving with no time to leave the platform is not "being there"
 const WAN_MAX_CAND = 5;            // 1 board + 2 requests each -- volunteer API, explicit action only
 
+/* Wander is the feature people would open this app for, and its tab name says
+   what it does only to someone who already knows (Astra review, 2026-11-25).
+   So one question-shaped line sits under the departure search UNTIL the first
+   real Wander search -- after that the tab is enough and the line stays gone.
+   "Used" means a search actually ran (start + budget), not that the tab was
+   peeked at: opening the tab and leaving is exactly the undiscovered case. */
+function paintWanPeek(){ const b=$("wanPeek"); if(b) b.hidden=!!load(LS.wanused,false); }
+function openWanderPeek(){ setTab("wan"); scrollTo({top:0,behavior:"smooth"}); }
 function setWanBudget(min, el){
   wanBudget = min;
   document.querySelectorAll("#wanBudget .chip").forEach(c=>c.classList.toggle("on", c===el));
@@ -4511,6 +4519,7 @@ function wanCard(c){
 }
 async function runWander(){
   if(!wanName||!wanBudget) return;
+  if(!load(LS.wanused,false)){ save(LS.wanused,true); paintWanPeek(); }   // first real search retires the hint
   const run=++wanRun, out=$("wanOut");
   out.innerHTML=skel(4);
   const now=Date.now(), deadline=now+wanBudget*60000;
@@ -4741,6 +4750,7 @@ renderModes();
 renderCats();     // renderModes() cascades into it, but a remembered filter must not depend on a cascade
 renderRoutes();
 renderBuild();
+paintWanPeek();   // the Wander hint, until the first real Wander search
 wireFades();      // after the painters: the rows must have their chips before anything measures them
 tickClock(); setInterval(tickClock,1000); setInterval(tickSketches,15000);
 paintOnboard(); setInterval(paintOnboard,30000);   // the pinned journey survives a reload -- the bar must too

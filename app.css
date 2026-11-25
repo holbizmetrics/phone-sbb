@@ -629,6 +629,11 @@
   .err{background:rgba(235,0,0,.1); border:1px solid rgba(235,0,0,.3); color:var(--errtxt);
     padding:14px; border-radius:14px; text-align:center; font-size:14px}
   .hint{color:var(--faint); font-size:13px; text-align:center; padding:8px}
+  /* Wander hint under the departure search; [hidden] must win over display:block */
+  .wanpeek{display:block; width:100%; margin:6px 0 2px; padding:8px 12px; text-align:left;
+    font:inherit; font-size:13px; color:var(--faint); background:transparent;
+    border:1px dashed currentColor; border-radius:10px; cursor:pointer}
+  .wanpeek[hidden]{display:none}
 
   /* touch timetable -- the tile grid is the drag surface. touch-action:none on
      the TILES only, so a drag that starts on a tile draws the line while a
