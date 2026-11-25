@@ -80,7 +80,7 @@ const FIXED = Date.parse("2026-11-15T09:30:00+0100");
 const esc = s => String(s || "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const mkOff = ({ board = [], apiFail = false, pin } = {}) => {
   const calls = [], ui = [];
-  class FDate extends Date { constructor(...a) { a.length ? super(...a) : super(FIXED); } }
+  class FDate extends Date { constructor(...a) { a.length ? super(...a) : super(FIXED); } static now() { return FIXED; } }
   const ctx = {
     Math, Object, Date: FDate, esc, encodeURIComponent, TIGHT: 5,
     onboard: pin !== undefined ? pin : { to: "Chur", arr: "2026-11-15T11:30:00+0100",

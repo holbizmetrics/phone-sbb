@@ -91,7 +91,7 @@ const LV = {
 const FIXED = Date.parse("2026-11-15T09:30:00+01:00");
 const mkWan = ({ low = 85, gateFail = false, levels = LV, elevs = [1200, 680, 300] } = {}) => {
   const calls = [];
-  class FDate extends Date { constructor(...a) { a.length ? super(...a) : super(FIXED); } }
+  class FDate extends Date { constructor(...a) { a.length ? super(...a) : super(FIXED); } static now() { return FIXED; } }
   const gateHour = { time: [H + ":00"], cloud_cover_low: [low] };
   const ctx = {
     Math, Array, Number, Intl, Promise, Date: FDate,
