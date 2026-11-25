@@ -1,0 +1,486 @@
+{
+  "_readme": "Curated heritage / panorama catalogue (UNSOLVED-GAPS 1.2, the non-algorithmic two-thirds). HAND-EDITED source of truth; tools/build-heritage.py resolves stop names to UIC ids, validates, and writes the HERITAGE_CATALOGUE constant into app.js. Evidence per product: 'operator' = the season is quoted from the operator's own page (URL in source, wording in quote); 'third-party' = only aggregators were reachable at check time and the card SAYS so. Seasons change yearly: re-check every product before the next timetable year and bump 'checked'.",
+  "checked": "2026-09-08",
+  "products": [
+    {
+      "id": "glacier-express",
+      "name": "Glacier Express",
+      "operator": "MGB/RhB",
+      "kind": "panorama",
+      "route": "Zermatt – St. Moritz",
+      "stops": [
+        {
+          "name": "Zermatt",
+          "id": "8501689"
+        },
+        {
+          "name": "Brig",
+          "id": "8501609"
+        },
+        {
+          "name": "Andermatt",
+          "id": "8505165"
+        },
+        {
+          "name": "Disentis/Mustér",
+          "id": "8509179"
+        },
+        {
+          "name": "Chur",
+          "id": "8509000"
+        },
+        {
+          "name": "Thusis",
+          "id": "8509189"
+        },
+        {
+          "name": "Tiefencastel",
+          "id": "8509192"
+        },
+        {
+          "name": "Filisur",
+          "id": "8509195"
+        },
+        {
+          "name": "Bergün/Bravuogn",
+          "id": "8509197"
+        },
+        {
+          "name": "Samedan",
+          "id": "8509251"
+        },
+        {
+          "name": "Celerina",
+          "id": "8509252"
+        },
+        {
+          "name": "St. Moritz",
+          "id": "8509253"
+        }
+      ],
+      "season": [
+        {
+          "from": "2026-05-02",
+          "to": "2026-10-10",
+          "days": "daily"
+        },
+        {
+          "from": "2026-12-05",
+          "to": null,
+          "days": "daily",
+          "note": "winter timetable resumes; end date not stated on the page"
+        }
+      ],
+      "closed": [
+        {
+          "from": "2026-10-11",
+          "to": "2026-12-04"
+        }
+      ],
+      "reservation": "mandatory",
+      "evidence": {
+        "season": "operator",
+        "stops": "operator"
+      },
+      "source": "https://www.glacierexpress.ch/en/timetable",
+      "quote": "Summer timetable 02.05.2026 – 10.10.2026. The Glacier Express will not be running between 11.10. and 04.12.2026. A seat reservation is mandatory.",
+      "note": "Runs as a regular train in the timetable but with its own product and mandatory reservation; not filterable from stationboard data."
+    },
+    {
+      "id": "bernina-express",
+      "name": "Bernina Express",
+      "operator": "RhB",
+      "kind": "panorama",
+      "route": "Chur – St. Moritz – Tirano",
+      "stops": [
+        {
+          "name": "Chur",
+          "id": "8509000"
+        },
+        {
+          "name": "St. Moritz",
+          "id": "8509253"
+        },
+        {
+          "name": "Tirano",
+          "id": "8509369"
+        }
+      ],
+      "season": [
+        {
+          "from": "2026-01-01",
+          "to": "2026-12-31",
+          "days": "daily"
+        }
+      ],
+      "closed": [],
+      "reservation": "mandatory",
+      "evidence": {
+        "season": "third-party",
+        "stops": "operator"
+      },
+      "source": "https://www.rhb.ch/en/panoramic-journeys/bernina-express/",
+      "quote": "Operator page states reservation and a diversion via Vereina (Chur – Landquart – Klosters – Sagliains – Pontresina) from Thursday 29 October to Friday 13 November 2026; it does not state the season. Third-party (seat61, myswissalps, 2026-09-08): runs daily all year, summer timetable 2 May – 25 October 2026.",
+      "note": "Intermediate stops are not listed on the operator page; only the three named ones are carried. 29.10.–13.11.2026: trains 951/952 diverted via Vereina, no Albula line."
+    },
+    {
+      "id": "rhb-historical-train",
+      "name": "Historical train (1920s stock, open scenic carriage)",
+      "operator": "RhB",
+      "kind": "heritage",
+      "route": "Davos Platz – Filisur",
+      "stops": [
+        {
+          "name": "Davos Platz",
+          "id": "8509073"
+        },
+        {
+          "name": "Davos Frauenkirch",
+          "id": "8509075"
+        },
+        {
+          "name": "Davos Glaris",
+          "id": "8509076"
+        },
+        {
+          "name": "Davos Monstein",
+          "id": "8509077"
+        },
+        {
+          "name": "Davos Wiesen",
+          "id": "8509078"
+        },
+        {
+          "name": "Filisur",
+          "id": "8509195"
+        }
+      ],
+      "season": [
+        {
+          "from": "2026-05-14",
+          "to": "2026-10-25",
+          "days": "daily"
+        }
+      ],
+      "closed": [],
+      "reservation": "not stated",
+      "evidence": {
+        "season": "operator",
+        "stops": "operator"
+      },
+      "source": "https://www.rhb.ch/en/nostalgic-trips/historical-train/",
+      "quote": "From 14 May to 25 October 2026, you will have the opportunity to travel daily on a historical train composition from the 1920s from Davos to Filisur and back.",
+      "note": "Not barrier-free (nostalgic coaches). Stops per the open-scenic-carriages page."
+    },
+    {
+      "id": "rhb-open-carriages-bernina",
+      "name": "Open scenic carriages on the Bernina line",
+      "operator": "RhB",
+      "kind": "panorama",
+      "route": "St. Moritz – Tirano (on regional trains)",
+      "stops": [
+        {
+          "name": "St. Moritz",
+          "id": "8509253"
+        },
+        {
+          "name": "Pontresina",
+          "id": "8509255"
+        },
+        {
+          "name": "Alp Grüm",
+          "id": "8509357"
+        },
+        {
+          "name": "Poschiavo",
+          "id": "8509361"
+        },
+        {
+          "name": "Tirano",
+          "id": "8509369"
+        }
+      ],
+      "season": [
+        {
+          "from": "2026-06-22",
+          "to": "2026-08-30",
+          "days": "daily"
+        }
+      ],
+      "closed": [],
+      "reservation": "not possible for single travellers",
+      "evidence": {
+        "season": "operator",
+        "stops": "operator"
+      },
+      "source": "https://www.rhb.ch/en/excursions/open-scenic-carriages/",
+      "quote": "Bernina Line: daily from 22 June to 30 August 2026. Reservations are not possible for single travellers.",
+      "note": "Carried on ordinary regional trains, so the timetable shows nothing special."
+    },
+    {
+      "id": "rhb-viaduct-shuttle",
+      "name": "Viaduct shuttle with open scenic carriages",
+      "operator": "RhB",
+      "kind": "panorama",
+      "route": "Filisur – Alvaneu (Landwasser viaduct)",
+      "stops": [
+        {
+          "name": "Filisur",
+          "id": "8509195"
+        },
+        {
+          "name": "Alvaneu",
+          "id": "8509194"
+        }
+      ],
+      "season": [
+        {
+          "from": "2026-05-14",
+          "to": "2026-06-28",
+          "days": [
+            "Wed",
+            "Thu",
+            "Fri",
+            "Sat",
+            "Sun"
+          ]
+        },
+        {
+          "from": "2026-06-29",
+          "to": "2026-08-30",
+          "days": "daily"
+        },
+        {
+          "from": "2026-09-02",
+          "to": "2026-10-25",
+          "days": [
+            "Wed",
+            "Thu",
+            "Fri",
+            "Sat",
+            "Sun"
+          ]
+        }
+      ],
+      "closed": [],
+      "reservation": "not possible for single travellers",
+      "evidence": {
+        "season": "operator",
+        "stops": "operator"
+      },
+      "source": "https://www.rhb.ch/en/excursions/open-scenic-carriages/",
+      "quote": "Viaduct Shuttle: Wednesday to Sunday from 14 May to 28 June 2026, daily from 29 June to 30 August 2026 and Wednesday to Sunday from 2 September to 25 October 2026.",
+      "note": ""
+    },
+    {
+      "id": "landwasser-express",
+      "name": "Landwasser Express (tourist train to the viaduct viewpoint)",
+      "operator": "RhB",
+      "kind": "excursion",
+      "route": "Filisur station – Landwasser viaduct vantage point",
+      "stops": [
+        {
+          "name": "Filisur",
+          "id": "8509195"
+        }
+      ],
+      "season": [
+        {
+          "from": "2026-05-14",
+          "to": "2026-10-18",
+          "days": "daily"
+        }
+      ],
+      "closed": [],
+      "reservation": "booking (charter product)",
+      "evidence": {
+        "season": "operator",
+        "stops": "operator"
+      },
+      "source": "https://www.rhb.ch/en/excursions/landwasser-express/",
+      "quote": "Charter trips are available daily from 14 May to 18 October.",
+      "note": "Not a railway timetable train at all – a 54-seat road-going tourist train from the station forecourt; the page states charter availability, not public departures."
+    },
+    {
+      "id": "gotthard-panorama-express",
+      "name": "Gotthard Panorama Express (boat + panorama train)",
+      "operator": "SBB / SGV",
+      "kind": "panorama",
+      "route": "Luzern (boat) – Flüelen – Bellinzona – Lugano",
+      "stops": [
+        {
+          "name": "Luzern",
+          "id": "8505000"
+        },
+        {
+          "name": "Flüelen",
+          "id": "8505112"
+        },
+        {
+          "name": "Bellinzona",
+          "id": "8505213"
+        },
+        {
+          "name": "Lugano",
+          "id": "8505300"
+        }
+      ],
+      "season": [
+        {
+          "from": "2026-04-18",
+          "to": "2026-10-18",
+          "days": "daily"
+        }
+      ],
+      "closed": [],
+      "reservation": "mandatory",
+      "evidence": {
+        "season": "operator",
+        "stops": "operator"
+      },
+      "source": "https://www.sbb.ch/de/freizeit-ferien/zuege-schiffe/panoramareisen/gotthard-panorama-express.html",
+      "quote": "Von Samstag, 18. April 2026 bis Sonntag, 18. Oktober 2026 täglich. Obligatorische Reservation.",
+      "note": "1st-class panorama train over the Gotthard mountain line; the boat leg is Luzern – Flüelen."
+    },
+    {
+      "id": "dfb-furka-steam",
+      "name": "Furka steam railway (Dampfbahn Furka-Bergstrecke)",
+      "operator": "DFB",
+      "kind": "steam",
+      "route": "Realp DFB – Furka DFB – Gletsch – Oberwald",
+      "stops": [
+        {
+          "name": "Realp DFB",
+          "id": "8530612"
+        },
+        {
+          "name": "Tiefenbach DFB",
+          "id": "8530613"
+        },
+        {
+          "name": "Furka DFB",
+          "id": "8530614"
+        },
+        {
+          "name": "Muttbach-Belvédère",
+          "id": "8501634"
+        },
+        {
+          "name": "Gletsch",
+          "id": "8501635"
+        },
+        {
+          "name": "Oberwald",
+          "id": "8501661"
+        }
+      ],
+      "season": [
+        {
+          "from": "2026-06-18",
+          "to": "2026-09-27",
+          "days": [
+            "Thu",
+            "Fri",
+            "Sat",
+            "Sun"
+          ]
+        }
+      ],
+      "closed": [],
+      "reservation": "mandatory",
+      "evidence": {
+        "season": "third-party",
+        "stops": "operator"
+      },
+      "source": "https://www.dfb.ch/en/pages/dampfbahnfahrten-furka-bergstrecke",
+      "quote": "Operator page: service between Realp, Gletsch and Oberwald; seat reservation is part of the offer; tickets to or from Tiefenbach DFB, Furka DFB and Muttbach-Belvédère only at a staffed ticket office. Season NOT stated on that page. Third-party (dampfundschiene.de, 2026-09-08): Thursday to Sunday, 18 June – 27 September 2026.",
+      "note": "Official timetable table 615 (FAHRPLANJAHR 2026) exists at widgets.oev-info.ch but could not be read on this box."
+    },
+    {
+      "id": "blonay-chamby",
+      "name": "Blonay–Chamby museum railway",
+      "operator": "BC",
+      "kind": "heritage",
+      "route": "Blonay – Chamby – Chaulin museum",
+      "stops": [
+        {
+          "name": "Blonay",
+          "id": "8501281"
+        },
+        {
+          "name": "Chamby",
+          "id": "8501376"
+        },
+        {
+          "name": "Chamby-Musée",
+          "id": "8501306"
+        }
+      ],
+      "season": [
+        {
+          "from": "2026-05-02",
+          "to": "2026-10-25",
+          "days": [
+            "Sat",
+            "Sun"
+          ]
+        }
+      ],
+      "closed": [],
+      "reservation": "not stated",
+      "evidence": {
+        "season": "operator",
+        "stops": "third-party"
+      },
+      "source": "https://blonay-chamby.ch/en/accueil-an/",
+      "quote": "THE MUSEUM IS OPEN EVERY SATURDAY AND SUNDAY FROM MAY 2 TO OCTOBER 25. 2026",
+      "note": "Traction (steam or electric) is not stated on the operator page and is reserved to change; a 2026 search summary reported electric-only under fire risk – unverified."
+    },
+    {
+      "id": "sursee-triengen-steam",
+      "name": "Sursee–Triengen public steam train",
+      "operator": "ST",
+      "kind": "steam",
+      "route": "Sursee – Geuensee – Büron – Triengen",
+      "stops": [
+        {
+          "name": "Sursee",
+          "id": "8502007"
+        },
+        {
+          "name": "Geuensee",
+          "id": null
+        },
+        {
+          "name": "Büron",
+          "id": null
+        },
+        {
+          "name": "Triengen",
+          "id": null
+        }
+      ],
+      "season": [
+        {
+          "dates": [
+            "2026-05-31",
+            "2026-06-28",
+            "2026-07-26",
+            "2026-08-30",
+            "2026-09-27",
+            "2026-10-25"
+          ]
+        }
+      ],
+      "closed": [],
+      "reservation": "not needed",
+      "evidence": {
+        "season": "third-party",
+        "stops": "third-party"
+      },
+      "source": "https://www.sursee-triengen-bahn.ch/dampffahrten-erleben/oeffentliche-fahrten/",
+      "quote": "Operator site unreachable from the curating box (timed out three times 2026-09-08). Third-party search summary: last Sunday of each month May–October 2026 – 31.5., 28.6., 26.7., 30.8., 27.9., 25.10.; no advance reservation, tickets on board.",
+      "note": "Geuensee, Büron and Triengen have no rail station in transport.opendata.ch (bus stops only), so this product is findable at Sursee only."
+    }
+  ]
+}

@@ -32,6 +32,25 @@ to go* — and they are easy to miss if you only read the planning sections.
 - **Touch** — planning without typing. The stations the app already knows about
   (your stars, recent routes, last board) become tiles; you drag a line from one
   to another and that line is the journey.
+- **Special trains this weekend** — the 🚂 button on a departure board. Two layers:
+  what the *timetable* files as a heritage run (EXT departures under a verified
+  operator, DVZO so far), and what the timetable cannot show — panorama trains,
+  open scenic carriages, museum and steam lines — from a hand-curated catalogue
+  (`tools/heritage.json`, 10 products) of the operators' published seasons: which
+  products call at this station, on which of the weekend days, reservation, a link
+  to the operator's page, and the date it was checked. A season is the operator's
+  calendar, not a promise for the day; rows whose season came only from a third
+  party say so in amber.
+- **I'm on this one** — pin a connection and a bar at the bottom follows the
+  journey by the clock: the next change with its buffer and platform, and the
+  verdict only this app can give (*enough to leave the platform* / *stay on
+  the platform*). While a change is within two hours the change stop's arrival
+  board is re-read every few minutes and the buffer recomputed from the live
+  prognosis; on the last leg the destination's board is read the same way. The
+  bar says how old its data is — *live 2′*, *stale 14′*, *pin-time*, *live check
+  failed* — and once a live read is older than ten minutes it stops asserting
+  the verdict and says so, because a bar that repaints every 30 seconds looks
+  live whether it knows anything or not.
 
 ## The Smart change-finder
 
@@ -46,8 +65,11 @@ search for you, every time:
 - **Widens the scan** to 16 results instead of the handful you normally see.
 - **Sweeps the interchange hubs** — it re-runs the search *via* Zürich HB,
   Bern, Basel SBB, Luzern, Olten, Arth-Goldau, Lausanne, Biel/Bienne, Zürich
-  Flughafen and Winterthur, in parallel, to surface routes the default list
-  never led with.
+  Flughafen and Winterthur, three at a time (never all at once — one tap used
+  to fire eleven requests and rate-limit itself), to surface routes the default
+  list never led with. A hub the service refused or that timed out is named
+  under the results as *unswept*, so "swept 9 routes" is never printed over a
+  sweep that quietly lost two.
 - **Reads the real transfer buffer** at every change (the actual minutes
   between one train arriving and the next leaving) and flags **tight**
   changes under 5 minutes so a 4-minute platform sprint never surprises you.
@@ -110,6 +132,10 @@ Turn the toggle off any time for the plain, single-list view.
   are one glance apart. Climb and descent are counted separately: a journey
   down off a summit *descends*, and saying "climbs" there was worse than
   saying nothing.
+- **Toilets near here** — under the departure board and under a planned journey:
+  public toilets within 500 m from OpenStreetMap, nearest first, with fee,
+  wheelchair access and opening hours when the map knows them. An absent tag stays
+  absent; "the map lists none" is said as that, not as "there are none".
 - **Natural wonders near your destination** — peaks, glaciers, waterfalls,
   caves and viewpoints from OpenStreetMap, with a Wikipedia summary where a
   confident match exists.
@@ -174,8 +200,9 @@ answer is worse than an absent one:
   timetable request used to arrive at the screen as "No connections found —
   check the station names", sending you hunting for a typo in a name that was
   perfectly correct. An unreachable timetable now says so, and says explicitly
-  that it is **not a "no"**. A hub sweep that times out stays silent, because a
-  slow interchange has never meant the journey doesn't exist.
+  that it is **not a "no"**. A hub sweep that times out or is rate-limited
+  never turns into that banner (a slow interchange has never meant the journey
+  doesn't exist) — it is listed by name as unswept, with the reason.
 - If your phone isn't on Swiss time, a note says so — every time below is
   Swiss local, and the clock at the top is yours.
 - **A phone with no free space says so and keeps working.** `localStorage` throws
@@ -195,6 +222,56 @@ answer is worse than an absent one:
   time, and **the deploy fails if the stamp doesn't apply** — a version marker
   that quietly stopped updating would be worse than none, because it would be
   believed. A copy you opened yourself says `dev`, which is the truth.
+- **Type a place, not a station.** The timetable's own lookup answers with shops,
+  hotels and street addresses as well as stops; they arrive without an id and are
+  dropped, correctly — a nail salon offered with a station glyph was a real defect.
+  But the dropped row reads `NAME, TOWN, STREET NR`, and until now the only thing
+  taken from it was the *town*. So typing a shop name got you that town's **famous**
+  stations: for a Zürich address, Zürich HB and Oerlikon and Stadelhofen, when the
+  stop you want may be 300 m from the door and on none of those lists. Right town,
+  wrong stations.
+  Now the address is offered as its own row. Tap it and the address is geocoded
+  (Nominatim/OSM), then the timetable is asked which stops are near *those*
+  coordinates — `nearbyStops()`, which has existed since **near me**. Distances are
+  printed rather than sorted-and-chosen: the nearest stop is not always the best
+  served, and comparing "307 m" against "412 m on a line that actually runs" is a
+  judgement no sort order can make for you.
+  **It fires on the tap and never while you type, and that is not politeness.**
+  Nominatim's usage policy forbids autocomplete outright — *"you must not implement
+  such a service"* — and the dropdown that would host it runs on every debounced
+  keystroke, so the forbidden implementation is also the obvious one. Two tests hold
+  that line: a structural one (the dropdown's code must never reach the geocoder)
+  and a behavioural one (a spy that must record zero calls while typing). A mutation
+  that moves the lookup into the keystroke path is planted, and both go red.
+- **Save offline** — next to *Share this route*. Writes the connections currently
+  on screen to a single self-contained `.html` file: inline styles, the route
+  sketch inlined as SVG, and **zero network references**, which is asserted by a
+  test rather than hoped for. The case is not battery, it is **no signal** —
+  Swiss rail is tunnels, and the app is otherwise dead without a connection. The
+  file opens in any browser with the radio off.
+  It stamps when it was saved and says, at the top, that it is **a snapshot and
+  does not update**. That line is load-bearing: a saved route rendered like the
+  live app would let a train cancelled after saving still read as fine, and a
+  file that lies is worse than no file. Times are taken **prognosis-first**, the
+  same rule the journey card uses, so the file cannot disagree with the screen
+  it was saved from.
+- **Toilets during a change.** The layover panel ("step out?" on a long change) asked
+  OpenStreetMap for cafés, bakeries and viewpoints and never for toilets — on the one
+  occasion you most need one. It asks now. OSM toilets are almost never named, so they
+  get their own row rules: no name filter, deduped by position rather than by the
+  synthetic name they all share, and the nearest one is **guaranteed a slot** even when
+  six cafés are closer, because it is the one row on a layover that is not optional.
+- **Meeting points are retracted when the route changes.** *Meet in the middle* results
+  are computed from the two fields, and nothing used to take them down when the fields
+  changed — so the cards for the old pair stayed up with live *my leg / their leg*
+  buttons that would plan legs for a pair you had abandoned. A replan now retracts them
+  and says which pair they were for. The one exception is the leg buttons themselves,
+  which are *using* the cards; and *their leg* now reads the partner's origin from the
+  pair the cards were computed for, not from the field it had just overwritten — before,
+  tapping *my leg* and then *their leg* planned their leg from the meeting point.
+- **Sketch labels no longer collide.** "Kloten, Zum Wilden Mann" and "Kloten, Bahnhof"
+  both rendered as **Kloten** on two different dots; the second now reads *Kloten
+  Bahnhof*. Two legs that genuinely end at the same stop still get one label.
 - **Installable** — "Add to Home Screen" for an app-like, full-screen feel.
 - **Dark and light** — dark is the default for everyone and it stays where
   you put it.
@@ -207,6 +284,14 @@ of that and this doesn't try to replace it — it's the thing you reach for in
 the ninety seconds before a train leaves. The zone ribbon is not an exception:
 naming the areas you cross is geography, and it stops one step short of the
 tariff question on purpose.
+
+**"No offline timetable" still holds, and *Save offline* is not an exception to
+it.** A saved file is one plan, frozen: the connections you had on screen, at the
+moment you pressed the button. You cannot look a *new* train up in it, it knows
+nothing that happened afterwards, and it will not answer a question you did not
+already ask. An offline timetable would be a copy of the network you can query
+without signal — that is a different artifact, it is not here, and this button is
+not a step toward it.
 
 ## Run it locally
 
@@ -232,7 +317,7 @@ Works identically on desktop and phone.
   | [transport.opendata.ch](https://transport.opendata.ch/) | departures, journeys, every intermediate stop, platforms, live prognosis |
   | [Open-Meteo](https://open-meteo.com/) forecast | weather at the departure and arrival hour |
   | Open-Meteo elevation | terrain height along the route |
-  | [Overpass](https://overpass-api.de/) / OpenStreetMap | peaks, glaciers, waterfalls, caves, viewpoints |
+  | [Overpass](https://overpass-api.de/) / OpenStreetMap | peaks, glaciers, waterfalls, caves, viewpoints, public toilets |
   | Wikipedia REST + geosearch | what that place is |
   | [data.sbb.ch](https://data.sbb.ch/) tarifverbundkarte + haltestelle-haltekante | which Tarifverbund each stop sits in (precomputed offline, shipped inline) |
 
@@ -241,12 +326,17 @@ Works identically on desktop and phone.
   runs the point-in-polygon offline and pastes 17 KB of answers into
   `index.html`. A maintainer reruns it when Verbund boundaries move
   (`--check` fails if the file is stale). Users still get one HTML file.
+  The heritage catalogue follows the same rule: `tools/heritage.json` is hand-curated,
+  `python3 tools/build-heritage.py --apply` writes it into app.js and `--check` says whether
+  app.js is current; seasons change yearly, so re-check every row before the next timetable year.
 
 - **Endpoints:** `/stationboard`, `/connections` (with multi-`via[]` hub
   sweeps) and `/locations` on transport.opendata.ch; `/v1/forecast` and
   `/v1/elevation` on Open-Meteo.
-- **Politeness:** transport.opendata.ch is a volunteer service. Hub sweeps are
-  batched, results are cached, and polling stops the moment the tab is hidden.
+- **Politeness:** transport.opendata.ch is a volunteer service. Hub sweeps run
+  at most three requests at a time with one retry after a 429 (honouring
+  `Retry-After` when sent), results are cached, and polling stops the moment
+  the tab is hidden.
 
 ## Tests
 
@@ -258,10 +348,17 @@ node tests/mode-filter.mjs      # transport-mode filter — runs anywhere, no br
 node tests/route-history.mjs    # route chips — runs anywhere, no browser
 node tests/golden-hour.mjs      # arrive-before-sunset — runs anywhere, no browser
 node tests/enroute.mjs          # where to get off — runs anywhere, no browser
+node tests/toilets.mjs          # toilets near here — runs anywhere, no browser
+node tests/offline-export.mjs   # the saved .html is honest and self-contained — 35 checks
+node tests/place-to-stops.mjs   # address → coordinates → nearest stops, tap-only — 31 checks
+node tests/sketch-labels.mjs    # which dots get a label and what it says — 10 checks
 node tests/summit.mjs           # is it worth going up — runs anywhere, no browser
 node tests/storage-full.mjs     # a full phone must not kill the app — runs anywhere
 node tests/board-refresh.mjs    # the 30s refresh keeps its rows — runs anywhere
 node tests/outage-not-verdict.mjs # an outage is not "no such journey" — runs anywhere
+node tests/heritage.mjs         # the curated heritage catalogue: seasons, stations, the build check — 42 checks
+node tests/hub-sweep.mjs        # the hub sweep is capped, retries a 429 once, names what it did not sweep — 19 checks
+node tests/onboard-fresh.mjs    # the pinned bar says how old its data is and withholds a stale verdict — 26 checks
 node tests/verbund.mjs          # fare-zone lookup — the negatives are the point
 node tests/vehicle.mjs          # boat / cog / replacement-bus signals — runs anywhere
 node tests/last-home.mjs        # the last way back — and an outage is not "no way back"

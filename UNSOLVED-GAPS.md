@@ -10,6 +10,13 @@ SBB Mobile nor phone-sbb answers**, plus the honest reasons some of them stay un
 
 Compiled 2026-07-27. Supersedes nothing; sits alongside `ROADMAP.md`.
 
+**Re-verified against the code 2026-09-06 22:07Z (tip `014064a`); §1.2 catalogue strike added 2026-09-08 in the shipping commit.** Two sections had gone
+stale — §3 anchoring and §4.2 coverage are SHIPPED (marked below with the verifying
+symbols). The cost of the staleness was real: an experiment (PCLA H15) froze a 5-task
+set off this document and 2 of the 5 were void because the "gap" was already in the
+code. **Rule for readers: a gap row here is a claim about the code at the stamp date
+above, not about the code now — verify against `app.js` before building anything.**
+
 **Evidence labels** — applied per claim, because several beliefs in this project have
 turned out to be inherited rather than tested:
 
@@ -42,7 +49,10 @@ SBB Mobile and phone-sbb, not about the field.
 The structural gap. Both apps answer *A → B at time T*. Neither answers *where should I
 go*. `Wander` is the one exception in either product and it is phone-sbb's.
 
-**1.1 "Where can I get above the fog today?"** — `INFERRED`
+**1.1 "Where can I get above the fog today?"** — **SHIPPED** (`b866f86`, 2026-09-06,
+ported from the H15 arm; tests/fog.mjs 41 checks). Built exactly as sketched below —
+fog top from RH collapse + inversion corroboration, MeteoSwiss-pinned, gated on
+`cloud_cover_low`, three-valued verdict, ranking layer over Wander. Original analysis:
 
 The most Swiss rail question there is, unanswered from October to February by anything.
 Needs three inputs that no single vendor holds: reachability, elevation, and cloud-base
@@ -64,7 +74,26 @@ Vertical resolution near the ground is a few hundred metres, so the honest outpu
 three-valued: **above · below · too close to call.** The third state is the one that
 stops the app sending someone up an Aussichtsberg into grey soup.
 
-**1.2 "What's running that's special this weekend?"** — partly `MEASURED`
+**1.2 "What's running that's special this weekend?"** — **algorithmic third SHIPPED**
+(`d153370`, 2026-09-06, ported from the H15 arm; tests/special.mjs 29 checks). Built as
+sketched: EXT + curated operator allowlist (DVZO only — the one operator live-verified),
+datetime-anchored per-day fetches, dropped-EXT count + always-on coverage caveat on the
+card. **Curated-catalogue two-thirds SHIPPED 2026-09-08** (tablet session; tests/heritage.mjs
+42 checks, mutation battery tests/mutations/mut-heritage.py 8/8 caught): `tools/heritage.json` (10 products, hand-curated, one operator page per row) →
+`tools/build-heritage.py` (validates, resolves stop names to UIC ids through
+transport.opendata.ch — exact name only, 43 of 46 resolved, the 3 unresolved are
+Sursee–Triengen's halts which are bus stops, kept name-only and printed — and `--check`
+decides whether app.js is current) → `HERITAGE_CATALOGUE` in app.js → rows on the same
+weekend card: which products call at this station, on which of the weekend days, season in
+the operator's own shape, reservation, a source link, the check date. Two honesty marks
+travel per row: `evidence: operator` vs `third-party` (three rows — Bernina Express season,
+DFB season, Sursee–Triengen dates — are third-party and the card flags them in amber, because
+the operator page stated no season or the site was unreachable from the curating box), and
+`checked: 2026-09-08` (seasons change yearly; re-check before the next timetable year). The
+catalogue is offline data: it renders on an API outage too, matched by station name.
+**Still open inside 1.2:** the catalogue is 10 products, mostly Graubünden + four others;
+ZVV/BLS/MOB/Zentralbahn products are `UNASSESSED`; official timetable table 615 (DFB) could
+not be read on this box. Original analysis:
 
 Heritage and scenic operations. Confirmed reachable, with a caveat that kills the naive
 version.
@@ -102,13 +131,20 @@ and — the part SBB has no equivalent of — **only destinations with a verifie
 inside the budget**, last way home printed on every card. Getting there is a fact from
 the board; getting back is a claim, and an unverified one strands people.
 
-Not in `README.md`. See §5.
+~~Not in `README.md`. See §5.~~ *Stale since compilation: README now documents both
+Wander and Touch (verified 2026-09-06, tip `014064a`).*
 
 ---
 
 ## 2. The live journey
 
-**2.1 "I'm on the train, my connection is dying, replan from here"** — `OBSERVED`
+**2.1 "I'm on the train, my connection is dying, replan from here"** — **replan half
+SHIPPED, in two layers** (manual: `replanFromStop`, tap any stop in the route sketch;
+unprompted: `a7e949d`, 2026-09-06, ported from the H15 arm — the pinned journey's live
+buffer at the next change is rechecked against the arrival board and the onboard bar
+grows a one-tap replan when it goes tight or dies; tests/replan-offer.mjs 40 checks).
+The notification half stays out for the reason below (web push needs a server).
+Original analysis:
 
 phone-sbb knows everything at *search* time and nothing after. It flags impossible
 changes when you search — but at that moment they were still possible. The expensive
@@ -127,9 +163,17 @@ sweep from the current position. This is the single largest capability gap in th
 
 ---
 
-## 3. Information that arrives after the decision
+## 3. Information that arrives after the decision — **SHIPPED**
 
-Not missing features — features anchored to the wrong moment. Cheapest fix in this file.
+**Verified in the code 2026-09-06 (tip `014064a`, present since at least `a7d2468`):**
+the last way home renders ON THE RESULTS LIST (`lastHome()` + the `jlh` card ribbon —
+the code block is even titled "last way home ON THE RESULTS LIST", with the honest
+outage state "Could not check … an outage, not a 'no'"), and the Tarifverbund zone
+ribbon sits on connection cards (`connZoneRib`) at decision time, not only in the stop
+list. The section below is the original analysis, kept because the RULE it states is
+the reusable part.
+
+~~Not missing features — features anchored to the wrong moment. Cheapest fix in this file.~~
 
 **`MEASURED` (code):** in the Journey tab, the last way back sits inside the collapsible
 route sketch. But "is there a way home?" is not a detail *of* the chosen connection — it
@@ -167,7 +211,13 @@ Correct ROADMAP wording: *present in the schema, not populated by this source* �
 Note the field name inverts its meaning: `capacity2nd: 3` means *high occupancy*, three
 dolls, expect it full. Rendering `3` as "plenty of room" would be a silent 180° error.
 
-**4.2 Fares — the question was never the price** — `OBSERVED` (cross-session)
+**4.2 Fares — the question was never the price** — **coverage half SHIPPED**
+
+**Verified in the code 2026-09-06 (tip `014064a`, present since at least `a7d2468`):**
+the recommended coverage feature exists exactly as sketched below — build-time
+Tarifverbund data (`VERBUND_PACKED`, built by `tools/build-verbund.py`), rendered via
+`verbundHTML` / `connZoneRib` / `jrnZoneFact`. The fares half stays out for the
+architectural reason below, which still holds. Original analysis kept:
 
 Fares were left out on the assumption the data was paid. It is not: OJP Fare and OSDM
 sit on the free opentransportdata.swiss platform. The real blocker is architectural — a
@@ -202,9 +252,10 @@ a coverage list has to be maintained.
 
 Recurred three times in a single session, costing real work each time.
 
-1. `Wander` and `Touch` ship on master; `README.md` documents neither. Reading only the
-   README, a fresh session proposed building an isochrone that already existed
-   (`e486011`, field-tested).
+1. ~~`Wander` and `Touch` ship on master; `README.md` documents neither.~~ *Fixed since:
+   README documents both (verified 2026-09-06).* The incident stands as the origin
+   story: reading only the README, a fresh session proposed building an isochrone that
+   already existed (`e486011`, field-tested).
 2. The Android / GitHub Pages issue was diagnosed in a Claude Code session and recorded
    only there. Root cause: phone at 100% disk → `localStorage.setItem` threw
    `QuotaExceededError` → `save()` unguarded and sequenced *before* the work at 5 of 6
@@ -230,9 +281,13 @@ tidy-up will otherwise remove them:
 
 ---
 
-## Priority
+## Priority (re-ranked 2026-09-06 after the shipped items were struck)
 
-1. **§3 anchoring** — no new capability, highest ratio. Apply the Wander pattern to Journey.
-2. **§1.1 fog** — a ranking layer over existing infrastructure; nothing else in the market can compute it.
-3. **§2.1 replan-from-here** — largest gap, but needs a running-journey state rather than a search. Real architectural step.
-4. **§0 assess ZVV** — cheapest way to find out whether this document describes the field or just two apps.
+1. ~~**§1.2 curated heritage catalogue**~~ — SHIPPED 2026-09-08 (see §1.2); what remains is
+   breadth (10 products; re-check yearly via `python3 tools/build-heritage.py --check`).
+2. **§0 assess ZVV** — cheapest way to find out whether this document describes the field or just two apps.
+3. **§4.1 occupancy** — blocked on the source; only correct wording is actionable.
+
+*(§3 anchoring, §1.1 fog, §1.2's algorithmic third and §2.1's replan half are shipped;
+struck above. All three H15 reference implementations are now ported upstream —
+`b866f86`, `d153370`, `a7e949d` — the arm trees hold nothing unported.)*

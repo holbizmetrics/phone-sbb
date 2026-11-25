@@ -49,6 +49,7 @@ const pure = new Function(`
   ${grabConst(/const LAYOVER_MIN=[^\n]*/, "LAYOVER_MIN")}
   ${grabConst(/const LAYOVER_KEEP=[^\n]*/, "LAYOVER_KEEP")}
   ${grab("layoverWalkM")}
+  ${grab("toiletName")}
   ${grab("lpType")}
   ${grab("layoverRows")}
   return { layoverWalkM, lpType, layoverRows };
@@ -84,6 +85,52 @@ const pure = new Function(`
   const many = pure.layoverRows(
     Array.from({ length: 10 }, (_, i) => at(0.0005 + i * 0.0001, { name: "Spot " + i, amenity: "cafe" })), 47, 8, 1000);
   chk("the list stops at six -- a layover shortlist, not a directory", many.length === 6, String(many.length));
+}
+
+// ---- toilets in the layover (2026-09-06) ----
+// A 20-minute change is precisely when you need one, and this panel asked Overpass
+// for cafés, bakeries and viewpoints and never toilets. OSM toilets are almost never
+// named, so the [name] filter that keeps the café list honest would have dropped
+// every one of them -- which is why they need their own row rules.
+{
+  const at = (dLat, dLon, tags) => ({ lat: 47 + dLat, lon: 8 + dLon, tags });
+  chk("toilets have their own type and emoji", pure.lpType({ amenity: "toilets" }).l === "toilets"
+    && pure.lpType({ amenity: "toilets" }).e === String.fromCodePoint(0x1F6BB), "");
+
+  const rows = pure.layoverRows([
+    at(0.002, 0, { amenity: "toilets" }),                       // nameless, ~222 m
+    at(0.001, 0, { name: "Beck Muller", shop: "bakery" }),      // ~111 m
+  ], 47, 8, 750);
+  chk("an UNNAMED toilet survives the row filter with a synthetic name",
+    rows.some(r => r.wc && r.name === "Public toilets"), JSON.stringify(rows.map(r => r.name)));
+
+  const two = pure.layoverRows([
+    at(0.004, 0, { amenity: "toilets" }),     // ~444 m, listed FIRST by Overpass
+    at(0.001, 0, { amenity: "toilets" }),     // ~111 m, listed second
+  ], 47, 8, 750);
+  chk("two unnamed toilets at different spots are NOT collapsed into one -- dedupe is by coordinate, not by the shared synthetic name",
+    two.filter(r => r.wc).length === 2, JSON.stringify(two));
+  chk("...and the NEARER one sorts first, not the one Overpass happened to list first",
+    two[0].walk < two[1].walk, JSON.stringify(two.map(r => r.walk)));
+
+  // the guaranteed slot: six cafés nearer than the only toilet
+  const crowded = pure.layoverRows([
+    ...Array.from({ length: 7 }, (_, i) => at(0.0005 + i * 0.0001, 0, { name: "Cafe " + i, amenity: "cafe" })),
+    at(0.006, 0, { amenity: "toilets" }),     // ~666 m, further than all seven cafés
+  ], 47, 8, 1000);
+  chk("the nearest toilet is GUARANTEED a slot even when six cafés are nearer -- on a layover it is the one row that is not optional",
+    crowded.length === 6 && crowded.some(r => r.wc), JSON.stringify(crowded.map(r => r.name)));
+  chk("...and it displaces the LAST café, not a nearer one",
+    crowded[5].wc === true && crowded[0].name === "Cafe 0", JSON.stringify(crowded.map(r => r.name)));
+
+  // negative: the radius still applies to toilets
+  const far = pure.layoverRows([at(0.02, 0, { amenity: "toilets" })], 47, 8, 750);   // ~2.2 km
+  chk("a toilet outside the walk radius is still dropped -- the slot guarantee does not reach past the radius",
+    far.length === 0, JSON.stringify(far));
+
+  // the query itself asks for them (the rows test feeds elements directly, so this is the only check on the request)
+  chk("layoverSpots asks Overpass for amenity=toilets, WITHOUT a [name] filter",
+    /\[amenity=toilets\]/.test(grab("layoverSpots")) && !/\[amenity=toilets\]\[name\]/.test(grab("layoverSpots")), "");
 }
 
 // ---- layoverPOI: the async painter and its honesty edges ----

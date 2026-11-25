@@ -41,12 +41,20 @@ const ctx = {
   $: id => els[id],
   esc: s => String(s || "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])),
   planJourney: () => { plans++; },
-  Date, console,
+  Date, console, Intl,
   jrnConns: [], fromName: "Bern", toName: "Luzern",
   whenMode: "now", whenValue: "",
 };
+// pgLocal is now one line over the app's Swiss-zone formatter, so the REAL one
+// comes along rather than a stub -- the anchor's ZONE is the thing under test
+// here, and a stub is exactly how you would fail to notice it changing.
+const swissLocalSrc = (() => {
+  const i = src.indexOf("function swissLocal(");
+  if (i < 0) throw new Error("HARNESS FAILED -- swissLocal not found in " + APP);
+  return src.slice(i, src.indexOf("\n}", i) + 2);
+})();
 vm.createContext(ctx);
-new vm.Script(fnSrc
+new vm.Script(swissLocalSrc + "\n" + fnSrc
   + "\nthis.pgStep=pgStep; this.pgBack=pgBack; this.pgObserve=pgObserve;"
   + " this.pgBarHTML=pgBarHTML; this.pgNote=pgNote; this.pgWhyEmpty=pgWhyEmpty; this.pgTimes=pgTimes;"
   + " this.getStuck=()=>pgStuck; this.setStuck=v=>{pgStuck=v}; this.getPrev=()=>pgPrev;"
@@ -55,19 +63,32 @@ new vm.Script(fnSrc
 
 // A morning list: 08:00, 08:20, 08:40 departures, arriving an hour later.
 //
-// The offsets are the RUNNER'S OWN, computed per timestamp, not a hard-coded
-// +02:00. The anchor the pager writes is a local-time string, so a fixture
-// pinned to Swiss time makes every assertion below a claim about the machine's
-// timezone rather than about the code -- which is exactly how the first version
-// of this suite passed on the phone and failed in CI's UTC. "08:00" here means
-// eight in the morning wherever this runs.
+// The offsets are ZURICH'S, computed per timestamp, not a hard-coded +02:00 and
+// no longer the runner's own. "08:00" here means eight in the morning IN
+// SWITZERLAND -- which is what the anchor the pager writes now means, since
+// pgLocal was reading the DEVICE clock and shipping the result to an API that
+// reads it as Swiss (field-reported 2026-07-30, fixed in tests/tz-input.mjs).
+// The original virtue of this helper is unchanged and still the point: nothing
+// below is a claim about the machine the suite happens to run on. Only the zone
+// it is anchored to moved, from "wherever this runs" to "where the trains are".
 const isoAt = hhmm => {
   const [h, m] = hhmm.split(":").map(Number);
-  const off = -new Date(2026, 6, 29, h, m).getTimezoneOffset();
-  const sg = off < 0 ? "-" : "+", ao = Math.abs(off);
   const p2 = n => String(n).padStart(2, "0");
-  return `2026-07-29T${p2(h)}:${p2(m)}:00${sg}${p2(Math.floor(ao / 60))}:${p2(ao % 60)}`;
+  const stamp = `2026-07-29T${p2(h)}:${p2(m)}:00`;
+  // Zurich's offset AT THAT DATE, asked of Intl rather than assumed, so this
+  // fixture stays honest across the DST boundary instead of on one side of it.
+  const probe = new Date(stamp + "Z");
+  const tzn = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Zurich", timeZoneName: "longOffset" })
+    .formatToParts(probe).find(p => p.type === "timeZoneName").value;      // "GMT+02:00"
+  const mm = tzn.match(/GMT([+-])(\d{2}):(\d{2})/);
+  if (!mm) throw new Error("HARNESS FAILED -- could not read Zurich's offset, got " + tzn);
+  return `${stamp}${mm[1]}${mm[2]}:${mm[3]}`;
 };
+// control: the fixture really is anchored in Zurich, in both directions.
+// Without this, a broken isoAt would quietly re-point every assertion below.
+chk("control: the fixture's 08:00 is 08:00 SWISS, whatever zone this runs in",
+  new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Zurich", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
+    .format(new Date(isoAt("08:00"))) === "08:00", isoAt("08:00"));
 const conn = (dep, arr, prognosis) => ({
   from: { departure: isoAt(dep), prognosis: prognosis ? { departure: isoAt(prognosis) } : undefined },
   to: { arrival: isoAt(arr) },

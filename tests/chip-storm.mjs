@@ -30,7 +30,7 @@ const grab = (n) => {
   }
   throw new Error("HARNESS FAILED -- unbalanced braces in " + n);
 };
-const fnSrc = src.slice(a, b) + "\n" + grab("tryConns") + "\n" + grab("smartPlan");
+const fnSrc = src.slice(a, b) + "\n" + grab("tryConns") + "\n" + grab("pooled") + "\n" + grab("sweepHub") + "\n" + grab("smartPlan");
 
 // -- a browser-shaped connection pool ------------------------------------
 // 6 slots per host; a request past the limit WAITS for a slot. Aborting an
@@ -98,6 +98,7 @@ async function storm({ honourAbort, slowMs = 14000, settleMs = 50 }) {
     connZoneRib: () => "", fillJourneyLastHome: () => {},
     renderSmart: () => { jrnOut.innerHTML = "PAINTED"; },
     withTimeout: (p) => p.catch(() => []),   // no cap in the harness: the pool is the constraint under test
+    HUB_PAR: 3, HUB_RETRY_MS: 5, HUB_CAP: 1e9, HUB_TIMEOUT: Symbol("t"),   // row 371: the sweep is pooled now; the storm still must not wedge
     setTimeout, clearTimeout,
   };
   vm.createContext(ctx);
@@ -116,7 +117,8 @@ async function storm({ honourAbort, slowMs = 14000, settleMs = 50 }) {
 // 4 taps x 11 requests all stay alive, saturating all 6 slots with a deep queue.
 const before = await storm({ honourAbort: false });
 chk("planted positive: without abort, the pool is saturated", before.active === 6, JSON.stringify(before));
-chk("planted positive: without abort, a deep zombie queue forms", before.queued > 20, JSON.stringify(before));
+// (was > 20 before row 371: a sweep now holds 2 direct + HUB_PAR hubs at a time, so 4 zombie sweeps queue ~14, not ~38)
+chk("planted positive: without abort, a deep zombie queue forms", before.queued > 10, JSON.stringify(before));
 
 // the fix: same storm, aborts honoured -- only the NEWEST sweep may hold slots.
 // One sweep is 11 requests (2 direct + 9 hubs), so 6 active + 5 queued, max.

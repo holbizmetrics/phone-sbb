@@ -132,6 +132,12 @@
     background:rgba(245,158,11,.12); padding:3px 9px; border-radius:8px}
   .wcard .wunv{display:inline-block; margin-top:6px; font-size:12px; color:var(--redsoft);
     background:rgba(235,0,0,.10); padding:3px 9px; border-radius:8px}
+  .wcard .wfog{display:inline-block; margin-top:6px; font-size:12px; padding:3px 9px; border-radius:8px;
+    font-variant-numeric:tabular-nums}
+  .wcard .wfog.up{color:#6ee7b7; background:rgba(16,185,129,.12); font-weight:700}
+  .wcard .wfog.dn{color:var(--dim); background:rgba(148,163,184,.12)}
+  .wcard .wfog.md{color:var(--amber); background:rgba(245,158,11,.12)}
+  .wfognote{margin:2px 2px 10px; font-size:12px; color:var(--dim); font-variant-numeric:tabular-nums}
   #wanBudget .chip.on{border-color:var(--blue); color:var(--txt); opacity:1}
 
   /* ---- search / inputs ---- */
@@ -157,6 +163,12 @@
   .ac div:last-child{border-bottom:0}
   .ac div:active,.ac div.sel{background:var(--bg2)}
   .ac div .t{color:var(--faint); font-size:14px}
+  /* the address row: it is NOT a station, so it must not read like one -- the
+     flag glyph and the second line say what tapping it will do (one geocode),
+     which is also the only place in this app that reaches a third-party map. */
+  .ac .placerow{align-items:flex-start}
+  .ac .placerow b{display:block; font-weight:600; color:var(--blue); font-size:13px; margin-top:2px}
+  .ac .pdist{margin-left:auto; color:var(--faint); font-size:13px; font-variant-numeric:tabular-nums}
 
   .swap{display:flex; justify-content:center; margin:0 0 10px; position:relative; z-index:5}
   .swap button{width:38px; height:38px; border-radius:50%; border:1px solid var(--line); background:var(--card);
@@ -243,6 +255,25 @@
     background:rgba(245,158,11,.10); padding:2px 7px; border-radius:8px}
   .night .nnone{font-weight:700; color:var(--amber); font-size:14.5px}
   .night .ncav{margin-top:7px; font-size:12px; color:var(--faint); line-height:1.5}
+
+  /* special-trains board: the weekend heritage card */
+  .spcl{background:var(--card2); border:1px solid var(--line); border-radius:14px;
+    padding:12px 14px; margin:0 0 12px; animation:rise .25s ease both}
+  .spcl .nhead{display:flex; align-items:center; gap:8px; margin-bottom:8px}
+  .spcl .ntitle{font-weight:700; font-size:14px}
+  .spcl .nx{margin-left:auto; background:none; border:0; color:var(--faint); font-size:14px; cursor:pointer; padding:2px 4px}
+  .spcl .sday{margin:8px 0 2px; font-size:12px; font-weight:700; color:var(--dim); text-transform:uppercase; letter-spacing:.04em}
+  .spcl .srow{display:flex; align-items:baseline; gap:7px; padding:5px 0; font-size:14px;
+    font-variant-numeric:tabular-nums; border-top:1px solid var(--line)}
+  .spcl .sday+.srow{border-top:0}
+  .spcl .sline{color:var(--dim); font-weight:600; font-size:12.5px}
+  .spcl .nnone{font-weight:700; color:var(--amber); font-size:14.5px}
+  .spcl .ncav{margin-top:7px; font-size:12px; color:var(--faint); line-height:1.5}
+  .spcl .crow{border-top:1px solid var(--line); padding:5px 0}
+  .spcl .crow .srow{border-top:0; padding:0 0 2px}
+  .spcl .cmeta{font-size:12px; color:var(--dim); line-height:1.5}
+  .spcl .cmeta a{color:var(--dim)}
+  .spcl .cev{color:var(--amber); font-weight:600}
 
   .dep{display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--line);
     padding:14px; border-radius:16px; margin-bottom:9px; animation:rise .3s ease backwards}
@@ -560,6 +591,16 @@
   .obpoi{margin:6px 0}
   .obunpin{margin-top:9px; font-size:11px; font-weight:700; padding:5px 10px; border:1px solid var(--line);
     border-radius:8px; background:transparent; color:var(--faint); cursor:pointer; font-family:inherit}
+  .oboffer{padding:0 14px}
+  .oboffer:empty{display:none}
+  .obrp{display:block; width:100%; margin:8px 0; font-size:13px; font-weight:800; padding:9px 12px;
+    border:0; border-radius:10px; background:rgba(235,0,0,.16); color:var(--tighttxt);
+    cursor:pointer; font-family:inherit; text-align:left}
+  .oblive{font-size:12px; color:var(--dim); margin:4px 0; font-variant-numeric:tabular-nums}
+  .obfresh{font-size:11px; font-weight:600; color:var(--faint); white-space:nowrap}
+  .obfresh.live{color:var(--dim)}
+  .obfresh.stale, .obfresh.failed{color:var(--amber)}
+  .obverdict.unverified{color:var(--amber)}
   .rbrow{display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin-bottom:6px}
   .rbrow:empty{display:none}
   .rib{font-size:10px; font-weight:800; letter-spacing:.03em; text-transform:uppercase; padding:3px 8px; border-radius:6px; white-space:nowrap}

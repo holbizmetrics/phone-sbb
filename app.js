@@ -63,6 +63,22 @@ function tzNoteHTML(){
     return `<div class="tznote">All times are Swiss local (${swiss} now) &#183; your device shows ${local}</div>`;
   }catch(e){ return ""; }
 }
+/* The datetime-local BOUNDARY, in ONE place. Every time this app SHOWS is Swiss
+   (tzNoteHTML above says so out loud) and the API reads date=&time= as Swiss wall
+   time -- so a value seeded INTO a time field has to be Swiss as well. It was the
+   device wall clock: tap "dep" in Mumbai and the field read 18:30 while the
+   planner asked for 18:30 SWISS, three and a half hours off; in Auckland it asked
+   for the wrong DAY. Zurich agreed with itself, which is why it went unseen.
+   MEASURED across six zones and four instants, incl. both DST offsets --
+   tests/tz-input.mjs. Not to be confused with flightArriveBy's offset dance,
+   which is wall-clock arithmetic on a string the user typed and is correctly
+   zone-neutral; the note there says so, and the suite protects it. */
+function swissLocal(ms){
+  const p=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Zurich",year:"numeric",month:"2-digit",
+    day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(new Date(ms));
+  const g=t=>p.find(x=>x.type===t)?.value||"00";
+  return `${g("year")}-${g("month")}-${g("day")}T${g("hour")}:${g("minute")}`;
+}
 function minsUntil(iso){ return Math.round((new Date(iso)-Date.now())/60000); }
 /* The countdown slot, ONE definition -- depRow renders it and patchRow rewrites
    it every 30s, and two copies of this formula would drift apart. Past an hour
@@ -128,15 +144,55 @@ function vehicleRibs(secs){
 /* ---------- API ---------- */
 async function api(path, signal){
   const r = await fetch(API+path, signal?{signal}:undefined);
-  if(!r.ok) throw new Error("HTTP "+r.status);
+  if(!r.ok){
+    const e=new Error("HTTP "+r.status);
+    /* a 429 may say how long to wait; carry it so the hub sweep can honour it (row 371) */
+    const ra=r.headers&&r.headers.get&&r.headers.get("Retry-After");
+    if(ra&&/^\d+$/.test(String(ra).trim())) e.retryAfter=+ra;
+    throw e;
+  }
   return r.json();
 }
 const locCache = new Map();
-async function locations(q){
+/* `type=station` is a request, not a guarantee: this endpoint also answers with
+   businesses, hotels, street addresses and city quarters, and those come back
+   with `id: null`. Filtering on name alone rendered them as tappable suggestions
+   WITH THE STATION GLYPH -- measured 2026-07-31 across 28 specimens
+   (tests/passengers/probe-phrasing.py), 9 of which showed seven non-stations and
+   nothing else: "Zürich Hauptbahnhof" offered a bookshop and a nail salon,
+   "Bundeshaus" seven companies, "8001" city quarters. It did not even fail
+   loudly downstream -- /connections?from=Bundeshaus plans you from an SRG office.
+
+   nearbyStops(), thirty lines below, has always filtered `x.id && x.name` under a
+   comment saying a street address is not somewhere a train stops. That rule was
+   right the whole time; it just never covered the path everybody actually uses. */
+async function locRows(q){
   if(locCache.has(q)) return locCache.get(q);
   const d = await api("/locations?type=station&query="+encodeURIComponent(q));
-  const s = (d.stations||[]).filter(x=>x.name);
-  locCache.set(q,s); return s;
+  const all = (d.stations||[]).filter(x=>x.name);
+  const r = { stations: all.filter(x=>x.id), dropped: all.filter(x=>!x.id) };
+  locCache.set(q,r); return r;
+}
+// The contract every caller already relies on: rows that are places a train
+// stops. `dropped` exists for exactly one consumer -- the fallback below.
+async function locations(q){ return (await locRows(q)).stations; }
+
+/* The town the passenger probably meant, read off the rows the id-filter threw
+   away. Those come back formatted "NAME, TOWN, STREET NR" ("SRG SSR, Bern,
+   Giacomettistr. 1"), so the town is the second-to-last comma field.
+
+   This is a GUESS, and it is only defensible because the caller prints the town
+   it inferred. Measured 2026-07-31 over the nine queries the id-filter empties:
+   seven yield a town, and one of those seven is plainly wrong -- "Jet d'Eau"
+   matches a business in Vuadens, 200 km from the fountain in Geneva. A wrong
+   guess the passenger can SEE and reject is a suggestion; the same guess with
+   the town hidden would be the defect this whole filter was added to remove. */
+function townOf(rows){
+  for(const r of rows||[]){
+    const p = r.name.split(",").map(x=>x.trim());
+    if(p.length>=3 && p[p.length-2]) return p[p.length-2];
+  }
+  return null;
 }
 /* coordinates-to-stop (cross-vendor finding #4, the cheap one): the API's
    /locations?x=&y= has answered "nearest stop to here" since day one -- unused
@@ -150,24 +206,216 @@ async function nearbyStops(lat,lon){
 }
 
 /* ---------- autocomplete ---------- */
+/* ---------- a PLACE is not a station, but it has an address ----------
+   The timetable's /locations answers with businesses, hotels and street
+   addresses as well as stops, and those arrive with id:null. locRows() drops
+   them, correctly -- a nail salon offered with a station glyph was a real
+   defect. But the dropped row is not junk: it is formatted "NAME, TOWN,
+   STREET NR", and until now the only thing read out of it was the TOWN.
+
+   That left the app answering the wrong question. Typing a shop name got you
+   the town's FAMOUS stations -- for a Zurich address, Zürich HB and Oerlikon
+   and Stadelhofen -- when the stop you actually want may be 300 m from the door
+   and on none of those lists. Right town, wrong stations.
+
+   So: geocode the address the row already carries, then ask the timetable which
+   stops are near THOSE coordinates, using nearbyStops() which has existed and
+   been used since the near-me feature.
+
+   WHY THIS IS ON A TAP AND NOT ON TYPING, and it is not politeness:
+   Nominatim's usage policy forbids autocomplete outright -- "this is not yet
+   supported by Nominatim and you must not implement such a service" -- with a
+   1 req/s ceiling and a ban for abuse. wireAC's dropdown runs on every
+   debounced keystroke, and the dropped row it reads is computed RIGHT THERE, so
+   geocoding at that point is both the obvious implementation and the forbidden
+   one. It fires on an explicit tap, once, cached -- the same tap-to-load shape
+   the toilets panel already uses for Overpass.
+
+   Identification: a browser cannot set User-Agent from fetch (it is a forbidden
+   header), so we rely on the Referer the deployed page sends, which the policy
+   accepts as the alternative. A copy opened from file:// sends neither; that is
+   a dev-only case and it degrades to a failed lookup, which is reported as one. */
+const NOMINATIM = "https://nominatim.openstreetmap.org/search";
+const placeCache = new Map();
+
+/* The best dropped row to offer, or null. The shape is the same one townOf
+   reads: "NAME, TOWN, STREET NR" -- three comma fields or more. A row with
+   fewer is a bare name with no address in it and cannot be geocoded, so it is
+   not offered rather than being offered and failing later. */
+function placeFromDropped(rows){
+  /* Two shapes arrive, and which one you want depends on what you typed.
+     Type a NAME ("Promusig") and you get one row: "NAME, TOWN, STREET NR".
+     Type an ADDRESS ("Sihlfeldstrasse 138") and you get the bare address FIRST
+     -- "TOWN, STREET NR" -- followed by every business registered at it.
+
+     Taking the first >=3-field row in the address case picks an arbitrary
+     tenant, which is how "Bahnhofstrasse 1 Zürich" came back labelled
+     "Bettwanzen bekämpfen Kanton Zürich" (a bedbug exterminator) and
+     "Giacomettistrasse 1 Bern" came back as "Schulverlag plus AG". The
+     coordinates were right in both -- it is the same building -- but naming a
+     random tenant back at someone who typed a street is the app answering a
+     question they did not ask. Measured 2026-09-05 across four queries.
+
+     So the bare address WINS when present. The discriminator is a digit in the
+     last field: "Zürich, Sihlfeldstr. 138" is an address, "Zürich, Hauptbahnhof"
+     is a two-field row with no house number and stays un-offerable, which is the
+     case station-lookup.mjs already pins. */
+  const seen=[];
+  for(const r of rows||[]){
+    const parts=(r.name||"").split(",").map(x=>x.trim()).filter(Boolean);
+    if(parts.length===2 && /\d/.test(parts[1]))
+      return { query: parts[1] + ", " + parts[0], label: parts[1], town: parts[0], addr: parts[1] };
+    if(parts.length>=3) seen.push(parts);
+  }
+  for(const parts of seen){
+    const town=parts[parts.length-2], addr=parts[parts.length-1];
+    /* The geocoded string is "<street nr>, <town>" -- NOT the row as it arrived.
+       MEASURED 2026-09-05, not assumed: the full row fails outright.
+         "Promusig AG, Zürich, Sihlfeldstr. 138" -> no result
+         "Sihlfeldstr. 138, Zürich"              -> 47.3788, 8.5163 (Promusig itself)
+         "SRG SSR, Bern, Giacomettistr. 1"       -> no result
+         "Giacomettistr. 1, Bern"                -> 46.9437, 7.4736
+       Two specimens, both directions: the business name glued in front of an
+       address defeats the parser every time, and reordering to street-then-town
+       rescues it every time. This was found by RUNNING the chain -- the unit
+       tests stub fetch, so they were green while the live service returned
+       nothing, which is the ships-green-never-runs shape exactly. */
+    return { query: addr + ", " + town, label: parts[0], town, addr };
+  }
+  return null;
+}
+
+/* How a place READS, in one place, because the two shapes differ. A named
+   business wants "Promusig AG, Sihlfeldstr. 138" -- the name plus where it is.
+   A bare address has label === addr, so the same template would render
+   "Sihlfeldstr. 138, Sihlfeldstr. 138"; it wants the town as its second half
+   instead. Getting this wrong is not a crash, it is the app looking careless at
+   the exact moment it is showing off. */
+function placeLine(p){
+  return p.label === p.addr ? p.label + ", " + p.town : p.label + ", " + p.addr;
+}
+
+/* One request, cached. Returns {lat,lon} or null when the geocoder answered and
+   knew nothing -- and THROWS when the request itself failed. Those are two
+   different next moves for the passenger ("this address is not on the map" vs
+   "try again"), and collapsing them is the absence-rendered-as-data defect this
+   file keeps having to fix. */
+async function geocodePlace(q){
+  if(placeCache.has(q)) return placeCache.get(q);
+  const url = NOMINATIM + "?format=jsonv2&limit=1&q=" + encodeURIComponent(q);
+  const res = await fetch(url);
+  if(!res.ok) throw new Error("HTTP " + res.status);          // caller distinguishes this
+  const d = await res.json();
+  const hit = Array.isArray(d) && d[0] && isFinite(+d[0].lat) && isFinite(+d[0].lon)
+    ? { lat:+d[0].lat, lon:+d[0].lon } : null;
+  placeCache.set(q, hit);                                      // a known-nothing is worth caching too
+  return hit;
+}
+
+/* The tap handler. Deliberately its OWN top-level function and not a closure
+   inside wireAC: tests assert that wireAC's body never calls geocodePlace, which
+   is the structural guard that keeps this off the keystroke path. */
+async function placeTapped(place, ac, onPick){
+  ac.innerHTML = `<div class="nearmsg">Looking up ${esc(place.label)}&#8230;</div>`;
+  ac.classList.add("show");
+  let hit;
+  try{ hit = await geocodePlace(place.query); }
+  catch(e){
+    ac.innerHTML = `<div class="nearmsg">Could not reach the map to place ${esc(place.label)} `
+                 + `&#8212; this is not &#8220;address unknown&#8221;, try again in a moment.</div>`;
+    return;
+  }
+  if(!hit){
+    ac.innerHTML = `<div class="nearmsg">The map does not know ${esc(place.addr)} in ${esc(place.town)}. `
+                 + `Pick a station instead.</div>`;
+    return;
+  }
+  let stops;
+  try{ stops = await nearbyStops(hit.lat, hit.lon); }
+  catch(e){ ac.innerHTML = `<div class="nearmsg">Found the address, but the stop lookup failed &#8212; try again.</div>`; return; }
+  if(!stops.length){
+    ac.innerHTML = `<div class="nearmsg">No stop found near ${esc(place.addr)}.</div>`;
+    return;
+  }
+  /* Nearest first, but the distance is PRINTED rather than decided on: the
+     closest stop is not always the best served, and the passenger comparing
+     "314 m" against "383 m on a line that actually runs" is making a judgement
+     no sort order can make for them. */
+  ac.innerHTML = `<div class="nearmsg">Stops near ${esc(placeLine(place))}:</div>`
+    + stops.map(x=>`<div data-n="${esc(x.name)}"><span>&#9906;</span><span>${esc(x.name)}</span>`
+        + (x.distance!=null?`<span class="pdist">${Math.round(x.distance)}&#8201;m</span>`:"") + `</div>`).join("");
+  [...ac.children].filter(el=>el.dataset.n).forEach(el=>el.onclick=()=>{
+    ac.classList.remove("show"); onPick(el.dataset.n);
+  });
+}
+
 function wireAC(inpId, acId, fieldId, onPick){
   const inp=$(inpId), ac=$(acId), field=$(fieldId);
+  let pendingPlace=null;          // the address row currently on offer, if any
   const run = debounce(async ()=>{
     const q=inp.value.trim();
     field.classList.toggle("has", q.length>0);
     if(q.length<2){ ac.classList.remove("show"); return; }
     try{
       const s=await locations(q);
-      if(!s.length){ ac.classList.remove("show"); return; }
-      ac.innerHTML = s.slice(0,7).map(x=>
+      /* Hiding the dropdown was the app saying nothing at all. With the
+         non-stations now filtered out, "nothing matched" got commoner and more
+         honest at the same time, and an empty box that just closes reads as if
+         the app is still thinking. Say it.
+
+         The catch branch says something DIFFERENT on purpose: a lookup that
+         threw is not a lookup that found nothing, and rendering a dead request
+         as "no station matches" would be last night's 429 bug in a new costume
+         -- an absence of data presented as data. */
+      let rows=s, head="";
+      if(!s.length){
+        /* The id-filter empties this list for 9 of 28 measured queries -- every
+           landmark, postcode and abbreviation the timetable only knows as an
+           address. Saying "no station matches Zürich Hauptbahnhof" is honest and
+           useless. The discarded rows still name a TOWN, so offer that town's
+           stations, under a heading that says whose guess this is: a passenger
+           who sees "Vuadens" after typing "Jet d'Eau" rejects it in a glance. */
+        /* There WAS a `town!==q` guard here. It was dead: locCache answers a
+           repeat of the same string without a request, so removing it changed
+           neither the output nor the traffic, and a mutation that deleted it
+           survived the whole suite. An untestable line that protects nothing is
+           worse than no line -- it reads like a defence. The `town ?` guard is
+           real: without it a null town is looked up as a query. */
+        const droppedRows = (await locRows(q)).dropped;
+        const town = townOf(droppedRows);
+        /* The address row, offered as a TAP. No request is made here -- see the
+           policy note above placeFromDropped: geocoding inside this debounced
+           handler is exactly the autocomplete use Nominatim forbids. */
+        pendingPlace = placeFromDropped(droppedRows);
+        const alt = town ? await locations(town) : [];
+        if(!alt.length && !pendingPlace){ nearMsg(ac, `No station matches &#8220;${esc(q)}&#8221;.`); return; }
+        head = `<div class="nearmsg">No station called &#8220;${esc(q)}&#8221;.`
+             + (town ? ` The closest address match is in ${esc(town)}.` : "") + `</div>`
+             + (pendingPlace ? `<div class="placerow" data-place="1"><span>&#9873;</span>`
+                 + `<span>${esc(placeLine(pendingPlace))}`
+                 + `<b>find the stops near this address</b></span></div>` : "")
+             + (alt.length ? `<div class="nearmsg">&#8230;or a station in ${esc(town)}:</div>` : "");
+        rows = alt;
+      }
+      ac.innerHTML = head + rows.slice(0,7).map(x=>
         `<div data-n="${esc(x.name)}"><span>&#9906;</span><span>${esc(x.name)}</span></div>`).join("");
       ac.dataset.q=q;                  // which query these rows answer -- acEnter checks it
       ac.classList.add("show");
-      [...ac.children].forEach(el=>el.onclick=()=>{
+      [...ac.children].filter(el=>el.dataset.n).forEach(el=>el.onclick=()=>{
         inp.value=el.dataset.n; ac.classList.remove("show");
         field.classList.add("has"); onPick(el.dataset.n);
       });
-    }catch(e){ ac.classList.remove("show"); }
+      // the address row: one geocode, on this tap, never on a keystroke
+      const prow=[...ac.children].find(el=>el.dataset.place);
+      if(prow && pendingPlace) prow.onclick=()=>placeTapped(pendingPlace, ac, (n)=>{
+        inp.value=n; field.classList.add("has"); onPick(n);
+      });
+    }catch(e){
+      const m=/^HTTP (\d+)/.exec((e&&e.message)||"");
+      nearMsg(ac, m&&m[1]==="429"
+        ? "Too many searches for now &#8212; wait a moment and type again."
+        : `Station lookup failed &#8212; this is not a &#8220;no match&#8221;, try again in a moment.`);
+    }
   },300);
   inp.addEventListener("input", run);
   inp.addEventListener("focus", ()=>{ if(inp.value.trim().length>=2) run(); });
@@ -311,8 +559,12 @@ async function loadBoard(name, quiet){
       restoreOpenDep();
     }else{
       const rows = lastBoard.map((j,i)=>depRow(j,i)).join("");
+      // toilets near THIS station: the board is where you are standing, which is
+      // the one place the question is urgent. The stationboard reply carries the
+      // coordinate, so this costs nothing until tapped.
       $("depOut").innerHTML = boardHeadHTML(disp) +
-        (rows || `<div class="empty"><div class="big">&#9788;</div>No departures right now.</div>`);
+        (rows || `<div class="empty"><div class="big">&#9788;</div>No departures right now.</div>`) +
+        toiletsExpanderHTML(d.station);
       wireBoardHead(disp);
       restoreOpenDep();
     }
@@ -580,6 +832,7 @@ function boardHeadHTML(name){
     <h2>${esc(name)}</h2>
     <button class="rf" id="rf" type="button" title="refresh" aria-label="Refresh departures">&#8635;</button>
     <button class="ngt" id="ngt" type="button" title="What still leaves tonight" aria-label="What still moves from here tonight">&#127769;</button>
+    <button class="spc" id="spc" type="button" title="Special trains this weekend" aria-label="Heritage and special trains from here this weekend">&#128642;</button>
     <button class="star ${on?"on":""}" id="fav" type="button" title="favourite" aria-pressed="${on}" aria-label="${on?"Remove from favourites":"Add to favourites"}">${on?"&#9733;":"&#9734;"}</button>
   </div>`;
 }
@@ -588,6 +841,7 @@ function wireBoardHead(name){
   const fav=$("fav"); if(fav) fav.onclick=()=>toggleFav(name);
   const rf=$("rf"); if(rf) rf.onclick=()=>loadBoard(name);
   const n=$("ngt"); if(n) n.onclick=()=>strandedBoard(name);
+  const s=$("spc"); if(s) s.onclick=()=>specialBoard(name);
 }
 
 /* ---------- stranded-now board ----------
@@ -654,6 +908,189 @@ async function strandedBoard(name){
   }catch(e){
     box.innerHTML=nightWrap(name,
       `<div class="ncav">Could not check (${esc(e&&e.message||"no answer")}) &#8212; an outage, not a &quot;no&quot;. Tap &#127769; to retry.</div>`);
+  }
+}
+/* ---------- special trains this weekend ----------
+   The timetable files heritage runs as EXT, but EXT alone also covers football
+   shuttles and engineering extras -- so a row only counts when its operator is
+   on this allowlist. The list is deliberately small and verified: DVZO checked
+   live against the Bauma stationboard (EXT / operator "DVZO" steam runs to
+   Hinwil). An operator we cannot verify against this API would be a proper
+   noun filled in from plausibility, so it stays off until checked -- the
+   coverage caveat in the UI is the honest price of that. */
+const HERITAGE_OPS=["DVZO"];
+function ymdLocal(d){
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+/* "This weekend" from the rider's clock: on a Sunday only today is left of it;
+   any other day it is the coming Saturday and Sunday (on Saturday that starts
+   today). Local device time, same convention as nightCutoff. */
+function weekendDays(nowMs){
+  const d=new Date(nowMs), dow=d.getDay();
+  if(dow===0) return [ymdLocal(d)];
+  const sat=new Date(nowMs); sat.setDate(d.getDate()+(6-dow));
+  const sun=new Date(sat.getTime()); sun.setDate(sat.getDate()+1);
+  return [ymdLocal(sat), ymdLocal(sun)];
+}
+/* Rows for ONE day: EXT + allowlisted operator, sorted by departure. The count
+   of EXT rows that did NOT match is returned too -- the UI owes the rider that
+   number, because silently dropping them would render the filter as the world. */
+function specialRows(board, day){
+  const rows=[]; let extOther=0;
+  for(const j of board||[]){
+    const dep=j&&j.stop&&j.stop.departure;
+    if(!dep||dep.slice(0,10)!==day) continue;
+    if((j.category||"").toUpperCase()!=="EXT") continue;
+    if(HERITAGE_OPS.includes(j.operator||""))
+      rows.push({dep, num:j.number||j.line||"", op:j.operator||"", to:j.to||""});
+    else extOther++;
+  }
+  rows.sort((a,b)=>new Date(a.dep)-new Date(b.dep));
+  return {rows, extOther};
+}
+/* ---------- curated heritage catalogue (UNSOLVED-GAPS 1.2, the other two-thirds) ----------
+   Most special products never show in timetable data: a panorama train is an
+   ordinary train with a product attached, open carriages ride regional trains,
+   and a museum line's halts are not stations. So they live here as build-time
+   data -- product, route, season -- regenerated by tools/build-heritage.py from
+   tools/heritage.json (hand-curated, one operator page per row). Two honesty
+   rules travel with every row: `ev` says whether the season came from the
+   OPERATOR's own page or only from a THIRD PARTY, and `c` is the date it was
+   checked -- seasons change yearly and a stale season is a confident wrong
+   answer. A season is the operator's published calendar, never a promise that
+   the train runs on the day. DO NOT EDIT THE CONSTANT BY HAND: --check fails. */
+const HERITAGE_CATALOGUE=[{"c":"2026-09-08","cl":[{"f":"2026-10-11","t":"2026-12-04"}],"ev":"operator","id":"glacier-express","k":"panorama","n":"Glacier Express","op":"MGB/RhB","r":"Zermatt – St. Moritz","rv":"mandatory","s":[{"id":"8501689","n":"Zermatt"},{"id":"8501609","n":"Brig"},{"id":"8505165","n":"Andermatt"},{"id":"8509179","n":"Disentis/Mustér"},{"id":"8509000","n":"Chur"},{"id":"8509189","n":"Thusis"},{"id":"8509192","n":"Tiefencastel"},{"id":"8509195","n":"Filisur"},{"id":"8509197","n":"Bergün/Bravuogn"},{"id":"8509251","n":"Samedan"},{"id":"8509252","n":"Celerina"},{"id":"8509253","n":"St. Moritz"}],"se":[{"d":"daily","f":"2026-05-02","t":"2026-10-10"},{"d":"daily","f":"2026-12-05","t":null}],"src":"https://www.glacierexpress.ch/en/timetable"},{"c":"2026-09-08","cl":[],"ev":"third-party","id":"bernina-express","k":"panorama","n":"Bernina Express","op":"RhB","r":"Chur – St. Moritz – Tirano","rv":"mandatory","s":[{"id":"8509000","n":"Chur"},{"id":"8509253","n":"St. Moritz"},{"id":"8509369","n":"Tirano"}],"se":[{"d":"daily","f":"2026-01-01","t":"2026-12-31"}],"src":"https://www.rhb.ch/en/panoramic-journeys/bernina-express/"},{"c":"2026-09-08","cl":[],"ev":"operator","id":"rhb-historical-train","k":"heritage","n":"Historical train (1920s stock, open scenic carriage)","op":"RhB","r":"Davos Platz – Filisur","rv":"not stated","s":[{"id":"8509073","n":"Davos Platz"},{"id":"8509075","n":"Davos Frauenkirch"},{"id":"8509076","n":"Davos Glaris"},{"id":"8509077","n":"Davos Monstein"},{"id":"8509078","n":"Davos Wiesen"},{"id":"8509195","n":"Filisur"}],"se":[{"d":"daily","f":"2026-05-14","t":"2026-10-25"}],"src":"https://www.rhb.ch/en/nostalgic-trips/historical-train/"},{"c":"2026-09-08","cl":[],"ev":"operator","id":"rhb-open-carriages-bernina","k":"panorama","n":"Open scenic carriages on the Bernina line","op":"RhB","r":"St. Moritz – Tirano (on regional trains)","rv":"not possible for single travellers","s":[{"id":"8509253","n":"St. Moritz"},{"id":"8509255","n":"Pontresina"},{"id":"8509357","n":"Alp Grüm"},{"id":"8509361","n":"Poschiavo"},{"id":"8509369","n":"Tirano"}],"se":[{"d":"daily","f":"2026-06-22","t":"2026-08-30"}],"src":"https://www.rhb.ch/en/excursions/open-scenic-carriages/"},{"c":"2026-09-08","cl":[],"ev":"operator","id":"rhb-viaduct-shuttle","k":"panorama","n":"Viaduct shuttle with open scenic carriages","op":"RhB","r":"Filisur – Alvaneu (Landwasser viaduct)","rv":"not possible for single travellers","s":[{"id":"8509195","n":"Filisur"},{"id":"8509194","n":"Alvaneu"}],"se":[{"d":["Wed","Thu","Fri","Sat","Sun"],"f":"2026-05-14","t":"2026-06-28"},{"d":"daily","f":"2026-06-29","t":"2026-08-30"},{"d":["Wed","Thu","Fri","Sat","Sun"],"f":"2026-09-02","t":"2026-10-25"}],"src":"https://www.rhb.ch/en/excursions/open-scenic-carriages/"},{"c":"2026-09-08","cl":[],"ev":"operator","id":"landwasser-express","k":"excursion","n":"Landwasser Express (tourist train to the viaduct viewpoint)","op":"RhB","r":"Filisur station – Landwasser viaduct vantage point","rv":"booking (charter product)","s":[{"id":"8509195","n":"Filisur"}],"se":[{"d":"daily","f":"2026-05-14","t":"2026-10-18"}],"src":"https://www.rhb.ch/en/excursions/landwasser-express/"},{"c":"2026-09-08","cl":[],"ev":"operator","id":"gotthard-panorama-express","k":"panorama","n":"Gotthard Panorama Express (boat + panorama train)","op":"SBB / SGV","r":"Luzern (boat) – Flüelen – Bellinzona – Lugano","rv":"mandatory","s":[{"id":"8505000","n":"Luzern"},{"id":"8505112","n":"Flüelen"},{"id":"8505213","n":"Bellinzona"},{"id":"8505300","n":"Lugano"}],"se":[{"d":"daily","f":"2026-04-18","t":"2026-10-18"}],"src":"https://www.sbb.ch/de/freizeit-ferien/zuege-schiffe/panoramareisen/gotthard-panorama-express.html"},{"c":"2026-09-08","cl":[],"ev":"third-party","id":"dfb-furka-steam","k":"steam","n":"Furka steam railway (Dampfbahn Furka-Bergstrecke)","op":"DFB","r":"Realp DFB – Furka DFB – Gletsch – Oberwald","rv":"mandatory","s":[{"id":"8530612","n":"Realp DFB"},{"id":"8530613","n":"Tiefenbach DFB"},{"id":"8530614","n":"Furka DFB"},{"id":"8501634","n":"Muttbach-Belvédère"},{"id":"8501635","n":"Gletsch"},{"id":"8501661","n":"Oberwald"}],"se":[{"d":["Thu","Fri","Sat","Sun"],"f":"2026-06-18","t":"2026-09-27"}],"src":"https://www.dfb.ch/en/pages/dampfbahnfahrten-furka-bergstrecke"},{"c":"2026-09-08","cl":[],"ev":"operator","id":"blonay-chamby","k":"heritage","n":"Blonay–Chamby museum railway","op":"BC","r":"Blonay – Chamby – Chaulin museum","rv":"not stated","s":[{"id":"8501281","n":"Blonay"},{"id":"8501376","n":"Chamby"},{"id":"8501306","n":"Chamby-Musée"}],"se":[{"d":["Sat","Sun"],"f":"2026-05-02","t":"2026-10-25"}],"src":"https://blonay-chamby.ch/en/accueil-an/"},{"c":"2026-09-08","cl":[],"ev":"third-party","id":"sursee-triengen-steam","k":"steam","n":"Sursee–Triengen public steam train","op":"ST","r":"Sursee – Geuensee – Büron – Triengen","rv":"not needed","s":[{"id":"8502007","n":"Sursee"},{"id":null,"n":"Geuensee"},{"id":null,"n":"Büron"},{"id":null,"n":"Triengen"}],"se":[{"dates":["2026-05-31","2026-06-28","2026-07-26","2026-08-30","2026-09-27","2026-10-25"]}],"src":"https://www.sursee-triengen-bahn.ch/dampffahrten-erleben/oeffentliche-fahrten/"}];
+const HERITAGE_DOW=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+/* Does the operator's calendar say product p runs on day (YYYY-MM-DD)? Closed
+   ranges win over seasons; a season is a date range with a weekday pattern, or
+   an explicit date list (the last-Sunday-of-the-month shape); `t:null` = no end
+   stated. Anything malformed is "no", never a crash. */
+function heritageRuns(p, day){
+  if(!p||!/^\d{4}-\d{2}-\d{2}$/.test(day||"")) return false;
+  for(const c of p.cl||[]) if(c&&c.f<=day&&(!c.t||day<=c.t)) return false;
+  const dow=HERITAGE_DOW[new Date(day+"T12:00:00").getDay()];
+  for(const s of p.se||[]){
+    if(!s) continue;
+    if(Array.isArray(s.dates)){ if(s.dates.includes(day)) return true; continue; }
+    if(!(s.f<=day&&(!s.t||day<=s.t))) continue;
+    if(s.d==="daily"||(Array.isArray(s.d)&&s.d.includes(dow))) return true;
+  }
+  return false;
+}
+function heritageNorm(n){ return (n||"").toLowerCase().replace(/\s+/g," ").trim(); }
+/* Products calling at this station: by UIC id when the board gave us one, else
+   by exact (normalised) name -- the fallback that keeps the catalogue readable
+   when the timetable API is down, and the only route for halts that are not
+   stations (museum lines). */
+function heritageAt(cat, stationId, stationName){
+  const id=stationId?String(stationId):"", nm=heritageNorm(stationName);
+  return (cat||[]).filter(p=>(p&&p.s||[]).some(x=>x&&((id&&x.id&&String(x.id)===id)||(nm&&heritageNorm(x.n)===nm))));
+}
+/* Split the products calling here into ON (runs on at least one of the days,
+   with which) and OFF (calls here but not on these days -- shown quietly with
+   its season, because "not this weekend" is a fact worth one faint line). */
+function heritageSplit(cat, stationId, stationName, days){
+  const on=[], off=[];
+  for(const p of heritageAt(cat, stationId, stationName)){
+    const d=(days||[]).filter(x=>heritageRuns(p,x));
+    (d.length?on:off).push({p, days:d});
+  }
+  return {on, off};
+}
+function heritageDM(iso){ const d=new Date(iso+"T12:00:00"); return isNaN(d)?iso:`${d.getDate()}.${d.getMonth()+1}.`; }
+function heritageDaysLabel(d){
+  if(d==="daily") return "daily";
+  if(!Array.isArray(d)||!d.length) return "";
+  /* Mon..Sun as 1..7 so a Wed-Sun run is consecutive; Sunday is 0 in JS, which made "Wed–Sun" read Sun/Wed/Thu/Fri/Sat */
+  const idx=d.map(x=>HERITAGE_DOW.indexOf(x)).filter(i=>i>=0).map(i=>i===0?7:i).sort((a,b)=>a-b);
+  const nm=i=>HERITAGE_DOW[i%7];
+  const run=idx.length>=3&&idx.every((v,i)=>i===0||v===idx[i-1]+1);
+  return run ? `${nm(idx[0])}–${nm(idx[idx.length-1])}` : idx.map(nm).join("/");
+}
+/* One line for the season, in the operator's own shape: "daily 14.5.–25.10." /
+   "Wed–Sun 14.5.–28.6., daily 29.6.–30.8." / "31.5., 28.6., 26.7." */
+function heritageSeasonText(p){
+  const parts=[];
+  for(const s of p.se||[]){
+    if(!s) continue;
+    if(Array.isArray(s.dates)){ parts.push(s.dates.map(heritageDM).join(", ")); continue; }
+    parts.push(`${heritageDaysLabel(s.d)} ${heritageDM(s.f)}–${s.t?heritageDM(s.t):"(no end stated)"}`.trim());
+  }
+  return parts.join(", ");
+}
+function specialCatalogueHTML(split, days, catN, checked){
+  const on=split&&split.on||[], off=split&&split.off||[];
+  let h=`<div class="sday">From the operators&#8217; calendars</div>`;
+  if(!on.length&&!off.length){
+    return h+`<div class="ncav">No catalogued panorama or heritage product calls at this station (catalogue: ${catN} products, checked ${esc(heritageDM(checked))}${esc(String(checked).slice(0,4))}).</div>`;
+  }
+  for(const {p,days:d} of on){
+    const when = d.length===(days||[]).length ? "both days" : d.map(x=>DAY_NAMES[new Date(x+"T12:00:00").getDay()]).join("+");
+    const ev = p.ev==="operator" ? `operator page, checked ${esc(heritageDM(p.c))}` : `<span class="cev">season from a third party, not the operator&#8217;s page</span> (checked ${esc(heritageDM(p.c))})`;
+    h+=`<div class="crow"><div class="srow"><span class="sline">${esc(p.op)}</span> <b>${esc(p.n)}</b></div>`
+      +`<div class="cmeta">${esc(p.r)} &#183; <b>${esc(when)}</b> &#183; ${esc(heritageSeasonText(p))} &#183; reservation: ${esc(p.rv)} &#183; <a href="${esc(p.src)}" target="_blank" rel="noopener">source</a> &#183; ${ev}</div></div>`;
+  }
+  if(off.length){
+    h+=`<div class="ncav">Also calling here, not on these days: `
+      + off.map(({p})=>`${esc(p.n)} (${esc(heritageSeasonText(p))})`).join(" &#183; ") + `</div>`;
+  }
+  return h;
+}
+/* ---------- special trains this weekend ----------
+   "Is anything special running from here this weekend?" -- steam, museum and
+   heritage runs. specialRows (core/plan) owns the filter and its honesty
+   number; this side owns the fetches and the caveats. One anchored fetch per
+   weekend day: the stationboard API honours the datetime parameter (checked
+   live at Bauma -- unlike connections' silently-dropped `when`). The allowlist
+   covers only part of the heritage scene (UNSOLVED-GAPS 1.2 puts an
+   algorithmic answer at roughly a third), so the board SAYS what it had to
+   leave unnamed instead of pretending the filter is the world. */
+const DAY_NAMES=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+function specialWrap(name, inner){
+  return `<div class="spcl"><div class="nhead"><span class="ntitle">&#128642; Special trains this weekend &#8212; ${esc(shortStop(name))}</span>`
+    + `<button class="nx" type="button" aria-label="Close" onclick="closeSpecial()">&#10005;</button></div>${inner}</div>`;
+}
+function closeSpecial(){ const b=$("specialOut"); if(b) b.innerHTML=""; }
+function specialDayHTML(day, rows){
+  if(!rows.length) return "";
+  const d=new Date(day+"T12:00:00");
+  const label=`${DAY_NAMES[d.getDay()]} ${d.getDate()}.${d.getMonth()+1}.`;
+  return `<div class="sday">${esc(label)}</div>`
+    + rows.map(r=>`<div class="srow"><b>${hhmm(r.dep)}</b> <span class="sline">${esc((r.op+" "+r.num).trim())}</span> &#8594; ${esc(shortStop(r.to))}</div>`).join("");
+}
+async function specialBoard(name){
+  const box=$("specialOut"); if(!box||!name) return;
+  box.innerHTML=specialWrap(name, `<div class="ncav">checking the weekend timetable&#8230;</div>`);
+  const days=weekendDays(Date.now());
+  const catN=HERITAGE_CATALOGUE.length, catChecked=(HERITAGE_CATALOGUE[0]||{}).c||"";
+  try{
+    let disp=name, inner="", any=0, other=0, stationId=null;
+    for(const day of days){
+      const d=await api(`/stationboard?limit=100&station=${encodeURIComponent(name)}&datetime=${encodeURIComponent(day+" 05:00")}`);
+      disp=d.station?.name||disp; stationId=d.station?.id||stationId;
+      const r=specialRows(d.stationboard||[], day);
+      other+=r.extOther; any+=r.rows.length;
+      inner+=specialDayHTML(day, r.rows);
+    }
+    /* the honesty lines: what the filter dropped, and how small the filter is */
+    const dropped = other>0
+      ? `<div class="ncav">${other} other EXT departure${other===1?"":"s"} this weekend matched no operator on the heritage list &#8212; football shuttles and engineering extras file under EXT too, but so might a special we cannot name.</div>`
+      : "";
+    const coverage = `<div class="ncav">The heritage list is curated and covers only part of the scene &#8212; a special train under an operator we do not recognise will not appear here. The calendar rows are the operators&#8217; published seasons (${catN} products, checked ${esc(catChecked)}); a season is not a promise that the train runs on the day, and seasons change yearly.</div>`;
+    const cat = specialCatalogueHTML(heritageSplit(HERITAGE_CATALOGUE, stationId, disp, days), days, catN, catChecked);
+    if(!any){
+      box.innerHTML=specialWrap(disp,
+        `<div class="nnone">No heritage runs we can recognise leave from here this weekend.</div>`
+        + cat + dropped + coverage);
+      return;
+    }
+    box.innerHTML=specialWrap(disp, inner + cat + dropped + coverage);
+  }catch(e){
+    /* the catalogue is offline data: it does not go dark with the API */
+    const cat = specialCatalogueHTML(heritageSplit(HERITAGE_CATALOGUE, null, name, days), days, catN, catChecked);
+    box.innerHTML=specialWrap(name,
+      `<div class="ncav">Could not check (${esc(e&&e.message||"no answer")}) &#8212; an outage, not a &quot;no&quot;. Tap &#128642; to retry.</div>`
+      + cat + `<div class="ncav">The calendar rows above are offline data matched by station name, not by the timetable check that just failed.</div>`);
   }
 }
 function toggleFav(name){
@@ -818,9 +1255,9 @@ function setWhen(mode){
     return;
   }
   at.hidden = false; clr.hidden = false;
-  if(!at.value){                       // seed with the next round half-hour, local time
-    const d=new Date(Date.now()+30*60000); d.setSeconds(0,0); d.setMinutes(d.getMinutes()>=30?30:0);
-    at.value = new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  if(!at.value){                       // seed with the next round half-hour, SWISS time
+    const s=swissLocal(Date.now()+30*60000);
+    at.value = s.slice(0,14) + (+s.slice(14)>=30 ? "30" : "00");
   }
   whenValue = at.value;
   if(fromName && toName) planJourney();
@@ -870,7 +1307,7 @@ function pgArr(c){ return c && c.to   && c.to.arrival     ? new Date(c.to.arriva
 // 09:00" steps to "arrive by 08:00", it does not silently become a departure.
 function pgOf(c){ return whenMode === "arr" ? pgArr(c) : pgDep(c); }
 function pgTimes(list){ return (list||[]).map(pgOf).filter(t=>t>0).sort((a,b)=>a-b); }
-function pgLocal(ms){ const d=new Date(ms); return new Date(ms - d.getTimezoneOffset()*60000).toISOString().slice(0,16); }
+function pgLocal(ms){ return swissLocal(ms); }
 
 function pgStep(dir){
   const ts = pgTimes(jrnConns);
@@ -981,8 +1418,7 @@ function setWhenFlight(){
   p.hidden=false;
   const fi=$("fltAt");
   if(fi && !fi.value){                    // seed the FLIGHT time, not the arrival
-    const d=new Date(Date.now()+4*3600000); d.setSeconds(0,0); d.setMinutes(0);
-    fi.value=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);
+    fi.value=swissLocal(Date.now()+4*3600000).slice(0,14)+"00";
   }
   flightAt = fi ? fi.value : "";
   renderFlight();
@@ -1218,6 +1654,30 @@ function viaPending(){
   const i=$("iVia"); if(!i) return;
   $("fVia").classList.toggle("pending", i.value.trim() !== viaName);
 }
+/* ...and MARKING it was not enough. Field report 2026-07-30 (Zurich -> Luzern
+   via Buchrain): the via applied only on Enter or on tapping a suggestion, so
+   typing the stop and then touching anything else -- the To box, a route chip,
+   the results -- ran the search with no via at all. The dashed border was the
+   whole warning, and it says nothing. On a phone you do not press Enter; you
+   tap away. So leaving the box IS applying it: the API resolves a literal
+   station name fine (measured against via[]=Buchrain), and if the text was
+   junk the via note names it with one tap to drop it -- visible and reversible,
+   which an unconstrained search pretending otherwise never was. */
+function viaBlur(){
+  const i=$("iVia"); if(!i) return;
+  const typed=i.value.trim();
+  if(!typed || typed===viaName) return;      // nothing pending
+  /* A tap on a suggestion blurs the box BEFORE its click lands, and that blur
+     carries the half-typed text the dropdown was still answering. Applying it
+     here would fire a search for "Buchra" and then a second for "Buchrain".
+     One frame is enough for the click to win; if it did, typed===viaName by
+     the time this runs and the guard above ends it. */
+  setTimeout(()=>{
+    const now=$("iVia"); if(!now) return;
+    const t=now.value.trim();
+    if(t && t!==viaName) viaSet(t);
+  }, 150);
+}
 function viaClear(){
   const had = !!viaName;
   viaName = "";
@@ -1353,14 +1813,28 @@ let jrnAbort = null;
 /* api() throws Error("HTTP 429") etc., but the catch blocks used to discard it
    and print the generic "check your connection" line -- the one situation where
    that advice is wrong (the network is FINE, the service refused us). Rate-limit
-   and server errors need different advice than a dead connection. */
-function errBox(e){
+   and server errors need different advice than a dead connection.
+
+   Field report 2026-07-30: this function was RIGHT and never ran on the screen
+   that mattered. Smart mode routes through tryConns, which caught the error,
+   set a boolean and dropped the reason on the floor -- so renderSmart printed
+   its own hardcoded "check your connection" while the operator's connection was
+   demonstrably fine (measured: 40 requests, 23 came back HTTP 429 "Too many
+   requests this minute"). A correct message on a path nobody walks is not a
+   correct message. Every failure branch now ends here; `unknown` and `again`
+   are the only per-screen words, so a new screen cannot fork the advice. */
+function errBox(e, unknown, again){
+  const what  = unknown || "whether this journey runs";
+  const retry = again   || "tap Search again";
   const m=/^HTTP (\d+)/.exec((e&&e.message)||"");
-  if(m&&m[1]==="429") return `<div class="err">The timetable service is rate-limiting us &#8212; too many searches for now.<br>This is not a &quot;no&quot;, and not your connection: wait a minute, then search again.</div>`;
-  if(m) return `<div class="err">The timetable service answered with an error (HTTP ${m[1]}), so we do not know whether this journey runs.<br>This is not a &quot;no&quot; &#8212; try again in a moment.</div>`;
-  return `<div class="err">We could not reach the timetable, so we do not know whether this journey runs.<br>This is not a &quot;no&quot; &#8212; check your connection and tap Search again.</div>`;
+  if(m&&m[1]==="429") return `<div class="err">The timetable service is rate-limiting us &#8212; too many searches for now.<br>This is not a &quot;no&quot;, and not your connection: wait a minute, then ${retry}.</div>`;
+  if(m) return `<div class="err">The timetable service answered with an error (HTTP ${m[1]}), so we do not know ${what}.<br>This is not a &quot;no&quot; &#8212; try again in a moment.</div>`;
+  return `<div class="err">We could not reach the timetable, so we do not know ${what}.<br>This is not a &quot;no&quot; &#8212; check your connection and ${retry}.</div>`;
 }
-function planJourney(){ return smart ? smartPlan() : plainPlan(); }
+function planJourney(opts){
+  if(!(opts && opts.keepMeet)) meetInvalidate();   // a new plan supersedes meeting points computed for the old pair
+  return smart ? smartPlan() : plainPlan();
+}
 
 /* ---------- share a route ----------
    What travels is the QUERY, never the result: timetables shift, so the
@@ -1395,10 +1869,187 @@ function shareRoute(ev){
   } else copy();
 }
 const SHARE_LBL = "&#8599; Share this route";
+
+/* ---------- offline export: ONE self-contained .html, no dependency ----------
+   The case this exists for is not battery, it is NO SIGNAL. Swiss rail is
+   tunnels, and this app is dead without a connection -- it ships no service
+   worker at all (grep: serviceWorker 0, Blob 0, download 0 across every shipped
+   file, while fetch counts 29 in the same scan), so a journey you did not plan
+   before the bars went is one you cannot plan. A saved file opens in any browser
+   with the radio off.
+
+   Two rules the document must obey, both learned elsewhere in this file:
+
+   1. PROGNOSIS FIRST, exactly as connCard does. If the export read the
+      scheduled time while the card showed the real one, the file you carry into
+      the tunnel would disagree with the screen you saved it from -- the same
+      defect connCard's own comment records ("14:02" here, "14:02 +11" there).
+   2. IT MUST NOT LOOK LIVE. A snapshot rendered like the app is a lying
+      artifact: the times stop the moment it is written, and nothing in a static
+      file can know a train was later cancelled. The document stamps when it was
+      made and says outright that it does not update. */
+const OFFLINE_LBL = "&#11015; Save offline";
+
+/* The data half, kept clear of the DOM so a test can run it. Takes the raw
+   connections plus a sketch-producer and returns plain rows -- no globals, no
+   fetch, nothing to stub but the two arguments. */
+function offlineRows(conns, sketchOf){
+  return (conns||[]).map(function(c,i){
+    var dep = (c.from && c.from.prognosis && c.from.prognosis.departure) || (c.from && c.from.departure);
+    var arr = (c.to   && c.to.prognosis   && c.to.prognosis.arrival)     || (c.to   && c.to.arrival);
+    var dly = function(a,b){ return a&&b ? Math.round((new Date(a)-new Date(b))/60000) : 0; };
+    var secs = ((c.sections)||[]).filter(function(x){ return x.journey; });
+    return {
+      dep: dep, arr: arr,
+      depDelay: dly(c.from && c.from.prognosis && c.from.prognosis.departure, c.from && c.from.departure),
+      arrDelay: dly(c.to   && c.to.prognosis   && c.to.prognosis.arrival,     c.to   && c.to.arrival),
+      from: (c.from && c.from.station && c.from.station.name) || "",
+      to:   (c.to   && c.to.station   && c.to.station.name)   || "",
+      duration: c.duration || "",
+      platformDep: (c.from && c.from.prognosis && c.from.prognosis.platform) || (c.from && c.from.platform) || "",
+      platformArr: (c.to   && c.to.prognosis   && c.to.prognosis.platform)   || (c.to   && c.to.platform)   || "",
+      changes: c._chg ? c._chg.length : (c.transfers||0),
+      legs: secs.map(function(x){
+        return {
+          label: ((x.journey.category||"") + (x.journey.number ? " "+x.journey.number : "")).trim() || "\u00b7",
+          col: catColor(x.journey.category),
+          fromName: (x.departure && x.departure.station && x.departure.station.name) || "",
+          toName:   (x.arrival   && x.arrival.station   && x.arrival.station.name)   || "",
+          depTime: (x.departure && x.departure.prognosis && x.departure.prognosis.departure) || (x.departure && x.departure.departure) || "",
+          arrTime: (x.arrival   && x.arrival.prognosis   && x.arrival.prognosis.arrival)     || (x.arrival   && x.arrival.arrival)     || ""
+        };
+      }),
+      buffers: (c._chg||[]).map(function(x){ return { at:x.stn, mins:x.b, missed:!!x.missed }; }),
+      sketch: stripLiveMarkers(typeof sketchOf === "function" ? (sketchOf(i)||"") : "")
+    };
+  });
+}
+
+/* The route sketch carries a marker for where the train IS -- `.sktrain` with a
+   pulsing `.sktrain-halo`. In the live app that is the best thing on the sketch.
+   In a saved file it is a lie with an animation attached: it pins the position
+   the train held at save time and then pulses at you forever, which is precisely
+   what the banner at the top of the document exists to deny. So it is removed on
+   the way out. The stops, the lines and the labels are facts about the plan and
+   they stay; the moving dot is not. */
+function stripLiveMarkers(svg){
+  return (svg||"").replace(/<circle[^>]*class="sktrain(?:-halo)?"[^>]*\/>/g, "");
+}
+
+/* The document half. A complete standalone file: inline CSS, inline SVG, and no
+   network reference of any kind -- an external stylesheet or webfont would fail
+   to load in exactly the situation the file was saved for. */
+function offlineDoc(rows, meta){
+  var m = meta || {};
+  var t = function(iso){ return iso ? hhmm(iso) : "\u2014"; };
+  var dtag = function(n){ return n>0 ? ' <span class="d">+'+n+'\u2032</span>' : ""; };
+  var cards = (rows||[]).map(function(r){
+    return '<section class="c">'
+      + '<div class="hd"><span class="t">'+t(r.dep)+dtag(r.depDelay)+'</span>'
+      + '<span class="ar">\u2192</span><span class="t">'+t(r.arr)+dtag(r.arrDelay)+'</span>'
+      + '<span class="du">'+esc(parseDur(r.duration))+' \u00b7 '+r.changes+' change'+(r.changes===1?"":"s")+'</span></div>'
+      + '<div class="ep">'+esc(r.from)+' \u2192 '+esc(r.to)+'</div>'
+      + (r.platformDep ? '<div class="pf">Platform '+esc(r.platformDep)
+          + (r.platformArr ? ' \u00b7 arrives '+esc(r.platformArr) : "") + '</div>' : "")
+      + '<ol class="lg">' + r.legs.map(function(l){
+          return '<li><b style="background:'+esc(l.col)+'">'+esc(l.label)+'</b><span>'
+               + t(l.depTime)+' '+esc(l.fromName)+' \u2192 '+t(l.arrTime)+' '+esc(l.toName)+'</span></li>';
+        }).join("") + '</ol>'
+      + (r.buffers.length ? '<div class="cx">' + r.buffers.map(function(b){
+          return '<span class="'+(b.missed?"miss":"")+'">'+esc(b.at)+' '
+               + (b.missed ? "missed by "+(-b.mins) : b.mins+"\u2032")+'</span>';
+        }).join("") + '</div>' : "")
+      + (r.sketch ? '<div class="sk">'+r.sketch+'</div>' : "")
+      + '</section>';
+  }).join("");
+  return '<!doctype html>\n'
++ '<html lang="en"><head><meta charset="utf-8">\n'
++ '<meta name="viewport" content="width=device-width,initial-scale=1">\n'
++ '<title>'+esc(m.from||"")+' \u2192 '+esc(m.to||"")+' \u2014 saved route</title>\n'
++ '<style>\n'
++ ' :root{color-scheme:dark;\n'
++ '   /* The sketch is lifted out of the live page, and its classes colour themselves\n'
++ '      from these custom properties. Undefined, a var() makes the whole declaration\n'
++ '      invalid and the shape falls back to black -- which is how the first exported\n'
++ '      sketches came out as black blobs on a dark card. Carried, not re-derived.\n'
++ '      The transport-category palette is here for the same reason and it is NOT optional:\n'
++ '      catColor() returns a var() for SIX of its seven branches, so an export missing them\n'
++ '      loses the badge AND the polyline for every IC and every S-train -- most of Swiss\n'
++ '      rail -- while buses render fine because --grn happened to be here for the sketch.\n'
++ '      That is what shipped for one commit. offline-export.mjs now asserts that every\n'
++ '      var() the document actually uses is defined here, so the next colour cannot be\n'
++ '      forgotten the way this one was. */\n'
++ '   --txt:#e6e6ec; --card:#15151b; --dim:#9a9aa6; --line:#26262f;\n'
++ '   --red:#eb0000; --grn:#22c55e; --amber:#f59e0b; --blue:#3b82f6;\n'
++ '   --violet:#8b5cf6; --teal:#14b8a6}\n'
++ ' body{margin:0;padding:16px;font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;\n'
++ '      background:#0b0b0d;color:#e6e6ec;max-width:720px}\n'
++ ' h1{font-size:19px;margin:0 0 2px}\n'
++ ' .stamp{background:#3a2a12;border:1px solid #6b4c1d;color:#f0d9a8;\n'
++ '        padding:10px 12px;border-radius:10px;margin:12px 0 18px;font-size:13px}\n'
++ ' .stamp b{color:#ffd88a}\n'
++ ' .c{background:#15151b;border:1px solid #26262f;border-radius:12px;padding:12px 14px;margin:0 0 12px}\n'
++ ' .hd{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}\n'
++ ' .t{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}\n'
++ ' .ar{opacity:.55} .du{margin-left:auto;font-size:13px;opacity:.75}\n'
++ ' .d{font-size:13px;color:#ff9f68;font-weight:700}\n'
++ ' .ep{font-size:13px;opacity:.75;margin:2px 0 8px}\n'
++ ' .pf{font-size:13px;margin:0 0 8px}\n'
++ ' .lg{list-style:none;margin:0;padding:0}\n'
++ ' .lg li{display:flex;gap:8px;align-items:baseline;margin:4px 0;font-size:13px}\n'
++ ' .lg b{color:#08080a;padding:1px 7px;border-radius:5px;font-size:12px;white-space:nowrap}\n'
++ ' .cx{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;font-size:12px}\n'
++ ' .cx span{background:#20202a;border-radius:6px;padding:2px 7px}\n'
++ ' .cx .miss{background:#4a1d1d;color:#ffb4b4}\n'
++ ' .sk{margin-top:10px} .sk svg{width:100%;height:auto;display:block;overflow:visible}\n'
++ ' .sklbl{fill:var(--txt); font-size:11px; font-weight:700; paint-order:stroke;\n'
++ '   stroke:var(--card); stroke-width:3.5px; stroke-linejoin:round}\n'
++ ' .sklbl.chg{fill:var(--dim); font-weight:600}\n'
++ ' .snone{font-size:12px; opacity:.6}\n'
++ ' @media print{body{background:#fff;color:#000}.c{border-color:#bbb;background:#fff}\n'
++ '   .stamp{background:#fff;border-color:#000;color:#000}}\n'
++ '</style></head><body>\n'
++ '<h1>'+esc(m.from||"")+' \u2192 '+esc(m.to||"")+'</h1>\n'
++ '<div class="stamp"><b>This is a snapshot, not a live timetable.</b><br>\n'
++ ' Saved '+esc(m.savedAt||"")+(m.tz ? ' ('+esc(m.tz)+')' : "")+'. The times below were the best known\n'
++ ' <em>at that moment</em> and do not update. A train cancelled or re-platformed after this file was\n'
++ ' written will still look fine here \u2014 re-check online once you have signal.</div>\n'
++ (cards || '<p>No connections were on screen when this was saved.</p>')
++ '\n</body></html>';
+}
+
+/* The DOM half: gather what is on screen, build the file, hand it to the browser. */
+function saveOffline(ev){
+  var btn = ev && ev.currentTarget;
+  var say = function(msg){ if(btn){ btn.textContent=msg; setTimeout(function(){ btn.innerHTML=OFFLINE_LBL; },1800); } };
+  if(!jrnConns.length){ say("Nothing to save yet"); return; }
+  var now = new Date();
+  var rows = offlineRows(jrnConns, function(i){ return sketchSVG(i); });
+  var html = offlineDoc(rows, {
+    from: fromName, to: toName,
+    savedAt: now.toLocaleString(),
+    tz: (Intl.DateTimeFormat().resolvedOptions().timeZone || "")
+  });
+  var slug = function(x){ return (x||"route").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,28); };
+  var name = "rail-"+slug(fromName)+"-"+slug(toName)+"-"+now.toISOString().slice(0,10)+".html";
+  try{
+    var url = URL.createObjectURL(new Blob([html], {type:"text/html;charset=utf-8"}));
+    var a = document.createElement("a");
+    a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+    say("Saved \u2713");
+  }catch(e){
+    // Name it. A download that silently does nothing is indistinguishable from a
+    // button that was never wired -- the exact shape this repo keeps catching.
+    say("Could not save: "+((e && e.message) || "unknown"));
+  }
+}
+
 function shareBarHTML(){
   // the pager sits at the FAR LEFT of the row the share button already owns --
   // one bar for "what to do with this list", not a second panel
-  return `<div class="sharebar">${pgBarHTML()}<button type="button" class="shr" onclick="shareRoute(event)">${SHARE_LBL}</button></div>`;
+  return `<div class="sharebar">${pgBarHTML()}<button type="button" class="shr" onclick="shareRoute(event)">${SHARE_LBL}</button>`
+       + `<button type="button" class="shr" onclick="saveOffline(event)" title="Save these connections as one file that works with no signal">${OFFLINE_LBL}</button></div>`;
 }
 
 /* ---------- deep link: ?from=&to=[&via=][&at=][&mode=arr] ----------
@@ -1440,6 +2091,26 @@ function applyDeepLink(){
    ever on the button tap -- never on render. */
 const MEET_FB = 4;
 let meetGen = 0, meetAbort = null, meetRows = [];
+let meetFor = null;   // {from,to} the rows on screen were computed for -- the pair, not whatever the fields say now
+
+/* The meeting points are DERIVED from the two fields, and nothing used to retract
+   them when the fields changed: run Meet for Luzern <-> Bern, type Zug into From,
+   plan -- and the Luzern <-> Bern cards stayed on screen with live "my leg / their
+   leg" buttons that would plan legs for a pair you had abandoned. Stale output with
+   actions attached, the same class as the onboard bar's frozen snapshot. Operator
+   named the class from a gut feeling 2026-09-06; this is the site it was true at.
+   Retraction is not silent: the hint names the pair the cards were for, because a
+   panel that simply vanishes is the app saying nothing. */
+function meetInvalidate(){
+  const out=$("meetOut"); if(!out) return;
+  if(!meetRows.length && !out.innerHTML) return;   // nothing on offer, nothing to retract
+  const was=meetFor;
+  meetGen++; if(meetAbort) meetAbort.abort();      // an in-flight meet is for the old pair too
+  meetRows=[]; meetFor=null;
+  out.innerHTML = was
+    ? `<div class="hint">Those meeting points were for ${esc(was.from)} &#8596; ${esc(was.to)} and the route changed &#8212; tap Meet in the middle again.</div>`
+    : "";
+}
 
 function connStops(c){
   // every station the journey actually calls at, with the clock time there.
@@ -1476,14 +2147,17 @@ function meetCardHTML(r, i){
 }
 
 function meetLeg(i, theirs){
-  const r = meetRows[i]; if(!r) return;
+  const r = meetRows[i]; if(!r || !meetFor) return;
   // planning THEIR leg swaps the From field to their origin -- an explicit
-  // tap, and the share bar in the resulting plan is how you send it to them
-  const f = theirs ? toName : fromName;
+  // tap, and the share bar in the resulting plan is how you send it to them.
+  // Origins come from meetFor, the pair the cards were computed for: after
+  // "my leg" the live fields already hold (me -> meeting point), so reading
+  // toName here would plan their leg FROM the meeting point.
+  const f = theirs ? meetFor.to : meetFor.from;
   fromName = f; toName = r.name;
   $("iFrom").value = f; $("iTo").value = r.name;
   $("fFrom").classList.add("has"); $("fTo").classList.add("has");
-  planJourney();
+  planJourney({ keepMeet: true });   // the one caller that is USING the cards, not abandoning them
 }
 
 async function meetMiddle(){
@@ -1564,6 +2238,7 @@ async function meetMiddle(){
     }
     rows.sort((a,b)=>a.gap-b.gap || (new Date(a.together)-new Date(b.together)));
     meetRows = rows.slice(0,3);
+    meetFor = { from: fromName, to: toName };
     out.innerHTML = fbNote + meetRows.map((r,k)=>meetCardHTML(r,k)).join("")
       + `<div class="hint">Fair = closest ride times, both leaving now. Tap a leg to plan it &#8212; the share bar sends it on.</div>`;
   }catch(e){
@@ -1595,7 +2270,7 @@ async function plainPlan(){
     jrnConns = cs;   // render order == the ci the leg buttons index back into
     pgObserve(cs);   // did the step actually move? decided BEFORE the bar is built
     $("jrnOut").innerHTML = shareBarHTML() + pgNote() + viaNote() + catFilterNote(kept.length, raw.length)
-      + cs.map((c,i)=>connCard(c,i)).join("") + wondersExpanderHTML(cs[0].to?.station);
+      + cs.map((c,i)=>connCard(c,i)).join("") + toiletsExpanderHTML(cs[0].to?.station) + wondersExpanderHTML(cs[0].to?.station);
     if(weather) fillWeather();
   }catch(e){
     if(gen!==jrnGen) return;                                       // superseded
@@ -1618,9 +2293,14 @@ async function plainPlan(){
    the timetable" just because its slower twin timed out. The wide query is the
    likeliest request in the app to fail -- bus-filtered, limit 16, it is a 1 MB
    14-second response -- so all-or-nothing was guaranteed to fire eventually. */
+/* ...and recording the FAILURE without its REASON was the same defect one layer
+   up. `note.failed=true` says a request died; it cannot say the service refused
+   us, which is the one case where "check your connection" is false. Keep the
+   error itself -- it is the only place that fact exists, and discarding it here
+   forced every screen downstream to invent an explanation. */
 async function tryConns(qs, note, signal){
   try{ const d=await api("/connections?"+qs, signal); if(note) note.ok=true; return d.connections||[]; }
-  catch(e){ if(note) note.failed=true; return []; }
+  catch(e){ if(note){ note.failed=true; note.err=e; } return []; }
 }
 function connSig(c){ return (c.from?.departure||"")+"|"+(c.to?.arrival||"")+"|"+(c.duration||""); }
 function changeDetails(c){
@@ -1846,7 +2526,10 @@ async function loadWonders(btn,lat,lon){
   const els=await overpass(lat,lon);
   // "we could not ask OSM" is not "OSM says there is nothing here" -- saying the
   // second when the first is true tells you a mountain range is empty.
-  if(els===null){ body.innerHTML=`<div class="wempty">Could not reach the map data just now. That is not the same as nothing being here &#8212; tap again to retry.</div>`; return; }
+  // On failure the panel must also UN-load itself: until 2026-09-03 the "tap again
+  // to retry" below was a promise the `loaded` flag above made impossible to keep
+  // within one render (the second tap returned at the first line).
+  if(els===null){ wrap.dataset.loaded=""; btn.classList.remove("open"); body.innerHTML=`<div class="wempty">Could not reach the map data just now. That is not the same as nothing being here &#8212; tap again to retry.</div>`; return; }
   const seen=new Set(), list=[];
   els.forEach(e=>{
     const t=e.tags||{};
@@ -1863,6 +2546,69 @@ async function loadWonders(btn,lat,lon){
   body.innerHTML=top.map((w,i)=>wonderCard(w,i)).join("");
   enrichWonders(top, body);   // Wikipedia layer fills in after
 }
+/* ---- Public toilets (OSM amenity=toilets) -- same Overpass client, same honesty rules ----
+   Operator ask 2026-09-03. The passenger ledger had parked "needs-toilet-en-route" on Overpass
+   cost; this is tap-to-load, so it costs nothing until asked, and it answers "near THIS
+   station", not the en-route residual (that row is left to the sweep's own judgment).
+   Sources considered: OSM via the client already here (CORS-open, carries fee / wheelchair /
+   opening_hours / access tags); the official opentransportdata.swiss "Toilets - Accessibility
+   (v2)" CSVs (per-stop wheelchair data, daily) are a second signal once their columns are
+   known -- not wired. */
+function overpassToilets(lat,lon){
+  return overpassQuery("wc:"+lat+","+lon,
+    `[out:json][timeout:25];(`
+    +`node(around:500,${lat},${lon})[amenity=toilets];`
+    +`way(around:500,${lat},${lon})[amenity=toilets];`
+    +`);out center 30;`);
+}
+// pure: OSM tags -> the one line under a toilet's name. Says only what the tags say;
+// an absent tag is absent, never "free" or "accessible" by default.
+function toiletMeta(t){
+  t=t||{};
+  const bits=[];
+  if(t.fee==="yes") bits.push(t.charge?"fee "+t.charge:"fee");
+  else if(t.fee==="no") bits.push("free");
+  if(t.wheelchair==="yes") bits.push("wheelchair ✓");
+  else if(t.wheelchair==="limited") bits.push("wheelchair limited");
+  else if(t.wheelchair==="no") bits.push("no wheelchair access");
+  if(t.changing_table==="yes") bits.push("changing table");
+  if(t.access==="customers") bits.push("customers only");
+  else if(t.access==="private") bits.push("private");
+  if(t.opening_hours) bits.push(t.opening_hours);
+  return bits.join(" · ");
+}
+function toiletName(t){ t=t||{}; return t.name || (t.operator ? t.operator+" toilets" : "Public toilets"); }
+function toiletsExpanderHTML(place){
+  if(!place||!place.coordinate) return "";
+  const lat=place.coordinate.x, lon=place.coordinate.y;   // transport.opendata.ch: x is LATITUDE
+  if(lat==null||lon==null) return "";
+  return `<div class="wonders"><button class="wtoggle" onclick="loadToilets(this,${lat},${lon})">`
+    +`${CP(0x1F6BB)} Toilets near ${esc(place.name||"here")}<span class="wchev">&#9662;</span>`
+    +`</button><div class="wbody"></div></div>`;
+}
+async function loadToilets(btn,lat,lon){
+  const wrap=btn.closest(".wonders"), body=wrap.querySelector(".wbody");
+  if(wrap.dataset.loaded) return;
+  wrap.dataset.loaded="1"; btn.classList.add("open");
+  body.innerHTML=`<div class="wloading">searching within 500&#8201;m&#8230;</div>`;
+  const els=await overpassToilets(lat,lon);
+  if(els===null){ wrap.dataset.loaded=""; btn.classList.remove("open"); body.innerHTML=`<div class="wempty">Could not reach the map data just now. That is not the same as there being no toilets &#8212; tap again to retry.</div>`; return; }
+  const list=[];
+  els.forEach(e=>{
+    const la=e.lat??e.center?.lat, lo=e.lon??e.center?.lon;
+    if(la==null||lo==null) return;
+    list.push({t:e.tags||{}, dist:haversineKm(+lat,+lon,la,lo), lat:la, lon:lo});
+  });
+  list.sort((a,b)=>a.dist-b.dist);
+  const top=list.slice(0,6);
+  if(!top.length){ body.innerHTML=`<div class="wempty">OpenStreetMap lists no toilets within 500&#8201;m. Larger stations usually have them even when the map does not say so &#8212; ask at the counter.</div>`; return; }
+  body.innerHTML=top.map(w=>`<div class="wcard"><div class="wmain"><span class="wemoji">${CP(0x1F6BB)}</span><span class="wname">${esc(toiletName(w.t))}</span>`
+    +`<span class="wmeta">${Math.round(w.dist*1000)}&#8201;m</span>`
+    +`<a class="wpin" href="https://www.google.com/maps/search/?api=1&query=${w.lat},${w.lon}" target="_blank" rel="noopener" title="Open in Maps">${CP(0x1F4CD)}</a></div>`
+    +(toiletMeta(w.t)?`<div class="wrich">${esc(toiletMeta(w.t))}</div>`:"")
+    +`</div>`).join("");
+}
+
 function wonderCard(w,i){
   // coord-based Maps link (NOT name) so the pin lands on the exact wonder, never a same-named place elsewhere
   const pin = (w.lat!=null&&w.lon!=null)
@@ -1885,6 +2631,7 @@ function layoverWalkM(b){
   return Math.min(1000, Math.round((b-LAYOVER_KEEP)/2*75));
 }
 function lpType(t){
+  if(t.amenity==="toilets")     return {e:CP(0x1F6BB),l:"toilets"};
   if(t.amenity==="cafe")        return {e:CP(0x2615), l:"caf\u00e9"};
   if(t.amenity==="restaurant")  return {e:CP(0x1F37D),l:"restaurant"};
   if(t.amenity==="ice_cream")   return {e:CP(0x1F366),l:"ice cream"};
@@ -1900,6 +2647,13 @@ function layoverSpots(lat,lon,r){
     `[out:json][timeout:12];(`
     +`node(around:${r},${lat},${lon})[amenity~"^(cafe|restaurant|ice_cream)$"][name];`
     +`node(around:${r},${lat},${lon})[shop=bakery][name];`
+    /* Toilets carry no [name] filter: OSM toilets are almost never named, and the
+       filter that keeps the café list honest would silently drop every one of
+       them. A 20-minute change is precisely when a passenger needs one, and this
+       panel already had the coordinate, the walk radius and the Overpass plumbing
+       -- it just never asked. (Found 2026-09-06 when the operator asked where the
+       toilets feature was; the destination expander exists, this moment had none.) */
+    +`node(around:${r},${lat},${lon})[amenity=toilets];`
     +`node(around:${r},${lat},${lon})[tourism~"^(viewpoint|museum)$"][name];`
     +`node(around:${r},${lat},${lon})[historic~"^(castle|monument)$"][name];`
     +`way(around:${r},${lat},${lon})[leisure=park][name];`
@@ -1908,17 +2662,31 @@ function layoverSpots(lat,lon,r){
 function layoverRows(els, lat, lon, r){
   const seen=new Set(), list=[];
   for(const e of els||[]){
-    const t=e.tags||{}; const name=t.name;
-    if(!name || seen.has(name)) continue;
+    const t=e.tags||{};
+    const wc = t.amenity==="toilets";
+    const name = wc ? toiletName(t) : t.name;   // toilets are nameless in OSM; give them the same synthetic name the destination expander uses
+    if(!name) continue;
     const la=e.lat??e.center?.lat, lo=e.lon??e.center?.lon;
     if(la==null||lo==null) continue;
+    /* Named spots dedupe on the name: two "Café Central" rows are one café. Toilets
+       dedupe on the COORDINATE, because every unnamed one shares the synthetic name
+       and name-dedupe would keep whichever Overpass happened to list first -- not
+       the nearest, since dedupe runs before the sort. */
+    const key = wc ? `wc@${(+la).toFixed(5)},${(+lo).toFixed(5)}` : name;
+    if(seen.has(key)) continue;
     const m=haversineKm(+lat,+lon,la,lo)*1000;
     if(m>r) continue;   // "around" is a circle over OSM geometry; re-check against OUR radius
-    seen.add(name);
-    list.push({name, ty:lpType(t), walk:Math.max(1,Math.ceil(m/75))});
+    seen.add(key);
+    list.push({name, ty:lpType(t), walk:Math.max(1,Math.ceil(m/75)), wc});
   }
   list.sort((a,b)=>a.walk-b.walk);
-  return list.slice(0,6);
+  const top=list.slice(0,6);
+  /* The shortlist is six, and six cafés can be nearer than the nearest toilet. On a
+     layover the toilet is the one row that is not optional, so the nearest one is
+     guaranteed a slot: it displaces the last entry rather than being crowded out. */
+  const nearestWc=list.find(x=>x.wc);
+  if(nearestWc && !top.includes(nearestWc)) top[top.length-1]=nearestWc;
+  return top;
 }
 async function layoverPOI(btn,ci,k){
   const x=jrnConns[ci]?._chg?.[k]; if(!x||!x.co) return;
@@ -1989,7 +2757,9 @@ function onboardNext(ob,now){
 /* The verdict line is ALWAYS on -- it is the one thing here nobody else can
    tell you. The station signage knows the platform; only the buffer maths
    knows whether those minutes buy you the station hall or just the Gleis. */
-function obVerdictHTML(x){
+function obVerdictHTML(x, f){
+  if(f && f.state==="stale")
+    return `<div class="obverdict unverified">${x.missed?"missed":x.b+"&#8242;"} at the last live read, ${f.age}&#8242; ago &#8212; unverified since; the verdict may be out of date</div>`;
   if(x.missed)          return `<div class="obverdict miss">&#9888; missed by ${-x.b}&#8242; &#8212; this change cannot be made; replan from ${esc(x.stn)}</div>`;
   if(x.b>=LAYOVER_MIN)  return `<div class="obverdict go">${x.b}&#8242; &#8212; enough to leave the platform</div>`;
   return `<div class="obverdict stay">${x.b}&#8242; &#8212; stay on the platform</div>`;
@@ -1997,23 +2767,38 @@ function obVerdictHTML(x){
 function obLineHTML(ob,nx){
   const pin=CP(0x1F4CC);
   if(nx.phase==="arrived")  return `${pin} <b>${esc(ob.to)}</b> &#8212; arrived`;
+  const f=obFreshness(ob,nx,Date.now());
   if(nx.phase==="arriving"){
-    const m=minsUntil(ob.arr);
-    return `${pin} &#8594; <b>${esc(ob.to)}</b> ${hhmm(ob.arr)}${m>0&&m<600?` &#183; in ${m}&#8242;`:""} &#183; no more changes`;
+    const liveArr = f&&(f.state==="live"||f.state==="stale") ? obArr : null;   // obFreshness already keyed the read to THIS pin
+    const when = liveArr ? liveArr.at : ob.arr;
+    const m=minsUntil(when);
+    const dly = liveArr && liveArr.dly ? ` (${liveArr.dly>0?"+":""}${liveArr.dly}&#8242;)` : "";
+    return `${pin} &#8594; <b>${esc(ob.to)}</b> ${hhmm(when)}${dly}${m>0&&m<600?` &#183; in ${m}&#8242;`:""} &#183; no more changes${obFreshTag(f)}`;
   }
-  const x=nx.x;
+  const x=obEffective(nx)||nx.x;   // the one-line bar shows the freshest buffer it has
   const t=x.missed?`<b class="obmiss">missed</b>`:`<b>${x.b}&#8242;</b>`;
-  return `${pin} &#8594; <b>${esc(ob.to)}</b> &#183; next change ${esc(x.stn)} ${t}${x.pd?` &#183; Pl.&#8201;${esc(x.pd)}`:""}`;
+  return `${pin} &#8594; <b>${esc(ob.to)}</b> &#183; next change ${esc(x.stn)} ${t}${x.pd?` &#183; Pl.&#8201;${esc(x.pd)}`:""}${obFreshTag(f)}`;
 }
 function obSheetHTML(ob,nx){
   const unpin=`<button type="button" class="obunpin" onclick="onboardUnpin()">unpin &#8212; I&#39;m off this journey</button>`;
+  const f=obFreshness(ob,nx,Date.now());
   if(nx.phase!=="change"){
-    const line=nx.phase==="arrived"
-      ? `Arrived at <b>${esc(ob.to)}</b>.`
-      : `No more changes &#8212; ride it out to <b>${esc(ob.to)}</b>, arriving <b>${hhmm(ob.arr)}</b>.`;
-    return `<div class="obh">${line}</div>${unpin}`;
+    let line;
+    if(nx.phase==="arrived") line=`Arrived at <b>${esc(ob.to)}</b>.`;
+    else{
+      const liveArr = f&&(f.state==="live"||f.state==="stale") ? obArr : null;
+      line=`No more changes &#8212; ride it out to <b>${esc(ob.to)}</b>, arriving <b>${hhmm(liveArr?liveArr.at:ob.arr)}</b>`
+        + (liveArr ? (liveArr.dly ? ` (${liveArr.dly>0?"+":""}${liveArr.dly}&#8242;, live ${f.age}&#8242; ago)` : ` (on time, live ${f.age}&#8242; ago)`) : "") + ".";
+    }
+    const note = f && f.state!=="live" && nx.phase==="arriving" ? `<div class="oblive">${f.state==="stale"?`live read is ${f.age}&#8242; old &#8212; arrival unverified since`:f.note}</div>` : "";
+    return `<div class="obh">${line}</div>${note}${unpin}`;
   }
-  const x=nx.x;
+  const x=obEffective(nx)||nx.x;
+  // four-valued and honest: a live read WITH ITS AGE, a stale read, a live failure, or pin-time -- never a guessed "on time"
+  const live = f.state==="live"
+    ? `<div class="oblive">live: incoming train ${obLive.dly>0?`+${obLive.dly}&#8242;`:"on time"} &#8212; buffer recomputed, read ${f.age}&#8242; ago</div>`
+    : f.state==="stale" ? `<div class="oblive">live read is ${f.age}&#8242; old &#8212; buffer unverified since</div>`
+    : `<div class="oblive">${f.note}</div>`;
   const times=`${x.at?`arrive ${hhmm(x.at)}${x.pa?` Pl.&#8201;${esc(x.pa)}`:""}`:""}${x.dt?` &#183; depart ${hhmm(x.dt)}${x.pd?` Pl.&#8201;${esc(x.pd)}`:""}`:""}`;
   const later = nx.left>0 ? `then ${nx.left} more change${nx.left===1?"":"s"} &#183; ` : "";
   // the setting travels with the sheet, so turning it on happens exactly where
@@ -2022,7 +2807,7 @@ function obSheetHTML(ob,nx){
   const poiBox = obPoi && !x.missed && x.b>=LAYOVER_MIN && x.co ? `<div class="obpoi"></div>` : "";
   return `<div class="obh">Next change &#8212; <b>${esc(x.stn)}</b></div>`
     + `<div class="obt">${times}</div>`
-    + obVerdictHTML(x)
+    + obVerdictHTML(x, f) + live
     + poiBox + tog
     + `<div class="obt">${later}arriving ${esc(ob.to)} <b>${hhmm(ob.arr)}</b></div>`
     + unpin;
@@ -2048,6 +2833,129 @@ async function obFillPoi(box,x){
   }
   box.innerHTML=rows.map(p=>`<div class="lprow"><span class="lpe">${p.ty.e}</span><span class="lpn">${esc(p.name)}</span><span class="lpm">${p.ty.l?esc(p.ty.l)+" &#183; ":""}${p.walk}&#8242; walk</span></div>`).join("")
     + `<div class="lpcav">One-way walk times; keep ~${LAYOVER_KEEP}&#8242; to be back and find your platform. Opening hours not checked.</div>`;
+}
+/* ---------- unprompted replan offer (UNSOLVED-GAPS 2.1 residual) ----------
+   replanFromStop serves the passenger who NOTICED the plan die; the pin's
+   buffer maths is the only thing positioned to notice FOR them. While the next
+   change is upcoming and near, the change stop's arrival board is asked about
+   the pinned incoming train every few minutes; when the LIVE buffer goes below
+   TIGHT -- or the change is already gone -- the bar itself grows a one-tap
+   offer that replans from the change stop, leaving now. The offer lives on the
+   BAR, not in the sheet: unprompted means visible without opening anything. */
+let obLive=null;      // {k,b,dly} -- last live read, keyed to the change row it measured
+let obLiveAt=0;       // when that read landed
+let obCheckAt=0;      // throttle: next board request no earlier than this
+let obLiveNote="";    // honest status when the check could not answer
+let obArr=null;       // {key, at, dly} -- live arrival at the destination for the last leg, keyed to the pinned arrival
+let obArrAt=0;        // when that read landed
+let obArrNote="";     // honest status for the arrival check
+const OB_RECHECK_MIN=3;    // volunteer API: one arrival-board request every few minutes, only while pinned
+const OB_HORIZON_MIN=120;  // a change hours away has no live board yet -- don't burn requests on it
+const OB_STALE_MIN=10;     // a live read older than this no longer underwrites the go/stay verdict (courier row 361)
+
+/* ---------- freshness: the bar says how old its data is (courier row 361) ----------
+   paintOnboard repaints every 30 s, so the bar LOOKS live whatever it knows. The
+   clock advances while the timetable may not: before the first live read, beyond
+   the 2 h horizon, after a failed read, or when the last read has aged. Each of
+   those is a different fact and the rider is owed the right one, on the one-line
+   bar and not only in the sheet. Four states, never a guessed "live":
+     live    -- a read for THIS change/arrival, younger than OB_STALE_MIN
+     stale   -- a read for this change, older than that: the number is shown, the verdict is not asserted
+     failed  -- the last read did not answer or found no row (note says which)
+     pintime -- no read yet (note says whether one is even due) */
+function obFreshness(ob, nx, now){
+  if(nx.phase==="change"){
+    if(obLive && obLive.k===nx.k){
+      const age=Math.max(0, Math.round((now-obLiveAt)/60000));
+      return age<=OB_STALE_MIN ? {state:"live", age} : {state:"stale", age};
+    }
+    if(obLiveNote) return {state:"failed", age:null, note:obLiveNote};
+    const far = !!(nx.x && nx.x.at && new Date(nx.x.at).getTime()-now > OB_HORIZON_MIN*60000);
+    return {state:"pintime", age:null, note: far
+      ? `pin-time buffer &#8212; the live check starts within ${Math.round(OB_HORIZON_MIN/60)}&#8201;h of the change`
+      : "pin-time buffer &#8212; no live check yet"};
+  }
+  if(nx.phase==="arriving"){
+    if(obArr && ob && obArr.key===ob.arr){
+      const age=Math.max(0, Math.round((now-obArrAt)/60000));
+      return age<=OB_STALE_MIN ? {state:"live", age} : {state:"stale", age};
+    }
+    if(obArrNote) return {state:"failed", age:null, note:obArrNote};
+    const far = !!(ob && ob.arr && new Date(ob.arr).getTime()-now > OB_HORIZON_MIN*60000);
+    return {state:"pintime", age:null, note: far
+      ? `pin-time arrival &#8212; the live check starts within ${Math.round(OB_HORIZON_MIN/60)}&#8201;h of arriving`
+      : "pin-time arrival &#8212; no live check yet"};
+  }
+  return null;
+}
+function obFreshTag(f){
+  if(!f) return "";
+  const t = f.state==="live" ? `live ${f.age}&#8242;` : f.state==="stale" ? `stale ${f.age}&#8242;`
+          : f.state==="failed" ? "live check failed" : "pin-time";
+  return ` <span class="obfresh ${f.state}">${t}</span>`;
+}
+
+/* Live supersedes pin-time ONLY for the change it measured -- an old read
+   about Olten must not colour the verdict for Bern once the anchor moves on. */
+function obEffective(nx){
+  if(nx.phase!=="change") return null;
+  if(!obLive || obLive.k!==nx.k) return nx.x;
+  return Object.assign({}, nx.x, {b:obLive.b, missed:obLive.b<0});
+}
+function obOfferHTML(ob,nx){
+  const x=obEffective(nx);
+  if(!x || !x.stn || x.stn===ob.to) return "";
+  if(!(x.missed || x.b<TIGHT)) return "";
+  const why=x.missed?`the change at ${esc(x.stn)} is gone`:`${x.b}&#8242; at ${esc(x.stn)} is a sprint`;
+  return `<button type="button" class="obrp" onclick="onboardReplan(event)">&#9888; ${why} &#8212; replan from ${esc(x.stn)}, leaving now</button>`;
+}
+async function obRecheck(now){
+  if(!onboard) return;
+  const nx=onboardNext(onboard,now);
+  // the next change while there is one; the destination's arrival on the last leg (row 361)
+  let stn, at;
+  if(nx.phase==="change"){ stn=nx.x.stn; at=nx.x.at; }
+  else if(nx.phase==="arriving"){ stn=onboard.to; at=onboard.arr; }
+  else return;
+  if(!stn || !at || new Date(at).getTime()-now>OB_HORIZON_MIN*60000) return;
+  if(now<obCheckAt) return;
+  obCheckAt=now+OB_RECHECK_MIN*60000;
+  try{
+    const d=await api("/stationboard?station="+encodeURIComponent(stn)+"&type=arrival&limit=30");
+    if(nx.phase==="change"){
+      const r=obLiveBuffer(nx.x, d.stationboard||[]);
+      if(r){ obLive={k:nx.k, b:r.b, dly:r.dly}; obLiveNote=""; }
+      else { obLive=null; obLiveNote="incoming train not on the arrival board &#8212; live check has no verdict"; }
+      obLiveAt=Date.now();
+    }else{
+      const r=obLiveArrival(at, d.stationboard||[]);
+      if(r){ obArr={key:onboard.arr, at:r.at, dly:r.dly}; obArrNote=""; }
+      else { obArr=null; obArrNote="your train is not on the destination&#39;s arrival board &#8212; no live arrival"; }
+      obArrAt=Date.now();
+    }
+  }catch(e){
+    // a dead request is "unknown", not "on time" -- the pin-time figure stands, labelled
+    if(nx.phase==="change"){ obLive=null; obLiveNote="live check did not answer &#8212; buffer shown is pin-time"; obLiveAt=Date.now(); }
+    else { obArr=null; obArrNote="live check did not answer &#8212; arrival shown is pin-time"; obArrAt=Date.now(); }
+  }
+  paintOnboard();
+}
+/* One tap: the change stop becomes the origin, the pinned destination stays,
+   and the journey tab re-runs LEAVING NOW -- replanFromStop's move, fired
+   from the bar instead of from a tapped stop row. */
+function onboardReplan(ev){
+  if(ev) ev.stopPropagation();
+  if(!onboard) return;
+  const nx=onboardNext(onboard,Date.now());
+  const x=nx.phase==="change"?nx.x:null;
+  if(!x || !x.stn || x.stn===onboard.to) return;
+  fromName=x.stn;
+  const f=$("iFrom"); if(f){ f.value=x.stn; $("fFrom")?.classList.add("has"); }
+  toName=onboard.to;
+  const t=$("iTo"); if(t){ t.value=onboard.to; $("fTo")?.classList.add("has"); }
+  setTab("jrn");
+  setWhen("now");                    // replans as its last act -- the offer means NOW
+  scrollTo({top:0,behavior:"smooth"});
 }
 function onboardPin(i){
   const c=jrnConns[i]; if(!c) return;
@@ -2100,13 +3008,17 @@ function paintOnboard(){
     host.innerHTML=`<div class="obbar"><div class="obtop">`
       +`<button type="button" class="obline" onclick="onboardSheetToggle()" aria-expanded="false" aria-label="Your pinned journey &#8212; tap for the next change"></button>`
       +`<button type="button" class="obx" onclick="onboardUnpin()" aria-label="Unpin this journey">&#10005;</button>`
-      +`</div><div class="obsheet"></div></div>`;
+      +`</div><div class="oboffer"></div><div class="obsheet"></div></div>`;
   }
   const lineEl=host.querySelector(".obline");
   const line=obLineHTML(onboard,nx);
   if(lineEl.innerHTML!==line) lineEl.innerHTML=line;
+  const offEl=host.querySelector(".oboffer");
+  const offer=obOfferHTML(onboard,nx);
+  if(offEl && offEl.innerHTML!==offer) offEl.innerHTML=offer;
   if(obOpen && key!==obKey) renderObSheet();   // the anchor moved while the sheet was open
   obKey=key;
+  obRecheck(Date.now());   // fire-and-forget; throttled + horizon-bounded inside
 }
 
 /* ---- Wikipedia enrichment (REST summary; keyless, CORS-open) ---- */
@@ -2186,7 +3098,62 @@ function enrichWonders(top, body){
 }
 
 // resolve to [] if a slow query outruns the cap, so one lagging hub can't stall first paint
-function withTimeout(p, ms){ return Promise.race([p, new Promise(r=>setTimeout(()=>r([]), ms))]); }
+function withTimeout(p, ms, onTimeout){ return Promise.race([p, new Promise(r=>setTimeout(()=>r(onTimeout===undefined?[]:onTimeout), ms))]); }
+
+/* ---------- hub sweep: bounded, and honest about what it did not sweep (courier row 371) ----------
+   One tap used to fire base + wide + one request PER HUB at once -- about eleven
+   to a volunteer API -- and the 429 that came back was self-inflicted (probe
+   2026-09-06: one request 200; six at 150 ms spacing 0x429; the burst trips
+   it). Worse, hub jobs ran under allSettled and a rejected hub simply VANISHED
+   from the answer, while a 429 on base or wide killed the whole plan with the
+   red banner: the same refusal, two outcomes, decided by which of the eleven the
+   server picked. So: at most HUB_PAR hub requests in flight, one retry after a
+   429 (Retry-After when the server sends one, else HUB_RETRY_MS), and every hub
+   that still came back empty-handed is RETURNED with its reason -- the render
+   owes the rider the count and the names, because "swept 9 routes" over a sweep
+   that silently lost two is the absence-as-data class this app keeps finding. */
+const HUB_PAR = 3;          // hub requests in flight at once
+const HUB_RETRY_MS = 1500;  // wait before the one retry after a 429 that carries no Retry-After
+const HUB_CAP = 5000;       // per-attempt cap: hubs measured 3.3-9.3 s; first paint never waits on this
+const HUB_TIMEOUT = Symbol("hub-timeout");
+/* Run thunks with at most `limit` in flight; results land in input order; a
+   thunk that throws leaves its Error in the slot, never a hole. */
+async function pooled(thunks, limit){
+  const out=new Array(thunks.length); let next=0;
+  async function worker(){
+    while(next<thunks.length){ const k=next++; try{ out[k]=await thunks[k](); }catch(e){ out[k]=e; } }
+  }
+  await Promise.all(Array.from({length:Math.max(1,Math.min(limit,thunks.length))}, worker));
+  return out;
+}
+/* One hub -> {hub, conns, state}; state is ok | limited | timeout | failed | aborted.
+   A 429 is retried ONCE after the server's Retry-After (or HUB_RETRY_MS); a
+   Retry-After longer than the cap is not waited for -- the hub reads limited. */
+async function sweepHub(h, qs, sig){
+  for(let attempt=0; attempt<2; attempt++){
+    const note={};
+    const r=await withTimeout(tryConns(qs, note, sig), HUB_CAP, HUB_TIMEOUT);
+    if(r===HUB_TIMEOUT) return {hub:h, conns:[], state:"timeout"};
+    if(!note.failed) return {hub:h, conns:r.map(c=>{c._via=h; return c;}), state:"ok"};
+    if(sig&&sig.aborted) return {hub:h, conns:[], state:"aborted"};
+    const m=/^HTTP (\d+)/.exec((note.err&&note.err.message)||"");
+    if(!(m&&m[1]==="429")) return {hub:h, conns:[], state:"failed"};
+    const wait = note.err.retryAfter ? note.err.retryAfter*1000 : HUB_RETRY_MS;
+    if(attempt>0 || wait>HUB_CAP) return {hub:h, conns:[], state:"limited"};
+    await new Promise(res=>setTimeout(res, wait));
+  }
+  return {hub:h, conns:[], state:"limited"};
+}
+/* The line the settled render owes: which hubs were NOT searched and why. Empty
+   when every hub answered -- and only then. */
+function unsweptNote(unswept){
+  const u=(unswept||[]).filter(x=>x&&x.state&&x.state!=="ok"&&x.state!=="aborted");
+  if(!u.length) return "";
+  const why={limited:"rate-limited", timeout:"timed out", failed:"failed"};
+  return `<div class="shint unswept">${u.length} hub route${u.length===1?"":"s"} unswept: `
+    + u.map(x=>`${esc(x.hub)} (${esc(why[x.state]||x.state)})`).join(", ")
+    + ` &#8212; not searched, so not &quot;none&quot;; tap Search again to retry.</div>`;
+}
 
 /* A sweep takes up to five seconds. Refusing to start a new one while the old
    one runs meant a mode chip tapped in that window did NOTHING -- no result, no
@@ -2212,10 +3179,8 @@ async function smartPlan(){
     // API takes ONE via[] here, and a second one is not "more thorough" --
     // it is a different journey the passenger did not ask for.
     const hubList = viaName ? [] : [...HUBS, ...(preferScenic?SCENIC_HUBS:[])].filter(h=>h!==fromName&&h!==toName);
-    const HUB_CAP=5000;  // tunable: bounds hub fill-in (hubs measured 3.3-9.3s); the base render fixes PERCEIVED latency regardless of this
-    const hubJobs = hubList.map(h=>
-      withTimeout(tryConns(`from=${f}&to=${t}&via[]=${encodeURIComponent(h)}&limit=3${whenQS()}${modeQS()}`, null, sig), HUB_CAP)
-        .then(cs=>cs.map(c=>{c._via=h; return c;})).catch(()=>[]));
+    // hubs: at most HUB_PAR in flight, each with one 429 retry, each reporting its own outcome (row 371)
+    const hubsP = pooled(hubList.map(h=>()=>sweepHub(h, `from=${f}&to=${t}&via[]=${encodeURIComponent(h)}&limit=3${whenQS()}${modeQS()}`, sig)), HUB_PAR);
 
     // Phase 1 -- render the direct/wide results the moment they land (~base latency), hint that more is coming
     const [rawBase, rawWide] = await Promise.all([baseP, wideP]);
@@ -2228,14 +3193,16 @@ async function smartPlan(){
     const nRaw=rawBase.length+rawWide.length, nKept=base.length+wide.length;
     const baseline = base[0] ? annotate(base[0]) : null;
     if(base.length||wide.length) rememberRoute(fromName,toName);   // a real result -- now it is worth a chip
-    renderSmart(base, wide.slice(), baseline, true, direct.failed && !direct.ok, nKept, nRaw);
+    renderSmart(base, wide.slice(), baseline, true, (direct.failed && !direct.ok) ? (direct.err||true) : null, nKept, nRaw);
 
-    // Phase 2 -- hub routes fill in when they arrive; any past the cap are dropped silently
-    const rawHubs = (await Promise.allSettled(hubJobs)).flatMap(r=>r.status==="fulfilled"?r.value:[]);
+    // Phase 2 -- hub routes fill in when they arrive; a hub past the cap, rate-limited or failed is NAMED, never dropped
+    const hubOut = (await hubsP).map((r,i)=> (r&&r.state) ? r : {hub:hubList[i], conns:[], state:"failed"});
     if(gen!==jrnGen) return;                                       // superseded
+    const rawHubs = hubOut.flatMap(r=>r.conns);
+    const unswept = hubOut.filter(r=>r.state!=="ok");
     const hubResults = catFilter(rawHubs);
-    renderSmart(base, wide.concat(hubResults), baseline, false, direct.failed && !direct.ok,
-                nKept+hubResults.length, nRaw+rawHubs.length);
+    renderSmart(base, wide.concat(hubResults), baseline, false, (direct.failed && !direct.ok) ? (direct.err||true) : null,
+                nKept+hubResults.length, nRaw+rawHubs.length, unswept);
     fillJourneyLastHome(gen);   // after the settled render: the slot exists now, and gen bars a stale paint
   }catch(e){
     if(gen!==jrnGen) return;                                       // superseded
@@ -2244,7 +3211,12 @@ async function smartPlan(){
 }
 
 // score + pin + paint a candidate set; called twice (fast base-only, then full sweep)
-function renderSmart(base, swept, baseline, searching, reqFailed, nKept, nRaw){
+/* reqErr, not reqFailed: a boolean could only ever produce one sentence, and the
+   sentence it produced blamed the passenger's connection for the service's
+   refusal. It carries the thrown error when the direct query died unanswered,
+   and null otherwise -- still falsy at the branch, so the "one answered query is
+   a definite answer" rule above is unchanged. */
+function renderSmart(base, swept, baseline, searching, reqErr, nKept, nRaw, unswept){
   const seen=new Set(), all=[];
   base.concat(swept).forEach(c=>{ const s=connSig(c); if(!seen.has(s)){ seen.add(s); all.push(annotate(c)); } });
   if(!all.length){
@@ -2257,9 +3229,8 @@ function renderSmart(base, swept, baseline, searching, reqFailed, nKept, nRaw){
        the whole time. Whether the request landed is unknown; that you set a
        filter is not. */
     if(!searching) pgObserve([]);
-    if(!searching) $("jrnOut").innerHTML = reqFailed
-      ? `<div class="err">We could not reach the timetable, so we do not know whether this journey runs.<br>`
-        + `This is not a &quot;no&quot; &#8212; check your connection and tap Search again.</div>${modeWhyEmpty()}${nRaw?catWhyEmpty():""}`
+    if(!searching) $("jrnOut").innerHTML = reqErr
+      ? errBox(reqErr) + `${modeWhyEmpty()}${nRaw?catWhyEmpty():""}`
       : `<div class="empty"><div class="big">&#9940;</div>No connections found.${sunWhyEmpty()||((viaName||pgStuck)?"":"<br>Check the station names.")}${viaWhyEmpty()}${pgWhyEmpty()}${modeWhyEmpty()}${nRaw?catWhyEmpty():""}</div>`;
     return;
   }
@@ -2306,10 +3277,11 @@ function renderSmart(base, swept, baseline, searching, reqFailed, nKept, nRaw){
     + pgNote()
     + viaNote()
     + catFilterNote(nKept, nRaw)
+    + (searching?"":unsweptNote(unswept))
     + (searching?`<div class="shint">&#8987; searching wider routes&#8230;</div>`
                 :jrnZoneFact()+`<div id="jlh"></div>`)   // route-level facts, settled render only (one request per search, not per phase)
     + top.map((c,i)=>connCard(c,i)).join("")
-    + (searching?"":wondersExpanderHTML((base[0]||swept[0])?.to?.station));   // expander only on the settled render
+    + (searching?"":toiletsExpanderHTML((base[0]||swept[0])?.to?.station) + wondersExpanderHTML((base[0]||swept[0])?.to?.station));   // expanders only on the settled render
   if(weather) fillWeather();
 }
 
@@ -2576,6 +3548,36 @@ function shortStop(n){
   s=s.split(",")[0].trim();                       // keep the place, drop the address tail
   return s.length>20 ? s.slice(0,19)+"…" : s;
 }
+/* A stop's longer short form: the first TWO comma fields ("Kloten, Bahnhof" ->
+   "Kloten Bahnhof"), for when the one-field form collides with a neighbour. */
+function shortStopLong(n){
+  const p=(n||"").split(",").map(x=>x.trim()).filter(Boolean);
+  const out = p.length>=2 ? p[0]+" "+p[1] : (p[0]||"");
+  return out.length>20 ? out.slice(0,19)+"…" : out;
+}
+/* Which vertices get a label, and what it says. Pulled out of sketchSVG so it can
+   be tested without a DOM, and because it had a bug that only shows on a real
+   route: the origin was deduped against the OTHER labels using its FULL name and
+   only shortened afterwards, so "Kloten, Zum Wilden Mann" and "Kloten, Bahnhof"
+   both passed the collision check and both rendered as "Kloten" -- two identical
+   labels on two different dots, on the operator's own exported route 2026-09-05.
+   Now every name is shortened BEFORE the check, and a collision falls back to the
+   two-field form ("Kloten Bahnhof") so the change station keeps a label that says
+   which Kloten it is. Two legs that genuinely end at the same stop still get one. */
+function sketchMarks(legs){
+  const marks=[{p:legs[0].pts[0], t:shortStop(legs[0].pts[0].name)}];
+  legs.forEach((l,i)=>{
+    const end=l.pts[l.pts.length-1];
+    let name=shortStop(end.name);
+    if(marks.some(m=>m.t===name)){
+      const longer=shortStopLong(end.name);
+      if(longer===name || marks.some(m=>m.t===longer)) return;   // the same stop, one label
+      name=longer;
+    }
+    marks.push({p:end, t:name, change:i<legs.length-1});
+  });
+  return marks;
+}
 function sketchSVG(ci){
   const legs=routePoints(ci);
   if(!legs) return `<div class="snone">No map data for this route.</div>`;
@@ -2601,13 +3603,7 @@ function sketchSVG(ci){
   });
   // Label the MEANINGFUL vertices: origin, every change station, destination.
   // Anonymous dots make a correct shape unreadable -- the changes are the story.
-  const marks=[{p:legs[0].pts[0], t:legs[0].pts[0].name}];
-  legs.forEach((l,i)=>{
-    const end=l.pts[l.pts.length-1];
-    const name=shortStop(end.name);
-    if(!marks.some(m=>m.t===name)) marks.push({p:end, t:name, change:i<legs.length-1});
-  });
-  marks[0].t=shortStop(marks[0].t);
+  const marks=sketchMarks(legs);
   // place each label on the side with room, and anchor so it never runs off-frame
   const placed=[];
   marks.forEach(m=>{
@@ -2881,6 +3877,71 @@ function dayOutlook(lat,lon){
     .then(d=>d.daily)
     .catch(e=>{ delete dayOutlookCache[k]; throw e; });   // an outage must not be cached as a verdict
   return dayOutlookCache[k];
+}
+/* ---------- fog top (UNSOLVED-GAPS 1.1) ----------
+   "Where can I get above the fog today?" Point weather at the destination says
+   "overcast" both under and above an inversion, so the missing quantity is the
+   FOG TOP. Derived from pressure levels: relative humidity collapsing between
+   two adjacent levels marks the top, a temperature inversion across the same
+   gap corroborates it independently, and geopotential height converts the
+   level to metres. Model pinned to MeteoSwiss ICON -- high fog is a 1-2 km
+   phenomenon and a global model will not resolve the valley boundaries. */
+const FOG_LEVELS=[1000,975,950,925,900,850,800,700];   // hPa, bottom-up; the deck lives below ~3 km
+const FOG_RH_IN=90, FOG_RH_OUT=65;    // saturated inside the deck, collapsed above it
+const FOG_GATE=40;                    // % cloud_cover_low; under this there is no deck to rank against
+const FOG_BAND=150;                   // m -- vertical resolution near the ground is a few hundred metres
+const fogCache={};
+/* The gate is its own tiny request so the pressure-level fetch is never paid
+   on clear days -- that is the point of gating on cloud_cover_low. */
+function fogGate(lat,lon){
+  const k="g"+(+lat).toFixed(2)+","+(+lon).toFixed(2);
+  if(!fogCache[k]) fogCache[k]=fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=cloud_cover_low&forecast_days=1&timezone=auto`)
+    .then(r=>{ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
+    .then(d=>d.hourly)
+    .catch(e=>{ delete fogCache[k]; throw e; });   // an outage must not be cached as "clear"
+  return fogCache[k];
+}
+function fogLevels(lat,lon){
+  const k="p"+(+lat).toFixed(2)+","+(+lon).toFixed(2);
+  if(!fogCache[k]){
+    const h=FOG_LEVELS.map(l=>`relative_humidity_${l}hPa,temperature_${l}hPa,geopotential_height_${l}hPa`).join(",");
+    fogCache[k]=fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=${h}&forecast_days=1&timezone=auto&models=meteoswiss_icon_ch1`)
+      .then(r=>{ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
+      .then(d=>d.hourly)
+      .catch(e=>{ delete fogCache[k]; throw e; });
+  }
+  return fogCache[k];
+}
+/* Pure: read the deck top out of one hour of pressure-level data.
+   null = no derivable top; that is "unknown", never a verdict. */
+function fogTopAt(hourly, hourIso){
+  if(!hourly||!Array.isArray(hourly.time)) return null;
+  const key=(hourIso||"").slice(0,13);
+  const i=hourly.time.findIndex(t=>t.slice(0,13)===key);
+  if(i<0) return null;
+  const at=(f,l)=>{ const a=hourly[`${f}_${l}hPa`]; return Array.isArray(a)&&a[i]!=null?a[i]:null; };
+  for(let n=0;n<FOG_LEVELS.length-1;n++){
+    const lo=FOG_LEVELS[n], hi=FOG_LEVELS[n+1];          // pressure falls upward
+    const rhLo=at("relative_humidity",lo), rhHi=at("relative_humidity",hi);
+    if(rhLo==null||rhHi==null) continue;
+    if(rhLo>=FOG_RH_IN&&rhHi<=FOG_RH_OUT){
+      const zLo=at("geopotential_height",lo), zHi=at("geopotential_height",hi);
+      if(zLo==null||zHi==null) return null;              // a top with no height is not a top
+      const tLo=at("temperature",lo), tHi=at("temperature",hi);
+      return { top: Math.round((zLo+zHi)/2),             // the collapse happens somewhere in the gap
+               inv: tLo!=null&&tHi!=null&&tHi>tLo };     // warmer ABOVE = inversion, independent corroboration
+    }
+  }
+  return null;
+}
+/* Three-valued on purpose: the band is the vertical resolution, and "too close
+   to call" is the state that stops the app sending someone up an
+   Aussichtsberg into grey soup. */
+function fogVerdict(elev,top){
+  if(elev==null||top==null) return null;
+  if(elev>=top+FOG_BAND) return "above";
+  if(elev<=top-FOG_BAND) return "below";
+  return "close";
 }
 function bestDayHTML(daily){
   const days=(daily&&daily.time)||[], codes=(daily&&daily.weather_code)||[];
@@ -3274,13 +4335,53 @@ function wanCandidates(board, now, deadline){
       const prev=best.get(nm);
       if(!prev || arrT<prev.arrT)
         best.set(nm,{name:nm, dep, arr, arrT, ride, cat:j.category,
-                     num:j.number||j.line, scenic:isScenic(j.category)});
+                     num:j.number||j.line, scenic:isScenic(j.category),
+                     crd:p.station?.coordinate||null});   // x=lat,y=lon -- the fog layer needs an elevation
     }
   }
   // the ride is the point: scenic first, then the longest ride that still fits
   return [...best.values()]
     .sort((a,b)=>(b.scenic?1:0)-(a.scenic?1:0) || b.ride-a.ride)
     .slice(0,WAN_MAX_CAND);
+}
+/* ---------- live buffer at the next change ----------
+   The pin's chg rows are pin-time facts; the buffer rots the moment the
+   incoming train slips. Given the change stop's ARRIVAL board, find the row
+   whose scheduled arrival equals the pinned one, take the prognosis (or the
+   delay field when no prognosis instant is given), and recompute the buffer
+   against the SCHEDULED onward departure. The onward train's own slip is
+   deliberately not folded in: guessing it would be inventing data, and being
+   wrong there flips the verdict in the dangerous direction. No matching row
+   on the board = UNKNOWN (null), never a verdict. */
+function obLiveBuffer(x, rows){
+  if(!x || !x.at || !x.dt) return null;
+  const schedT=new Date(x.at).getTime(), depT=new Date(x.dt).getTime();
+  if(isNaN(schedT)||isNaN(depT)) return null;
+  for(const j of rows||[]){
+    const arr=j&&j.stop&&j.stop.arrival; if(!arr) continue;
+    if(new Date(arr).getTime()!==schedT) continue;
+    const prog=j.stop.prognosis&&j.stop.prognosis.arrival;
+    let freshT=prog?new Date(prog).getTime():NaN;
+    if(isNaN(freshT)) freshT = typeof j.stop.delay==="number" ? schedT+j.stop.delay*60000 : schedT;
+    return {b:Math.round((depT-freshT)/60000), dly:Math.round((freshT-schedT)/60000)};
+  }
+  return null;
+}
+/* The last leg has no change to recheck, but its arrival rots the same way: the
+   destination's arrival board row whose SCHEDULED arrival equals the pinned one
+   gives the live instant (prognosis, else delay field). No row = UNKNOWN. */
+function obLiveArrival(at, rows){
+  if(!at) return null;
+  const schedT=new Date(at).getTime(); if(isNaN(schedT)) return null;
+  for(const j of rows||[]){
+    const arr=j&&j.stop&&j.stop.arrival; if(!arr) continue;
+    if(new Date(arr).getTime()!==schedT) continue;
+    const prog=j.stop.prognosis&&j.stop.prognosis.arrival;
+    let freshT=prog?new Date(prog).getTime():NaN;
+    if(isNaN(freshT)) freshT = typeof j.stop.delay==="number" ? schedT+j.stop.delay*60000 : schedT;
+    return {at:new Date(freshT).toISOString(), dly:Math.round((freshT-schedT)/60000)};
+  }
+  return null;
 }
 /* Return legs for one candidate. Two separate verdicts, never conflated:
    ret     -- latest connection back that still lands inside the budget
@@ -3312,6 +4413,48 @@ async function wanReturns(c, deadline){
     c.last=late[0]?.from?.departure||null; c.lastOk=true;
   }catch(e){ c.last=null; c.lastOk=false; }
 }
+/* Fog ranking layer (UNSOLVED-GAPS 1.1). Adds a verdict per candidate --
+   above / below / too close to call -- never a card of its own. Failure here
+   must not cost the feature: the cards stand without it, so a dead fog request
+   degrades to "no verdict" with its reason kept on the note line, and a clear
+   day costs exactly one tiny gate request. */
+let wanFogNote="";
+async function wanFog(cands, stn){
+  wanFogNote="";
+  const co=stn&&stn.coordinate;
+  if(!co||co.x==null) return;                    // no origin fix -> nothing to anchor the column on
+  // Open-Meteo hourly times are LOCAL (timezone=auto); the device may be
+  // anywhere, so the current hour is formatted IN Zurich's zone, like swissQS.
+  const p=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Zurich",year:"numeric",month:"2-digit",
+    day:"2-digit",hour:"2-digit",hourCycle:"h23"}).formatToParts(new Date());
+  const g=t=>p.find(x=>x.type===t)?.value||"00";
+  const hourKey=`${g("year")}-${g("month")}-${g("day")}T${g("hour")}`;
+  try{
+    const gate=await fogGate(co.x, co.y);
+    const i=(gate&&Array.isArray(gate.time)?gate.time:[]).findIndex(t=>t.slice(0,13)===hourKey);
+    const low=i>=0&&Array.isArray(gate.cloud_cover_low)?gate.cloud_cover_low[i]:null;
+    if(low==null||low<FOG_GATE) return;          // clear day: the pressure-level fetch is never paid
+    const withC=cands.filter(c=>c.crd&&c.crd.x!=null);
+    const [levels, elevs]=await Promise.all([
+      fogLevels(co.x, co.y),
+      withC.length?routeElevation(withC.map(c=>({x:+c.crd.y, y:+c.crd.x}))):[],
+    ]);
+    const ft=fogTopAt(levels, hourKey+":00");
+    if(!ft){ wanFogNote=`low cloud ${low}% but no clean deck top in the profile &#8212; no verdict`; return; }
+    withC.forEach((c,n)=>{
+      c.fogElev=Array.isArray(elevs)&&elevs[n]!=null?Math.round(elevs[n]):null;
+      c.fog=fogVerdict(c.fogElev, ft.top);
+    });
+    wanFogNote=`fog top &#8776;${ft.top}&#8201;m`+(ft.inv?" (inversion confirmed)":"");
+  }catch(e){ wanFogNote="fog check did not answer ("+esc(e&&e.message||"")+") &#8212; verdicts withheld"; }
+}
+/* On a fog day the deck decides the ORDER: above first, below last. The sort
+   is stable, so inside each group the scenic-then-longest order survives; on a
+   clear day every card ranks the same and nothing moves. */
+function wanFogRank(list){
+  const r=c=>c.fog==="above"?0:c.fog==="below"?2:1;
+  return list.slice().sort((a,b)=>r(a)-r(b));
+}
 function wanCard(c){
   const b=badge(c.cat,c.num);
   const dwell=c.ret ? Math.round((new Date(c.ret.from.departure)-c.arrT)/60000) : null;
@@ -3331,6 +4474,14 @@ function wanCard(c){
      train home may exist unseen. The one printed is a train that EXISTS -- plan
      around it and you cannot be stranded; claiming it is THE last would lie in
      the dangerous direction on thin lines. */
+  // three-valued and honest: no fog data on this candidate = no line, never a guess
+  const fog = c.fog==="above"
+    ? `<div class="wfog up">&#9728; above the fog &#8212; ${c.fogElev}&#8201;m, the deck top is below you</div>`
+    : c.fog==="below"
+    ? `<div class="wfog dn">under the fog &#8212; ${c.fogElev}&#8201;m is inside the grey</div>`
+    : c.fog==="close"
+    ? `<div class="wfog md">too close to call &#8212; ${c.fogElev}&#8201;m sits at the deck top; could be soup up there</div>`
+    : "";
   const lastLine = c.lastOk
     ? (c.last ? `<div class="wlast">last verified way home departs ${hhmm(c.last)}</div>`
               : `<div class="wlast">&#9888; no later way home could be verified &#8212; treat the return above as your last safe one</div>`)
@@ -3342,7 +4493,7 @@ function wanCard(c){
       <div class="wride">${fmtDur(c.ride)}</div>
     </div>
     <div class="wlegs">${legs}</div>
-    ${warn}${unv}${lastLine}
+    ${fog}${warn}${unv}${lastLine}
   </div>`;
 }
 async function runWander(){
@@ -3350,13 +4501,13 @@ async function runWander(){
   const run=++wanRun, out=$("wanOut");
   out.innerHTML=skel(4);
   const now=Date.now(), deadline=now+wanBudget*60000;
-  let board;
+  let board, stn;
   try{
     const d=await api("/stationboard?limit=15&station="+encodeURIComponent(wanName));
-    board=d.stationboard||[];
+    board=d.stationboard||[]; stn=d.station;
   }catch(e){
     if(run!==wanRun) return;
-    out.innerHTML=`<div class="err">We could not reach the timetable, so we do not know what leaves from here.<br>This is not a &quot;no&quot; &#8212; check your connection and try again.</div>`;
+    out.innerHTML=errBox(e, "what leaves from here", "try again");
     return;
   }
   const cands=wanCandidates(board, now, deadline);
@@ -3365,7 +4516,7 @@ async function runWander(){
     out.innerHTML=`<div class="empty"><div class="big">&#8987;</div>No round trip fits in ${fmtDur(wanBudget)} from ${esc(wanName)}.<br>Try a bigger budget &#8212; the shortest outing needs the ride out, ${WAN_MIN_DWELL}&#8242; there, and the ride back.</div>`;
     return;
   }
-  await Promise.all(cands.map(c=>wanReturns(c, deadline)));
+  await Promise.all([...cands.map(c=>wanReturns(c, deadline)), wanFog(cands, stn)]);
   if(run!==wanRun) return;
   // a candidate with an ANSWERED query and no fitting return fails the premise -> drop.
   // an UNANSWERED query is shown, loudly unverified -- unknown is not "no".
@@ -3374,7 +4525,8 @@ async function runWander(){
     out.innerHTML=`<div class="empty"><div class="big">&#8987;</div>Trains go out, but nothing gets you back inside ${fmtDur(wanBudget)}.<br>Try a bigger budget.</div>`;
     return;
   }
-  out.innerHTML=show.map(wanCard).join("");
+  out.innerHTML=(wanFogNote?`<div class="wfognote">${wanFogNote}</div>`:"")
+    +wanFogRank(show).map(wanCard).join("");
 }
 
 /* ---------- touch timetable ---------- */
@@ -3523,7 +4675,13 @@ function tickClock(){
 function acEnter(inpId, acId, onPick){
   const inp=$(inpId), ac=$(acId);
   inp.addEventListener("keydown", e=>{
-    const rows=[...ac.querySelectorAll("div")], open=ac.classList.contains("show");
+    /* `div[data-n]`, not `div`: the dropdown also carries message rows now (the
+       no-match line, the town-fallback heading), and those are not selectable.
+       Matching every div made rows[0] a heading whose dataset.n is undefined, so
+       Enter on a no-match did NOTHING -- where before the message existed it fell
+       through to searching the literal typed text. Regression shipped and caught
+       the same day, 2026-07-31. */
+    const rows=[...ac.querySelectorAll("div[data-n]")], open=ac.classList.contains("show");
     if(e.key==="ArrowDown"||e.key==="ArrowUp"){
       if(!open||!rows.length) return;
       e.preventDefault();
@@ -3558,6 +4716,7 @@ wireAC("iFrom","acFrom","fFrom", n=>{ fromName=n; if(toName) planJourney(); });
 wireAC("iTo","acTo","fTo",     n=>{ toName=n;   if(fromName) planJourney(); });
 wireAC("iVia","acVia","fVia", viaSet);
 $("iVia").addEventListener("input", viaPending);
+$("iVia").addEventListener("blur", viaBlur);
 wireAC("iWan","acWan","fWan",  n=>{ wanName=n;  if(wanBudget) runWander(); });
 $("iDep").addEventListener("keydown",e=>{ if(e.key==="Enter"){e.target.blur(); showDepartures(e.target.value.trim());}});
 

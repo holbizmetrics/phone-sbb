@@ -50,8 +50,14 @@ const mk = () => {
     const badge = (cat,num) => ({ label: (cat||"")+(num||""), col: "#888" });
     ${grabConst(/const LAYOVER_MIN=[^\n]*/, "LAYOVER_MIN")}
     let obPoi=false;
+    let obLive=null, obLiveNote="", obLiveAt=0, obArr=null, obArrAt=0, obArrNote="";   // P3 live-offer state -- pure fns read it; null = pin-time stands
+    ${grabConst(/const OB_HORIZON_MIN[^\n]*/, "OB_HORIZON_MIN")}
+    ${grabConst(/const OB_STALE_MIN[^\n]*/, "OB_STALE_MIN")}
+    ${grab("obFreshness")}
+    ${grab("obFreshTag")}
     ${grab("onboardSnap")}
     ${grab("onboardNext")}
+    ${grab("obEffective")}
     ${grab("obVerdictHTML")}
     ${grab("obLineHTML")}
     ${grab("obSheetHTML")}
@@ -213,7 +219,16 @@ const mkPaint = (ob, nowIso) => {
     const document={ body:{ classList:{ add:c=>BODY.push("+"+c), remove:c=>BODY.push("-"+c) } }, querySelector:()=>null };
     let onboard=OB, obOpen=false, obKey="";
     ${grabConst(/const OB_EXPIRE_MIN[^\n]*/, "OB_EXPIRE_MIN")}
+    let obLive=null, obLiveNote="", obLiveAt=0, obArr=null, obArrAt=0, obArrNote="";   // P3 live-offer state -- null = pin-time stands
+    ${grabConst(/const OB_HORIZON_MIN[^\n]*/, "OB_HORIZON_MIN")}
+    ${grabConst(/const OB_STALE_MIN[^\n]*/, "OB_STALE_MIN")}
+    ${grab("obFreshness")}
+    ${grab("obFreshTag")}
+    ${grabConst(/const TIGHT[^\n]*/, "TIGHT")}
     ${grab("onboardNext")}
+    ${grab("obEffective")}
+    ${grab("obOfferHTML")}
+    const obRecheck=()=>{};           // the live fetch has its own suite (replan-offer.mjs)
     ${grab("obLineHTML")}
     const renderObSheet=()=>{};
     ${grab("paintOnboard")}

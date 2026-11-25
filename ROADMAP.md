@@ -289,6 +289,340 @@ fixtures, so it passed on the phone and failed in UTC — a test pinned to one t
 makes a claim about the machine, not about the code. The fixtures now build their offsets from the
 runner's own clock, and the suite is verified green in five zones including a half-hour one.
 
+### Harness work, 2026-07-29 — two gates that were comments asking for care
+
+Both guard the same shape from opposite ends: **a check that is green over the wrong denominator.**
+Neither is a feature; no app asset changed, so there is deliberately no `?v=` bump.
+
+**`tests/workflow-parity.mjs` (20 checks) — the deploy gate may not be the smaller gate.** `ci.yml`
+gates every branch, `deploy.yml` gates what goes live, and their test steps are copy-pasted twins.
+`deploy.yml`'s own comment already named the hazard — *"a deploy that runs fewer tests than CI is the
+worst version of this bug"* — and then left it to care. The suite asserts the two suite-runner scripts
+are **identical**, that discovery stays a glob (the hand-written list once orphaned four suites while
+CI stayed green), that `smoke.mjs` is the *only* thing either skips, that the deploy job still carries
+`needs: test`, and that **no `node` invocation is piped** — `node "$t" | tail -1` reports tail's
+status, which is 0 whatever the suite said, so the suite runs, prints FAIL, and the step passes. That
+last check is imported: the same trap has bitten the sibling PCLA sessions four times. **6/6 planted
+mutations caught** (extra exclusion in deploy only · a pipe on the loop body · gate removed · a
+hand-listed suite · `exit $fail` dropped · glob replaced by a list).
+
+**The passenger sweep had rot in the one direction it never checked.** It already enforces that *a
+refusal may not outlive its policy* — every refusal names a file and a section, and both must still
+exist. The mirror was missing: an adjudication whose evidence reads *"no replan-from-here"* is a
+**claim about the app** — that the feature is absent. `replanFromStop` shipped,
+`tests/replan-from-here.mjs` sits in the same directory 20/20 green, and the row went on scoring a
+delayed passenger `LEFT_BEHIND`. The instrument understating the app is still the instrument being
+wrong. The new block resolves every cited absence against the suites on disk, and went red on exactly
+that row on its first run — no mutation needed, it caught a live defect.
+`conditions/delay-50min` is re-adjudicated **`LEFT_BEHIND` → `PARTIAL`** — deliberately not `SERVED`:
+`replanFromStop` and the missed-change obverdict serve the recover half, but the app never offers the
+replan unprompted, so the passenger has to notice first, and half a rescue is not a rescue. Its
+ledger row moves to `parked-with-reason` naming that residual as the open question.
+
+One thing learned while writing it: the first control was a count — *"at least one row cites an
+absence"* — which passed **only while the stale row existed.** Fixing the defect broke the proof that
+the check worked. The corpus is allowed to be clean, so the rule's negative case is now three
+synthetic self-tests (fires on a filled absence · stays silent on one that is still real · does not
+read ordinary prose like *"no data source"* as a feature name). Sweep: **82 checks green**, and the
+full suite is green under `TZ=UTC` as well as local.
+
+**`constraints/arrive-by-time` → `SERVED` (operator ruling, 2026-07-30).** Evidence: `segArr` plus
+`&isArrivalTime=1` on the query, and the earlier/later pager walks arrivals on their own axis rather
+than silently becoming a departure question. This is the *opposite* staleness from the rot above — not
+a rotted row but a **missing** one: a value the app plainly serves that the table had never ruled on,
+so every passenger carrying it scored `UNADJUDICATED`.
+
+Adding it exposed a third instance of tonight's class, and the worst-behaved one. Three checks used
+`arrive-by-time` as their hard-coded stand-in for "an unadjudicated value". Ruling it `SERVED` did not
+turn them red — it turned them **vacuous**. An unrelated field (`who/commuter`) happens to be
+unadjudicated too, so each check went on passing while no longer testing the thing it is named after.
+Green before, green after, and *nothing in the suite could see it*, because green is green. That is
+strictly nastier than the `LEFT_BEHIND` rot, which at least had a wrong answer sitting in a file
+somebody might read.
+
+Fixed by making the premise discovered and asserted rather than assumed: `UNADJ` resolves an unruled
+axis value at run time, two controls assert it exists *and* is genuinely unruled, and the
+UNADJUDICATED check now asserts the status **on that value's own axis** instead of on the
+whole-scenario verdict — a verdict is reachable through any unruled field, which is exactly how the
+check went vacuous. It now prints its own specimen (`who/commuter`) so a future reader can see what
+it actually tested.
+
+And the symmetry got closed while the row was being added. The absence rule had a third direction
+missing: **an adjudication may not outlive the PRESENCE it cites either.** `"feature: … (pager.mjs)"`
+is a claim that the evidence is still there to be re-read; rename or delete that suite and the row
+becomes an assertion backed by nothing, green. Five rows cite suites; all five are now checked.
+Sweep: **93 checks green**, in local, `TZ=UTC` and `TZ=Asia/Kolkata`. **4/4 mutations caught** —
+absence-rot restored · no unruled specimen available · the attributable check reverted to its old
+vacuous verdict-form · a cited evidence suite deleted.
+
+### 2026-07-30 — a field report, and the three rows I said would rot next
+
+Two shipped fixes, and the rot argument tested against itself.
+
+**The via was ignoring you.** Field report: *Zürich HB → Luzern via Buchrain* returned ordinary
+direct trains. The API is innocent — `via[]=Buchrain` returns real routes (IR75, change, then the
+S1 through Buchrain), and `tests/via.mjs` already covered the query string, the hub stand-down and
+the not-lying. The gap was the *moment of applying it*: `iVia` had a keydown handler and two
+`input` handlers and **no blur**, so the via only took effect on Enter or on tapping a suggestion.
+Type it and tap away — which is the only thing you do on a phone — and the search ran unconstrained
+behind a field that read "Buchrain", with a dashed amber border as the entire warning. The suite
+even *asserted* that state ("text typed but never applied MARKS the field"); marking it had been
+judged remedy enough. Leaving the box now applies it, deferred one frame so a suggestion tap still
+wins the race.
+
+**Every time field was in the wrong timezone.** Chasing `constraints/foreign-tz-time` — one of the
+three rows the part-2 bus report named as most likely stale — found it real and worse than written.
+Three writers seeded the **device** wall clock into a `datetime-local` field whose value `whenQS()`
+ships as **Swiss** wall time: the planner seed, the flight seed and the pager's anchor. Measured
+across five zones before the fix: Mumbai asks for a train 3h30 off, Auckland asks for the **wrong
+day**, and Zurich agrees with itself — which is why it survived this long. `swissLocal()` is now
+the single datetime-local boundary. One look-alike deliberately **kept**: `flightArriveBy`'s offset
+dance is wall-clock arithmetic on a string you typed, correctly zone-neutral, and a careless sweep
+of `getTimezoneOffset` through the file would break it — so the suite asserts its neutrality and
+counts the survivors.
+
+`tests/tz-input.mjs` (42 checks, six zones, both DST offsets) · `tests/via.mjs` +7 ·
+**9/9 mutations caught** after fixing three survivors of the first battery. Two of those three were
+weak mutations of *mine*; the third was real — a wiring check a **commented-out line still
+satisfied**, since a source-text regex cannot see a comment. All four wiring regexes in that file
+had it. **App assets changed, so `?v=` bumped to `20260730a`.** Whole suite **1002 checks green**
+in `TZ=UTC`, `Asia/Kolkata` and `Europe/Zurich`.
+
+**And the rot argument met its own mirror.** Fixing the timezone bug turned the *specimen* checks
+red: "Harold is LEFT_BEHIND … on the timezone axis" was no longer true. That is the specimen doing
+its job — it asserts a **falsifiable** claim, so it said so out loud, where the adjudication rows
+beside it rot silently for days. So the freshness contract the part-2 report proposed already
+exists in a second place, one file away from the rows that lack it. And it decays with the
+**opposite sign**: an adjudication cites an absence, so shipping makes it stale *pessimistic*; a
+specimen asserts a failure, so shipping makes it stale *optimistic* — it goes on claiming the app
+is worse than it is. Same decay, opposite direction, and only one of the two is loud.
+
+Of the three flagged rows: `foreign-tz-time` → **PARTIAL** (fixed; residual = the sunset
+roll-to-tomorrow still reads the device clock, asserted in the suite so it cannot be forgotten, and
+the field carries no zone label of its own). `future-origin-not-here` → **PARTIAL**: it had
+genuinely **rotted** — it cited "nor a stored place" and route history stores six, one tap filling
+both fields and re-planning. Caught by hand, *not* by the absence-rot check, because it is a prose
+absence — exactly the boundary the bus report declared, confirmed within a day of declaring it.
+`relative-date-phrase` **left unruled on purpose**: read as phrasing it is untouched (nothing parses
+"this Thursday"), read as the underlying need it has moved twice (date picker, summit day strip) —
+and the row sits on the `constraints` axis while its evidence is a sentence about parsing. A row
+whose axis makes its subject ambiguous can be read as rotted or fresh at will. That is a third
+staleness shape, and ruling it is the operator's call, not mine.
+
+### 2026-07-30 (later) — the app blamed the passenger's connection for the server's refusal
+
+Second field report the same evening: the operator's phone showed **"We could not reach the
+timetable — check your connection"** while his connection was demonstrably fine. I first blamed an
+airplane-mode glyph in his status bar; he corrected me — my own requests were going out over that
+same connection at that same moment — and he was right.
+
+Measured instead of guessed: **40 requests to transport.opendata.ch, 17 returned 200 and 23 returned
+HTTP 429**, `Rate limit error from timetable.search.ch: Too many requests this minute`. (I had been
+bursting curl against that API from the same IP while he field-tested, so I was plausibly the cause
+of his 429 — worth recording, because a diagnostic that competes with the thing being diagnosed is
+its own hazard.)
+
+The bug this exposed is not the wording. `errBox()` **already handled 429 correctly**, with a comment
+naming this exact reasoning — and never ran on the screen that mattered. Smart mode routes through
+`tryConns`, whose `catch(e){ note.failed=true; return []; }` recorded *that* a request died and threw
+away *why*; `renderSmart` then printed its own hardcoded sentence. Three copies of that sentence
+existed. One knew about rate limits; the copies did not; copies drift.
+
+- **`tryConns` keeps the error** (`note.err=e`). The comment above it already described fixing this
+  class once — for the empty-array case — while still discarding the reason one line down.
+- **`renderSmart` takes `reqErr`, not `reqFailed`**, and delegates to `errBox`. A boolean can only
+  ever produce one sentence, and the sentence it produced was false.
+- **`errBox(e, unknown, again)`** — the per-screen words are now parameters, so the departures board
+  (the third copy, which **no suite had ever looked at**) delegates instead of duplicating.
+- Suites: `outage-not-verdict.mjs` 23 → 36, `wander.mjs` 12 → 18. **1019 checks green** across four
+  timezones. **6 of 6 mutations caught** (`tests/mutations/mut-errbox.py`).
+
+Two method notes, both self-inflicted and both worth keeping. The existing wiring checks asserted the
+*guard* (`direct.failed && !direct.ok`) and not the *payload*, so reverting a call site to the bare
+boolean — the original defect, in full — left them green; caught only by mutation, now asserted
+directly. And my first `wander.mjs` slice ran backwards and produced `""`, on which the
+delegation check failed honestly but the "no hardcoded sentence" check **passed vacuously** — a
+negative assertion over a region is worthless unless something proves the region exists.
+
+### 2026-07-30 (later still) — "I do not know right now" is a state the table could not hold
+
+Asked the operator to rule `constraints/relative-date-phrase`; his answer was that he does not know
+yet. That is a legitimate state, and the ground-truth table had nowhere to put it — the ambiguity
+lived only in a source comment, which is precisely the thing that rots.
+
+So the not-knowing is data now. `openQuestion` records the question, the date it was asked, and
+**the status it was raised against**. The sweep prints every open row as an `OPEN` line so it cannot
+go quiet, and fails if the row is ruled while the question is still attached: retiring the question
+and changing the status must be the same edit. The row can be *decided*; it can no longer *drift*.
+
+Null-tested in both directions, because a gate that has only ever said yes has been shown to run and
+not to work — ruling the row without retiring the question goes red, and deleting the last open
+question goes red on the control rather than silently making the section vacuous.
+
+This is the third staleness shape named on 2026-07-30, and the only one that decays through nobody
+deciding rather than through shipping. The other two decay by shipping in opposite directions: an
+adjudication cites an absence the app later fills (stale **pessimistic**, and silent); a specimen
+asserts a failure the app later fixes (stale **optimistic**, and loud, because it asserts something
+falsifiable).
+
+### 2026-07-31 — the mutation scores lived on one phone, and one of them only worked abroad
+
+Closeout scan: every mutation-score claim in this file cited `~/tmp/mut-*.py` — a path on the
+operator's phone that no reviewer can open. Seven batteries had accumulated there. The strongest
+evidence in the document rested on an instrument outside the repo, which is the artifact-locus
+failure, not a filing preference. They now live in `tests/mutations/` and the citations point there.
+
+Moving them was not bookkeeping — **two of the seven did not survive the move**, and both rots are
+worth more than the tidying:
+
+- **`mut-via-tz.py` scored 9/9 abroad and 8/1 here.** Its fixture mutation re-points the pager
+  fixture to *the runner's* zone; on a machine already set to `Europe/Zurich` that substitutes
+  Zurich for Zurich — a literal no-op, which reads on the console as a suite gap. Under UTC,
+  Kolkata or New York it bites and the script reads 9/9. **A timezone mutation run inside the
+  timezone it is about measures nothing, and the machine guaranteed to be in that timezone is the
+  one this app is built on.** The zone is pinned per-mutation now, so the score means the same
+  thing wherever it runs. The earlier "9 of 9" was environment-dependent and never said so.
+- **`mut-t2.py` crashed with a bare `FileNotFoundError`** because `sw.js` only exists on the
+  unmerged `t2-service-worker` branch. It now exits non-zero with the reason and the command to
+  run it on the right branch. An instrument that cannot run must say *why* — "broken script" and
+  "you are on the wrong branch" are different facts, and only one of them is actionable.
+
+Same shape as the rate-limit bug fixed the night before, one level up: a correct instrument that
+silently reports the wrong thing because nobody checked the context it was running in.
+
+---
+
+### 2026-07-31 — the `phrasing` axis, all nine rows, and the dentists in the dropdown
+
+The sweep went **19/50 → 28/50 adjudicated**; `phrasing` is now the only axis with no unruled value.
+Measured rather than reasoned: `tests/passengers/probe-phrasing.py` → `phrasing-evidence.json`,
+28 specimens plus a no-match control, run **serially with a 1.2 s delay** because this is the API
+that rate-limited us the night before and a burst would have both poisoned the result and degraded
+the live app.
+
+**The app does no fuzzy matching of its own.** `wireAC` hands the raw box text to
+`/locations?type=station&query=` and renders the top 7, so on this axis the API's answer *is* the
+app's answer. Which makes the measured property easy to get wrong: it is not *"did it return
+something"* — everything returns something, and that is the trap. It is **is the row a place a train
+stops?** Real stops carry an `id`; businesses, hotels, street addresses and city quarters come back
+`id: null`.
+
+`locations()` filters on `x.name` alone, so those rows render as tappable suggestions **with the
+station glyph next to them**. In 9 of 28 specimens *all seven visible rows* are non-stations:
+
+| you type | you are offered |
+|---|---|
+| `Zürich Hauptbahnhof` | a bookshop, a nail salon, a shopping centre — 0 stations |
+| `Bundeshaus` | an SRG office and six other companies |
+| `ZRH` | seven firms in Kloten |
+| `8001` | Zürich city *quarters*, none of them a stop |
+| `Zurich Airport` | seven hotels |
+
+And it does not fail loudly downstream: `/connections?from=Bundeshaus` returns a journey starting at
+*"SRG SSR, Bern, Giacomettistr. 1"*. The app silently plans you from a company office.
+
+**The same file already knows better.** `nearbyStops`, the GPS path, filters `x.id && x.name` under a
+comment reading *"a street address is not somewhere a train stops."* The typed path — the default,
+the one everybody uses — never got the lesson. That is the third session running that this shape has
+turned up: **a correct rule, present in the file, absent from the path the user is on.**
+
+Second shared residual: when *nothing* matches (control `qxzvwqbbzz`, 0 rows) `wireAC` just hides the
+dropdown. No word is said. So the two ways this axis fails a passenger are a list of dentists, and
+silence.
+
+Rulings: `foreign-language` and `gps-here` **SERVED** (exonyms come free from the API; `nearMe` is the
+one value the app answers itself and the one that is properly built — id-filtered, distances, four
+distinct failure messages each naming the fallback). `ambiguous-city`, `misspelled-station`,
+`hb-airport-conflation`, `colloquial-place`, `landmark-not-station` **PARTIAL**. `abbreviation` and
+`zip-code` **LEFT_BEHIND** — and both of those had a tempting false positive: `SG`/`BS` do return
+stations, but as accidental substring matches on the canton suffix (`Wil SG`, `Crêt-Bs`), and `3000`
+resolves only because Bern's station is literally called *Bern*. Scoring those as working would be
+reading a coincidence as a capability. All seven non-SERVED rows are `undecided` in the disposition
+ledger, which is the truth: they were measured the same hour and nobody has ruled on what to do.
+
+**The sweep caught its own control rotting — the 2026-07-30 repair missed one.** That night, three
+checks were found using a live unadjudicated row as their hard-coded stand-in, and were fixed by
+discovering the premise at run time. A fourth of the same shape survived: the reduction control named
+`phrasing/zip-code` as its example of "a genuinely unchecked key", so it went red the hour that row
+was adjudicated — not because the reducer regressed, but because **a control that dies when you do
+the work is measuring the work, not the property.** It now names a synthetic key that can never be
+adjudicated, plus a guard that the key really is absent from all three sources rather than assuming
+it. The first draft of *that* guard indexed `refusals.refusals` — an array — with a string key, so it
+was vacuously true; caught by checking, and it now uses the `covered` Set.
+
+`tests/mutations/mut-phrasing.py`, **4 of 4 caught**, M4 being the one that proves the replacement
+control can still come back negative. Suite total **1047 green**.
+
+### …and then the fix, same session
+
+Ruled by the operator: *filter the non-stations, and say when nothing matches.* Both are one line.
+`locations()` now filters `x.id && x.name` — the rule `nearbyStops()` had all along — and the empty
+branch calls `nearMsg` instead of closing the box in silence.
+
+The third line was not asked for and is the one that matters most. `wireAC`'s `catch` used to be
+covered by the same silence, so a **dead request rendered exactly like a real "no such station"**.
+It now says something different on purpose, and names a 429 as a rate limit rather than as a broken
+lookup. That is last night's bug one screen over: an absence of data presented as data.
+
+**The fix shipped green without being run.** Right after the edit the suite still read **1047 —
+the same number as before**, which is this session's own defect class pointed at itself: nothing in
+1047 checks touched the changed code. Hence `tests/station-lookup.mjs`, **19 checks**, every positive
+paired with a negative twin, including a PLANTED control that rebuilds the pre-fix name-only filter
+and confirms it really does let a dentist through. Total now **1066**.
+`tests/mutations/mut-station-lookup.py`, **5 of 5 caught**: both shipped defects put back, plus the
+three ways the error path can quietly go wrong again (thrown-as-no-match, 429 unnamed, query
+unescaped).
+
+**What the fix actually bought — measured, and it is not what it looks like.** The probe was re-run
+against the live API afterwards (it measures the API, not the app, so the pre-fix numbers reproduce
+and the evidence file now carries both views). For **8 of the 28 specimens the id-filter leaves
+nothing at all** — `Zürich Hauptbahnhof`, `Zurich Airport`, `Genve`, `Bundeshaus`, `Jet d'Eau`,
+`ZH HB`, `ZRH`, `8001`, `6003`. Type the full proper name of the biggest station in the country and
+you now read *"No station matches Zürich Hauptbahnhof."*
+
+That is the honest outcome and it is still a failure: **the app stopped lying about those queries,
+it did not learn to answer them.** No status in `axes.mjs` changes. Nothing that worked regressed —
+every specimen that had a real stop in its top 7 still has one, and `Zürich`, `Zuerich HB`, `Zurigo`,
+`Bâle`, `3000` all answer as before. The remaining work on this axis is a *fallback*: when the
+id-filter empties the list, the raw rows still carry coordinates, so the nearest real stop to the
+matched business is computable — the GPS path already does exactly that. Unruled; nobody has decided
+it is worth the call.
+
+### The fallback — and the premise I got wrong
+
+Ruled: build it. **The premise was false and I had not checked it.** The sentence above ("the raw
+rows still carry coordinates") was written from plausibility, not measurement. They do not: every
+discarded row comes back `coordinate: {x: null, y: null}` — **0 of 85 rows across all 9 queries**,
+and on every `type=` the endpoint accepts (`station`, `address`, `poi`, `all`, none). There is no
+coordinate to feed the GPS path with. The fallback as specified is unbuildable from this vendor.
+
+What *is* there is the address string itself, formatted `NAME, TOWN, STREET NR`. So `townOf()` reads
+the town off the second-to-last comma field and the app offers **that town's stations**. Measured
+over the nine queries: seven yield a town, and of those seven — `Zürich Hauptbahnhof`→Zürich HB,
+`ZH HB`→Zürich HB, `Genve`→Genève, `Bundeshaus`→Bern are right; `Zurich Airport`→Glattbrugg and
+`ZRH`→Kloten are the airport's neighbouring towns, defensible; **`Jet d'Eau`→Vuadens is simply
+wrong**, 200 km from the fountain. The two postcodes yield no town at all and still say "no match".
+
+**One wrong guess in seven is why the heading names the town.** The dropdown reads *"No station
+called 'Jet d'Eau'. The closest address match is in Vuadens — stations there:"* — a passenger
+rejects that in a glance. The same guess with the town hidden would be the defect the id-filter was
+added to remove, wearing a new costume. `mut-station-lookup.py` **M6** exists to keep that line
+honest: strip the town from the heading and the suite goes red.
+
+**A regression I shipped that morning, caught the same day.** `acEnter` selected
+`querySelectorAll("div")`. Once the dropdown carried message rows, the message became row 0 with no
+`data-n`, so **Enter on a no-match did nothing** — where before the message existed the box was
+hidden and Enter fell through to searching the literal typed text. Now `div[data-n]`, with a PLANTED
+check that the old selector really does swallow the Enter.
+
+**And one line deleted for being untestable.** A `town !== q` guard looked prudent and was dead:
+`locCache` answers a repeated string without a request, so removing it changed neither output nor
+traffic, and the mutation that deleted it survived the entire suite. An untestable line that
+protects nothing is worse than no line — it reads like a defence. The `town ?` guard is real and M8
+proves it.
+
+`tests/station-lookup.mjs` **38 checks**, `mut-station-lookup.py` **9 of 9 caught**, suite **1085**.
+
 ## Regression summary — the "does it add or destroy?" answer
 
 | Item | Risk |
