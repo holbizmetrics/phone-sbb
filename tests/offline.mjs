@@ -8,6 +8,7 @@
 // so the fetch handler's actual decisions are observed. The load-bearing test is
 // a negative one -- a timetable request must come back UNCLAIMED.
 import fs from "fs";
+import { fileURLToPath } from "url";
 import vm from "vm";
 import { src, APP } from "./_src.mjs";
 console.log("reading " + APP);
@@ -15,7 +16,7 @@ console.log("reading " + APP);
 let pass = 0, fail = 0;
 const chk = (n, c, d = "") => { if (c) { pass++; console.log("  ok   " + n); } else { fail++; console.log("  FAIL " + n + " :: " + d); } };
 
-const ROOT = new URL("../", import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL("../", import.meta.url));  // .pathname gives "/D:/..." on Windows
 const swSrc = fs.readFileSync(ROOT + "sw.js", "utf8");
 
 // ---------- a fake worker global ----------
