@@ -39,6 +39,10 @@ const oa = src.indexOf("let obLive=null");
 const ob = Math.min(...["function onboardPin", "</script>"].map(p => src.indexOf(p, oa)).filter(i => i >= 0));
 if (oa < 0 || !Number.isFinite(ob)) throw new Error("HARNESS FAILED -- offer-layer markers not found");
 const offSrc = src.slice(oa, ob);
+// onboardNext's live view lives beside onboardNext, outside the offer slice
+const lvA = src.indexOf("function obLiveView(");
+if (lvA < 0) throw new Error("HARNESS FAILED -- obLiveView not found");
+const lvSrc = src.slice(lvA, src.indexOf("\n}", lvA) + 2);
 chk("control: extracted block is the offer layer",
   offSrc.includes("function obOfferHTML") && offSrc.includes("async function obRecheck") && offSrc.includes("function onboardReplan"),
   offSrc.slice(0, 60));
@@ -103,7 +107,7 @@ const mkOff = ({ board = [], apiFail = false, pin } = {}) => {
   // app: through the journey setters, or by assigning the shared globals.
   Object.defineProperty(ctx, "fromName", { set: v => ui.push("from:" + v) });
   Object.defineProperty(ctx, "toName", { set: v => ui.push("to:" + v) });
-  new vm.Script(offSrc
+  new vm.Script(offSrc + "\n" + lvSrc
     + "\nthis.obEffective=obEffective; this.obOfferHTML=obOfferHTML; this.obRecheck=obRecheck;"
     + "\nthis.onboardReplan=onboardReplan; this.getLive=()=>obLive; this.setLive=v=>{obLive=v};"
     + "\nthis.getNote=()=>obLiveNote; this.getCheckAt=()=>obCheckAt; this.OBH=OB_HORIZON_MIN;").runInContext(ctx);

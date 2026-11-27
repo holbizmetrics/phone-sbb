@@ -2251,6 +2251,7 @@ function changeDetails(c){
     // real-time prognosis when present (a delayed train's change is tighter
     // than scheduled — the whole point of tight-vs-safe), else scheduled
     const prevArr=rides[k-1].arrival?.prognosis?.arrival || rides[k-1].arrival?.arrival;
+    const prevArrS=rides[k-1].arrival?.arrival || prevArr;   // scheduled: what the arrival board is keyed by
     const nextDep=rides[k].departure?.prognosis?.departure || rides[k].departure?.departure;
     const stn=rides[k].departure?.station?.name || rides[k-1].arrival?.station?.name || "";
     if(!prevArr||!nextDep) continue;
@@ -2268,7 +2269,7 @@ function changeDetails(c){
     const co=rides[k].departure?.station?.coordinate || rides[k-1].arrival?.station?.coordinate || null;
     // the change's own clock times ride along: the onboard bar anchors "which
     // change is NEXT" to them, and without them it could only guess by order
-    if(b<600) out.push({stn, b, pa, pd, co, at:prevArr, dt:nextDep, missed:b<0});
+    if(b<600) out.push({stn, b, pa, pd, co, at:prevArr, as:prevArrS, dt:nextDep, missed:b<0});
   }
   return out;
 }
@@ -2736,7 +2737,8 @@ let onboard = load(LS.onboard, null);   // slim snapshot of the pinned journey, 
 let obPoi   = load(LS.obpoi, false);    // nearby-spots layer during long changes (the setting)
 let obOpen  = false;                    // gap sheet expanded?
 let obKey   = "";                       // phase:k of the last paint -- an open sheet re-renders when the anchor moves
-const OB_EXPIRE_MIN = 30;               // this long after arrival the pin quietly retires
+const OB_EXPIRE_MIN = 30;
+const OB_MISSED_GRACE_MIN = 10;         // a missed change stays on the bar this long after the late train reaches it               // this long after arrival the pin quietly retires
 
 /* The snapshot is SLIM on purpose: the full connection object drags the whole
    API response into localStorage; the bar needs names, times, legs and the
@@ -2747,6 +2749,7 @@ function onboardSnap(c){
     from:c.from?.station?.name||"", to:c.to?.station?.name||"",
     dep:c.from?.prognosis?.departure||c.from?.departure||null,
     arr:c.to?.prognosis?.arrival||c.to?.arrival||null,
+    arrS:c.to?.arrival||null,   // scheduled arrival: the destination board's key (a late-at-pin train never matched its prognosis)
     legs:secs.map(s=>badge(s.journey.category,s.journey.number).label),
     chg:c._chg||[],
   };
@@ -2754,14 +2757,33 @@ function onboardSnap(c){
 /* Which change is NEXT is a clock question: the first one whose onward
    departure has not happened yet. While you stand at Olten waiting for the
    10:25, Olten IS still the next change -- its platform is the one you need. */
-function onboardNext(ob,now){
+function onboardNext(ob,now,lv){
   const chg=ob.chg||[];
   for(let k=0;k<chg.length;k++){
     const x=chg[k];
-    if(x.dt && new Date(x.dt).getTime()>now) return {phase:"change",k,x,left:chg.length-k-1};
+    if(!x.dt) continue;
+    let endT=new Date(x.dt).getTime();
+    /* A change the live read says is MISSED must not vanish when its pinned
+       departure passes: the rider is still on the late incoming train, and the
+       verdict + replan offer are what they need on arriving. Hold it until the
+       live arrival there, plus a grace to step off and read it. */
+    if(lv && lv.k===k && typeof lv.b==="number" && lv.b<0) endT += (-lv.b+OB_MISSED_GRACE_MIN)*60000;
+    if(endT>now) return {phase:"change",k,x,left:chg.length-k-1};
   }
-  const arrT=ob.arr?new Date(ob.arr).getTime():0;
-  return {phase: now>arrT ? "arrived" : "arriving", k:-1, x:null, left:0};
+  return {phase: now>obArrT(ob,lv) ? "arrived" : "arriving", k:-1, x:null, left:0};
+}
+/* When the journey really ends: the LATER of the pinned and the live arrival.
+   A late last leg must not say "arrived" -- or retire the pin -- while the rider
+   is still on board; an early one costs only a few extra "arriving" minutes. */
+function obArrT(ob,lv){
+  const p=ob&&ob.arr?new Date(ob.arr).getTime():0;
+  const l=lv&&lv.arr?new Date(lv.arr).getTime():0;
+  return Math.max(p, isNaN(l)?0:l);
+}
+/* The live state onboardNext may lean on, read in ONE place. */
+function obLiveView(){
+  return { k: obLive?obLive.k:-1, b: obLive?obLive.b:null,
+           arr: (obArr && onboard && obArr.key===onboard.arr) ? obArr.at : null };
 }
 /* The verdict line is ALWAYS on -- it is the one thing here nobody else can
    tell you. The station signage knows the platform; only the buffer maths
@@ -2855,6 +2877,7 @@ let obLive=null;      // {k,b,dly} -- last live read, keyed to the change row it
 let obLiveAt=0;       // when that read landed
 let obCheckAt=0;      // throttle: next board request no earlier than this
 let obLiveNote="";    // honest status when the check could not answer
+let obLiveNoteK=-1;   // ...and WHICH change it was about: change 1's failure must not label an unchecked change 2
 let obArr=null;       // {key, at, dly} -- live arrival at the destination for the last leg, keyed to the pinned arrival
 let obArrAt=0;        // when that read landed
 let obArrNote="";     // honest status for the arrival check
@@ -2878,7 +2901,7 @@ function obFreshness(ob, nx, now){
       const age=Math.max(0, Math.round((now-obLiveAt)/60000));
       return age<=OB_STALE_MIN ? {state:"live", age} : {state:"stale", age};
     }
-    if(obLiveNote) return {state:"failed", age:null, note:obLiveNote};
+    if(obLiveNote && obLiveNoteK===nx.k) return {state:"failed", age:null, note:obLiveNote};
     const far = !!(nx.x && nx.x.at && new Date(nx.x.at).getTime()-now > OB_HORIZON_MIN*60000);
     return {state:"pintime", age:null, note: far
       ? `pin-time buffer &#8212; the live check starts within ${Math.round(OB_HORIZON_MIN/60)}&#8201;h of the change`
@@ -2920,7 +2943,7 @@ function obOfferHTML(ob,nx){
 }
 async function obRecheck(now){
   if(!onboard) return;
-  const nx=onboardNext(onboard,now);
+  const nx=onboardNext(onboard,now,obLiveView());
   // the next change while there is one; the destination's arrival on the last leg (row 361)
   let stn, at;
   if(nx.phase==="change"){ stn=nx.x.stn; at=nx.x.at; }
@@ -2934,17 +2957,17 @@ async function obRecheck(now){
     if(nx.phase==="change"){
       const r=obLiveBuffer(nx.x, d.stationboard||[]);
       if(r){ obLive={k:nx.k, b:r.b, dly:r.dly}; obLiveNote=""; }
-      else { obLive=null; obLiveNote="incoming train not on the arrival board &#8212; live check has no verdict"; }
+      else { obLive=null; obLiveNote="incoming train not on the arrival board &#8212; live check has no verdict"; obLiveNoteK=nx.k; }
       obLiveAt=Date.now();
     }else{
-      const r=obLiveArrival(at, d.stationboard||[]);
+      const r=obLiveArrival(onboard.arrS||at, d.stationboard||[]);
       if(r){ obArr={key:onboard.arr, at:r.at, dly:r.dly}; obArrNote=""; }
       else { obArr=null; obArrNote="your train is not on the destination&#39;s arrival board &#8212; no live arrival"; }
       obArrAt=Date.now();
     }
   }catch(e){
     // a dead request is "unknown", not "on time" -- the pin-time figure stands, labelled
-    if(nx.phase==="change"){ obLive=null; obLiveNote="live check did not answer &#8212; buffer shown is pin-time"; obLiveAt=Date.now(); }
+    if(nx.phase==="change"){ obLive=null; obLiveNote="live check did not answer &#8212; buffer shown is pin-time"; obLiveNoteK=nx.k; obLiveAt=Date.now(); }
     else { obArr=null; obArrNote="live check did not answer &#8212; arrival shown is pin-time"; obArrAt=Date.now(); }
   }
   paintOnboard();
@@ -2955,7 +2978,7 @@ async function obRecheck(now){
 function onboardReplan(ev){
   if(ev) ev.stopPropagation();
   if(!onboard) return;
-  const nx=onboardNext(onboard,Date.now());
+  const nx=onboardNext(onboard,Date.now(),obLiveView());
   const x=nx.phase==="change"?nx.x:null;
   if(!x || !x.stn || x.stn===onboard.to) return;
   fromName=x.stn;
@@ -2966,8 +2989,16 @@ function onboardReplan(ev){
   setWhen("now");                    // replans as its last act -- the offer means NOW
   scrollTo({top:0,behavior:"smooth"});
 }
+/* Every live field describes ONE journey. A new pin that inherits them shows
+   the old train's buffer -- even "missed" + a replan offer -- under the new
+   station's name, and the old throttle blocks the new journey's own read. */
+function obResetLive(){
+  obLive=null; obLiveAt=0; obLiveNote=""; obLiveNoteK=-1;
+  obArr=null; obArrAt=0; obArrNote=""; obCheckAt=0;
+}
 function onboardPin(i){
   const c=jrnConns[i]; if(!c) return;
+  obResetLive();
   onboard=onboardSnap(c);
   save(LS.onboard,onboard);
   obOpen=false; obKey="";
@@ -2975,6 +3006,7 @@ function onboardPin(i){
   paintOnboard();
 }
 function onboardUnpin(){
+  obResetLive();
   onboard=null; save(LS.onboard,null);
   obOpen=false; obKey="";
   paintOnboard();
@@ -2996,7 +3028,7 @@ function onboardSheetToggle(){
 function renderObSheet(){
   const box=document.querySelector("#ob .obsheet");
   if(!box||!onboard||!obOpen) return;
-  const nx=onboardNext(onboard,Date.now());
+  const nx=onboardNext(onboard,Date.now(),obLiveView());
   box.innerHTML=obSheetHTML(onboard,nx);
   if(obPoi && nx.phase==="change" && !nx.x.missed && nx.x.b>=LAYOVER_MIN && nx.x.co)
     obFillPoi(box.querySelector(".obpoi"), nx.x);
@@ -3006,12 +3038,12 @@ function renderObSheet(){
    fetch) unless the anchor itself moved to the next change. */
 function paintOnboard(){
   const host=$("ob"); if(!host) return;
-  if(onboard && onboard.arr && Date.now()>new Date(onboard.arr).getTime()+OB_EXPIRE_MIN*60000){
+  if(onboard && onboard.arr && Date.now()>obArrT(onboard,obLiveView())+OB_EXPIRE_MIN*60000){
     onboard=null; save(LS.onboard,null);   // the journey ended; the pin must not haunt tomorrow
   }
   if(!onboard){ host.innerHTML=""; document.body.classList.remove("hasob"); obOpen=false; return; }
   document.body.classList.add("hasob");
-  const nx=onboardNext(onboard,Date.now());
+  const nx=onboardNext(onboard,Date.now(),obLiveView());
   const key=nx.phase+":"+nx.k;
   if(!host.querySelector(".obbar")){
     host.innerHTML=`<div class="obbar"><div class="obtop">`
@@ -4376,7 +4408,8 @@ function wanCandidates(board, now, deadline){
    on the board = UNKNOWN (null), never a verdict. */
 function obLiveBuffer(x, rows){
   if(!x || !x.at || !x.dt) return null;
-  const schedT=new Date(x.at).getTime(), depT=new Date(x.dt).getTime();
+  // match on the SCHEDULED arrival when the pin kept it; pins from before 2026-11-27 only have `at`
+  const schedT=new Date(x.as||x.at).getTime(), depT=new Date(x.dt).getTime();
   if(isNaN(schedT)||isNaN(depT)) return null;
   for(const j of rows||[]){
     const arr=j&&j.stop&&j.stop.arrival; if(!arr) continue;

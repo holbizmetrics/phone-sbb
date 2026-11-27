@@ -41,8 +41,11 @@ const mk = (nowIso) => {
     ${grabConst(/const TIGHT[^\n]*/, "TIGHT")}
     ${grabConst(/const OB_HORIZON_MIN[^\n]*/, "OB_HORIZON_MIN")}
     ${grabConst(/const OB_STALE_MIN[^\n]*/, "OB_STALE_MIN")}
-    let obPoi=false, obLive=null, obLiveNote="", obLiveAt=0, obArr=null, obArrAt=0, obArrNote="";
+    let obPoi=false, obLive=null, obLiveNote="", obLiveNoteK=-1, obLiveAt=0, obArr=null, obArrAt=0, obArrNote="";
     ${grab("onboardNext")}
+    ${grab("obArrT")}
+    ${grab("obLiveView")}
+    ${grabConst(/const OB_MISSED_GRACE_MIN[^\n]*/, "OB_MISSED_GRACE_MIN")}
     ${grab("obEffective")}
     ${grab("obFreshness")}
     ${grab("obFreshTag")}
@@ -50,7 +53,7 @@ const mk = (nowIso) => {
     ${grab("obLineHTML")}
     ${grab("obSheetHTML")}
     return { onboardNext, obFreshness, obVerdictHTML, obLineHTML, obSheetHTML, OB_STALE_MIN, OB_HORIZON_MIN,
-      set(s){ if("obLive" in s) obLive=s.obLive; if("obLiveAt" in s) obLiveAt=s.obLiveAt; if("obLiveNote" in s) obLiveNote=s.obLiveNote;
+      set(s){ if("obLive" in s) obLive=s.obLive; if("obLiveAt" in s) obLiveAt=s.obLiveAt; if("obLiveNote" in s) obLiveNote=s.obLiveNote; if("obLiveNoteK" in s) obLiveNoteK=s.obLiveNoteK;
               if("obArr" in s) obArr=s.obArr; if("obArrAt" in s) obArrAt=s.obArrAt; if("obArrNote" in s) obArrNote=s.obArrNote; } };
   `)(NOW, Date);
   return { ...m, NOW };
@@ -94,7 +97,7 @@ const min = (iso, k) => new Date(T(iso) + k * 60000).getTime();
   const nx = P.onboardNext(OB, P.NOW);
   const f = P.obFreshness(OB, nx, P.NOW);
   chk("beyond the horizon: pin-time, and the note says WHEN the live check starts", f.state === "pintime" && /within 2&#8201;h of the change/.test(f.note), JSON.stringify(f));
-  P.set({ obLiveNote: "live check did not answer &#8212; buffer shown is pin-time" });
+  P.set({ obLiveNote: "live check did not answer &#8212; buffer shown is pin-time", obLiveNoteK: nx.k });   // a note is about ONE change
   const g = P.obFreshness(OB, nx, P.NOW);
   chk("a failed read is FAILED with its note, and the bar says so", g.state === "failed" && /live check failed/.test(P.obLineHTML(OB, nx)), P.obLineHTML(OB, nx));
   chk("...the sheet still asserts the pin-time verdict (labelled), not a guessed on-time", /enough to leave the platform/.test(P.obSheetHTML(OB, nx)) && /did not answer/.test(P.obSheetHTML(OB, nx)));
@@ -129,7 +132,7 @@ const min = (iso, k) => new Date(T(iso) + k * 60000).getTime();
       obLiveBuffer: () => null, api: url => { calls.push(url); return apiFail ? Promise.reject(new Error("dead")) : Promise.resolve({ stationboard: board }); },
       paintOnboard: () => {}, $: () => null };
     vm.createContext(ctx);
-    new vm.Script(arrSrc + "\n" + offSrc + "\nthis.obRecheck=obRecheck; this.arr=()=>obArr; this.note=()=>obArrNote;").runInContext(ctx);
+    new vm.Script(arrSrc + "\n" + offSrc + "\n" + src.slice(src.indexOf("function obLiveView("), src.indexOf("\n}", src.indexOf("function obLiveView(")) + 2) + "\nthis.obRecheck=obRecheck; this.arr=()=>obArr; this.note=()=>obArrNote;").runInContext(ctx);
     await ctx.obRecheck(NOW);
     return { calls, arr: ctx.arr(), note: ctx.note() };
   };
